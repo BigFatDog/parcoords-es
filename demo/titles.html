@@ -1,0 +1,36 @@
+<!doctype html>
+<title>Basic Parallel Coordinates Example</title>
+<link rel="stylesheet" type="text/css" href="./parcoords.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+<script src="lib/d3.v4.min.js"></script>
+<script src="./parcoords.standalone.js"></script>
+<body>
+<div id="example" class="parcoords" style="width:500px;height:150px"></div>
+<p>Demonstrates overriding dimension titles, except for 2 and 3.</p>
+</body>
+<script>
+    var parcoords = ParCoords()("#example")
+        .data([
+            [0, -0, 0, 0, 0, 3],
+            [1, -1, 1, 2, 1, 6],
+            [2, -2, 4, 4, 0.5, 2],
+            [3, -3, 9, 6, 0.33, 4],
+            [4, -4, 16, 8, 0.25, 9]
+        ])
+        .dimensions({
+            0: {
+                title: "Zero"
+            },
+            1:{
+                title:  "One"
+            },
+            4: {
+                title: "Four",
+            },
+            5: {
+                title: "Five"
+            }
+        })
+        .render()
+        .createAxes();
+</script>

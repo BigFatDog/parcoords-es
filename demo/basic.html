@@ -1,0 +1,25 @@
+<!doctype html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+</head>
+<title>Basic Parallel Coordinates Example</title>
+<link rel="stylesheet" type="text/css" href="./parcoords.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+<script src="./parcoords.standalone.js"></script>
+<body>
+<div id="example" class="parcoords" style="width:500px;height:150px"></div>
+<p>Demonstrates creating a parallel coordinates plot with axes using a 2-dimensional array of numbers.</p>
+</body>
+<script>
+var parcoords = ParCoords()("#example")
+  .data([
+    [0,-0,0,0,0,1],
+    [1,-1,1,2,1,1],
+    [2,-2,4,4,0.5,1],
+    [3,-3,9,6,0.33,1],
+    [4,-4,16,8,0.25,1]
+  ])
+  .render()
+  .createAxes();
+</script>

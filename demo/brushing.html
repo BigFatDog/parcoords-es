@@ -1,0 +1,103 @@
+<!doctype html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+</head>
+<title>Brushing Example</title>
+<link rel="stylesheet" type="text/css" href="./parcoords.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+<script src="./lib/d3.v4.min.js"></script>
+<script src="./parcoords.standalone.js"></script>
+<div id="example" class="parcoords" style="width:960px;height:200px;"></div>
+<p>Loads an external <a href="data/cars.csv">csv file</a>, creates a custom <a
+        href="https://github.com/mbostock/d3/wiki/Quantitative-Scales#wiki-quantitative">quantitative color scale</a>
+    using <a href="http://bl.ocks.org/3014589">L*a*b interpolation</a>, and enables brushing.
+
+<p>
+    <label for="sltBrushMode">Brush mode:</label>
+    <select id="sltBrushMode">
+    </select>
+    <label id="lblPredicate" for="sltPredicate">Predicate:</label>
+    <select id="sltPredicate">
+        <option>AND</option>
+        <option>OR</option>
+    </select>
+    <button id="btnReset">Reset Brushes</button>
+</p>
+
+<p id="pStrums" style="visibility: hidden;">Strumming is a 2D selection brushing method, also called pinches by Alfred
+    Inselberg.
+    You start a strum be clicking and dragging within one of the segments (area between two axes).
+    After releasing the mouse button, the selection will contain all lines that pass through all of the active strums.
+
+
+    <script>
+        // quantitative color scale
+        var blue_to_brown = d3.scaleLinear()
+            .domain([9, 50])
+            .range(["steelblue", "brown"])
+            .interpolate(d3.interpolateLab);
+
+        var color = function (d) {
+            return blue_to_brown(d['economy (mpg)']);
+        };
+
+        var parcoords = ParCoords()("#example")
+        //    .color(color)
+            .alpha(0.4);
+
+        // load csv file and create the chart
+        d3.csv('data/cars.csv', function (data) {
+            parcoords
+                .data(data)
+                .hideAxis(["name"])
+                .composite("darker")
+                .render()
+                .shadows()
+                .reorderable()
+                .brushMode("1D-axes");  // enable brushing
+        });
+
+        var sltBrushMode = d3.select('#sltBrushMode')
+
+        sltBrushMode.selectAll('option')
+            .data(parcoords.brushModes())
+            .enter()
+            .append('option')
+            .text(function (d) {
+                return d;
+            });
+
+        sltBrushMode.on('change', function () {
+            parcoords.brushMode(this.value);
+            switch (this.value) {
+                case 'None':
+                    d3.select("#pStrums").style("visibility", "hidden");
+                    d3.select("#lblPredicate").style("visibility", "hidden");
+                    d3.select("#sltPredicate").style("visibility", "hidden");
+                    d3.select("#btnReset").style("visibility", "hidden");
+                    break;
+                case '2D-strums':
+                    d3.select("#pStrums").style("visibility", "visible");
+                    break;
+                default:
+                    d3.select("#pStrums").style("visibility", "hidden");
+                    d3.select("#lblPredicate").style("visibility", "visible");
+                    d3.select("#sltPredicate").style("visibility", "visible");
+                    d3.select("#btnReset").style("visibility", "visible");
+                    break;
+            }
+        });
+
+        sltBrushMode.property('value', '1D-axes');
+
+        d3.select('#btnReset').on('click', function () {
+            parcoords.brushReset();
+        })
+        d3.select('#sltPredicate').on('change', function () {
+            parcoords.brushPredicate(this.value);
+        });
+    </script>
+
+
+
