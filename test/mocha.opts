@@ -1,1 +1,1 @@
---recursive --require ./test/testHelper.js
+--recursive --require ./test/testHelper.js --require ./test/css-null-compiler.js
