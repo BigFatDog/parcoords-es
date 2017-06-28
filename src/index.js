@@ -2,7 +2,7 @@ import { select, selectAll, event, mouse } from 'd3-selection';
 import { keys, entries, map } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
 import { extent, ascending, min } from 'd3-array';
-import { scaleBand, scalePoint, scaleOrdinal, scaleTime, scaleLinear } from 'd3-scale';
+import { scalePoint, scaleOrdinal, scaleTime, scaleLinear } from 'd3-scale';
 import { line, arc as d3Arc } from 'd3-shape';
 import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
 import { brushSelection, brushY } from 'd3-brush';
