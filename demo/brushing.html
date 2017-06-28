@@ -44,7 +44,18 @@
 
         var parcoords = ParCoords()("#example")
         //    .color(color)
-            .alpha(0.4);
+            .alpha(0.4)
+//
+//            .on('render', ()=>{
+//            console.log('- render event is triggered');
+//        }).on('resize', ()=>{
+//            console.log('- resize event is triggered');
+//        }).on('highlight', ()=>{
+//            console.log('- highlight event is triggered');
+//        }).on('brush', ()=>{
+//            console.log('- brush event is triggered');
+//        });
+
 
         // load csv file and create the chart
         d3.csv('data/cars.csv', function (data) {
@@ -56,6 +67,9 @@
                 .shadows()
                 .reorderable()
                 .brushMode("1D-axes");  // enable brushing
+
+
+
         });
 
         var sltBrushMode = d3.select('#sltBrushMode')

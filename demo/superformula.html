@@ -32,7 +32,7 @@ path {
  
 </style>
 <div id="superformula"></div>
-<div id="example" class="parcoords" style="width:960px;height:320px"></div>
+<div id="example" class="parcoords" style="width:960px;height:320px; padding: 20px 20px 20px 20px"></div>
 <script src="lib/d3.v3.min.js"></script>
 <script src="./parcoords.standalone.js"></script>
 <link rel="stylesheet" type="text/css" href="./parcoords.css">
@@ -88,7 +88,16 @@ var parcoords = ParCoords()("#example")
        .style("opacity", 0.2)
        .filter(function(d) { return selected.indexOf(d.key) > -1; })
        .style("opacity", 1);
-  });
+  })
+//    .on('render', ()=>{
+//        console.log('- render event is triggered');
+//    }).on('resize', ()=>{
+//        console.log('- resize event is triggered');
+//    }).on('highlight', ()=>{
+//        console.log('- highlight event is triggered');
+//    }).on('brush', ()=>{
+//        console.log('- brush event is triggered');
+//    });
 
 var shape = d3.superformula()
     .size(5000)
@@ -103,5 +112,8 @@ var path = svg
     .on("mouseover", function(d,i) {
       parcoords.highlight([data[i]]);
     })
-    .on("mouseout", parcoords.unhighlight);
+    .on("mouseout", parcoords.unhighlight)
+    .on('highlight', ()=> {
+        console.log('highlighted')
+    });
 </script>
