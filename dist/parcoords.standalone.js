@@ -423,9 +423,9 @@ var selection_exit = function () {
   return new Selection(this._exit || this._groups.map(sparse), this._parents);
 };
 
-var selection_merge = function (selection) {
+var selection_merge = function (selection$$1) {
 
-  for (var groups0 = this._groups, groups1 = selection._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
+  for (var groups0 = this._groups, groups1 = selection$$1._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
     for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) {
       if (node = group0[i] || group1[i]) {
         merge[i] = node;
@@ -1405,7 +1405,7 @@ function band() {
   var scale = ordinal().unknown(undefined),
       domain = scale.domain,
       ordinalRange = scale.range,
-      range$$1 = [0, 1],
+      range = [0, 1],
       step,
       bandwidth,
       round = false,
@@ -1417,9 +1417,9 @@ function band() {
 
   function rescale() {
     var n = domain().length,
-        reverse = range$$1[1] < range$$1[0],
-        start = range$$1[reverse - 0],
-        stop = range$$1[1 - reverse];
+        reverse = range[1] < range[0],
+        start = range[reverse - 0],
+        stop = range[1 - reverse];
     step = (stop - start) / Math.max(1, n - paddingInner + paddingOuter * 2);
     if (round) step = Math.floor(step);
     start += (stop - start - step * (n - paddingInner)) * align;
@@ -1436,11 +1436,11 @@ function band() {
   };
 
   scale.range = function (_) {
-    return arguments.length ? (range$$1 = [+_[0], +_[1]], rescale()) : range$$1.slice();
+    return arguments.length ? (range = [+_[0], +_[1]], rescale()) : range.slice();
   };
 
   scale.rangeRound = function (_) {
-    return range$$1 = [+_[0], +_[1]], round = true, rescale();
+    return range = [+_[0], +_[1]], round = true, rescale();
   };
 
   scale.bandwidth = function () {
@@ -1472,7 +1472,7 @@ function band() {
   };
 
   scale.copy = function () {
-    return band().domain(domain()).range(range$$1).round(round).paddingInner(paddingInner).paddingOuter(paddingOuter).align(align);
+    return band().domain(domain()).range(range).round(round).paddingInner(paddingInner).paddingOuter(paddingOuter).align(align);
   };
 
   return rescale();
@@ -1854,10 +1854,10 @@ function Lab(l, a, b, opacity) {
 }
 
 define$1(Lab, lab, extend(Color, {
-  brighter: function brighter$$1(k) {
+  brighter: function brighter(k) {
     return new Lab(this.l + Kn * (k == null ? 1 : k), this.a, this.b, this.opacity);
   },
-  darker: function darker$$1(k) {
+  darker: function darker(k) {
     return new Lab(this.l - Kn * (k == null ? 1 : k), this.a, this.b, this.opacity);
   },
   rgb: function rgb$$1() {
@@ -1907,10 +1907,10 @@ function Hcl(h, c, l, opacity) {
 }
 
 define$1(Hcl, hcl, extend(Color, {
-  brighter: function brighter$$1(k) {
+  brighter: function brighter(k) {
     return new Hcl(this.h, this.c, this.l + Kn * (k == null ? 1 : k), this.opacity);
   },
-  darker: function darker$$1(k) {
+  darker: function darker(k) {
     return new Hcl(this.h, this.c, this.l - Kn * (k == null ? 1 : k), this.opacity);
   },
   rgb: function rgb$$1() {
@@ -1954,11 +1954,11 @@ function Cubehelix(h, s, l, opacity) {
 }
 
 define$1(Cubehelix, cubehelix, extend(Color, {
-  brighter: function brighter$$1(k) {
+  brighter: function brighter(k) {
     k = k == null ? _brighter : Math.pow(_brighter, k);
     return new Cubehelix(this.h, this.s, this.l * k, this.opacity);
   },
-  darker: function darker$$1(k) {
+  darker: function darker(k) {
     k = k == null ? _darker : Math.pow(_darker, k);
     return new Cubehelix(this.h, this.s, this.l * k, this.opacity);
   },
@@ -2012,7 +2012,7 @@ function nogamma(a, b) {
   return d ? linear$1(a, d) : constant$2(isNaN(a) ? b : a);
 }
 
-var interpolateRgb = ((function rgbGamma(y) {
+var interpolateRgb = (function rgbGamma(y) {
   var color$$1 = gamma(y);
 
   function rgb$$1(start, end) {
@@ -2032,7 +2032,7 @@ var interpolateRgb = ((function rgbGamma(y) {
   rgb$$1.gamma = rgbGamma;
 
   return rgb$$1;
-}))(1);
+})(1);
 
 var array$2 = function (a, b) {
   var nb = b ? b.length : 0,
@@ -2354,19 +2354,19 @@ function reinterpolateClamp(reinterpolate) {
   };
 }
 
-function bimap(domain, range$$1, deinterpolate, reinterpolate) {
+function bimap(domain, range, deinterpolate, reinterpolate) {
   var d0 = domain[0],
       d1 = domain[1],
-      r0 = range$$1[0],
-      r1 = range$$1[1];
+      r0 = range[0],
+      r1 = range[1];
   if (d1 < d0) d0 = deinterpolate(d1, d0), r0 = reinterpolate(r1, r0);else d0 = deinterpolate(d0, d1), r0 = reinterpolate(r0, r1);
   return function (x) {
     return r0(d0(x));
   };
 }
 
-function polymap(domain, range$$1, deinterpolate, reinterpolate) {
-  var j = Math.min(domain.length, range$$1.length) - 1,
+function polymap(domain, range, deinterpolate, reinterpolate) {
+  var j = Math.min(domain.length, range.length) - 1,
       d = new Array(j),
       r = new Array(j),
       i = -1;
@@ -2374,12 +2374,12 @@ function polymap(domain, range$$1, deinterpolate, reinterpolate) {
   // Reverse descending domains.
   if (domain[j] < domain[0]) {
     domain = domain.slice().reverse();
-    range$$1 = range$$1.slice().reverse();
+    range = range.slice().reverse();
   }
 
   while (++i < j) {
     d[i] = deinterpolate(domain[i], domain[i + 1]);
-    r[i] = reinterpolate(range$$1[i], range$$1[i + 1]);
+    r[i] = reinterpolate(range[i], range[i + 1]);
   }
 
   return function (x) {
@@ -2396,7 +2396,7 @@ function copy(source, target) {
 // reinterpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding domain value x in [a,b].
 function continuous(deinterpolate, reinterpolate) {
   var domain = unit,
-      range$$1 = unit,
+      range = unit,
       interpolate$$1 = interpolate,
       clamp = false,
       piecewise,
@@ -2404,17 +2404,17 @@ function continuous(deinterpolate, reinterpolate) {
       input;
 
   function rescale() {
-    piecewise = Math.min(domain.length, range$$1.length) > 2 ? polymap : bimap;
+    piecewise = Math.min(domain.length, range.length) > 2 ? polymap : bimap;
     output = input = null;
     return scale;
   }
 
   function scale(x) {
-    return (output || (output = piecewise(domain, range$$1, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate$$1)))(+x);
+    return (output || (output = piecewise(domain, range, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate$$1)))(+x);
   }
 
   scale.invert = function (y) {
-    return (input || (input = piecewise(range$$1, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate) : reinterpolate)))(+y);
+    return (input || (input = piecewise(range, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate) : reinterpolate)))(+y);
   };
 
   scale.domain = function (_) {
@@ -2422,11 +2422,11 @@ function continuous(deinterpolate, reinterpolate) {
   };
 
   scale.range = function (_) {
-    return arguments.length ? (range$$1 = slice$1.call(_), rescale()) : range$$1.slice();
+    return arguments.length ? (range = slice$1.call(_), rescale()) : range.slice();
   };
 
   scale.rangeRound = function (_) {
-    return range$$1 = slice$1.call(_), interpolate$$1 = interpolateRound, rescale();
+    return range = slice$1.call(_), interpolate$$1 = interpolateRound, rescale();
   };
 
   scale.clamp = function (_) {
@@ -2562,6 +2562,7 @@ var formatTypes = {
   }
 };
 
+// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -3795,35 +3796,35 @@ function calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1
 
   var tickIntervals = [[second$$1, 1, durationSecond], [second$$1, 5, 5 * durationSecond], [second$$1, 15, 15 * durationSecond], [second$$1, 30, 30 * durationSecond], [minute$$1, 1, durationMinute], [minute$$1, 5, 5 * durationMinute], [minute$$1, 15, 15 * durationMinute], [minute$$1, 30, 30 * durationMinute], [hour$$1, 1, durationHour], [hour$$1, 3, 3 * durationHour], [hour$$1, 6, 6 * durationHour], [hour$$1, 12, 12 * durationHour], [day$$1, 1, durationDay], [day$$1, 2, 2 * durationDay], [week, 1, durationWeek], [month$$1, 1, durationMonth], [month$$1, 3, 3 * durationMonth], [year$$1, 1, durationYear]];
 
-  function tickFormat(date) {
-    return (second$$1(date) < date ? formatMillisecond : minute$$1(date) < date ? formatSecond : hour$$1(date) < date ? formatMinute : day$$1(date) < date ? formatHour : month$$1(date) < date ? week(date) < date ? formatDay : formatWeek : year$$1(date) < date ? formatMonth : formatYear)(date);
+  function tickFormat(date$$1) {
+    return (second$$1(date$$1) < date$$1 ? formatMillisecond : minute$$1(date$$1) < date$$1 ? formatSecond : hour$$1(date$$1) < date$$1 ? formatMinute : day$$1(date$$1) < date$$1 ? formatHour : month$$1(date$$1) < date$$1 ? week(date$$1) < date$$1 ? formatDay : formatWeek : year$$1(date$$1) < date$$1 ? formatMonth : formatYear)(date$$1);
   }
 
-  function tickInterval(interval, start, stop, step) {
-    if (interval == null) interval = 10;
+  function tickInterval(interval$$1, start, stop, step) {
+    if (interval$$1 == null) interval$$1 = 10;
 
     // If a desired tick count is specified, pick a reasonable tick interval
     // based on the extent of the domain and a rough estimate of tick size.
     // Otherwise, assume interval is already a time interval and use it.
-    if (typeof interval === "number") {
-      var target = Math.abs(stop - start) / interval,
+    if (typeof interval$$1 === "number") {
+      var target = Math.abs(stop - start) / interval$$1,
           i = bisector(function (i) {
         return i[2];
       }).right(tickIntervals, target);
       if (i === tickIntervals.length) {
-        step = tickStep(start / durationYear, stop / durationYear, interval);
-        interval = year$$1;
+        step = tickStep(start / durationYear, stop / durationYear, interval$$1);
+        interval$$1 = year$$1;
       } else if (i) {
         i = tickIntervals[target / tickIntervals[i - 1][2] < tickIntervals[i][2] / target ? i - 1 : i];
         step = i[1];
-        interval = i[0];
+        interval$$1 = i[0];
       } else {
-        step = tickStep(start, stop, interval);
-        interval = millisecond$$1;
+        step = tickStep(start, stop, interval$$1);
+        interval$$1 = millisecond$$1;
       }
     }
 
-    return step == null ? interval : interval.every(step);
+    return step == null ? interval$$1 : interval$$1.every(step);
   }
 
   scale.invert = function (y) {
@@ -3834,14 +3835,14 @@ function calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1
     return arguments.length ? domain(map$3.call(_, number$2)) : domain().map(date$1);
   };
 
-  scale.ticks = function (interval, step) {
+  scale.ticks = function (interval$$1, step) {
     var d = domain(),
         t0 = d[0],
         t1 = d[d.length - 1],
         r = t1 < t0,
         t;
     if (r) t = t0, t0 = t1, t1 = t;
-    t = tickInterval(interval, t0, t1, step);
+    t = tickInterval(interval$$1, t0, t1, step);
     t = t ? t.range(t0, t1 + 1) : []; // inclusive stop
     return r ? t.reverse() : t;
   };
@@ -3850,9 +3851,9 @@ function calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1
     return specifier == null ? tickFormat : format(specifier);
   };
 
-  scale.nice = function (interval, step) {
+  scale.nice = function (interval$$1, step) {
     var d = domain();
-    return (interval = tickInterval(interval, d[0], d[d.length - 1], step)) ? domain(nice(d, interval)) : scale;
+    return (interval$$1 = tickInterval(interval$$1, d[0], d[d.length - 1], step)) ? domain(nice(d, interval$$1)) : scale;
   };
 
   scale.copy = function () {
@@ -4522,11 +4523,17 @@ function translateY(y) {
   return "translate(0," + (y + 0.5) + ")";
 }
 
+function number$3(scale) {
+  return function (d) {
+    return +scale(d);
+  };
+}
+
 function center(scale) {
   var offset = Math.max(0, scale.bandwidth() - 1) / 2; // Adjust for 0.5px offset.
   if (scale.round()) offset = Math.round(offset);
   return function (d) {
-    return scale(d) + offset;
+    return +scale(d) + offset;
   };
 }
 
@@ -4550,9 +4557,9 @@ function axis(orient, scale) {
         format = tickFormat == null ? scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity$5 : tickFormat,
         spacing = Math.max(tickSizeInner, 0) + tickPadding,
         range = scale.range(),
-        range0 = range[0] + 0.5,
-        range1 = range[range.length - 1] + 0.5,
-        position = (scale.bandwidth ? center : identity$5)(scale.copy()),
+        range0 = +range[0] + 0.5,
+        range1 = +range[range.length - 1] + 0.5,
+        position = (scale.bandwidth ? center : number$3)(scale.copy()),
         selection = context.selection ? context.selection() : context,
         path = selection.selectAll(".domain").data([null]),
         tick = selection.selectAll(".tick").data(values, scale).order(),
@@ -4719,6 +4726,7 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
+// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -5160,7 +5168,7 @@ function create(node, id, self) {
 
 var interrupt = function (node, name) {
   var schedules = node.__transition,
-      schedule,
+      schedule$$1,
       active,
       empty = true,
       i;
@@ -5170,13 +5178,13 @@ var interrupt = function (node, name) {
   name = name == null ? null : name + "";
 
   for (i in schedules) {
-    if ((schedule = schedules[i]).name !== name) {
+    if ((schedule$$1 = schedules[i]).name !== name) {
       empty = false;continue;
     }
-    active = schedule.state > STARTING && schedule.state < ENDING;
-    schedule.state = ENDED;
-    schedule.timer.stop();
-    if (active) schedule.on.call("interrupt", node, node.__data__, schedule.index, schedule.group);
+    active = schedule$$1.state > STARTING && schedule$$1.state < ENDING;
+    schedule$$1.state = ENDED;
+    schedule$$1.timer.stop();
+    if (active) schedule$$1.on.call("interrupt", node, node.__data__, schedule$$1.index, schedule$$1.group);
     delete schedules[i];
   }
 
@@ -5192,8 +5200,8 @@ var selection_interrupt = function (name) {
 function tweenRemove(id, name) {
   var tween0, tween1;
   return function () {
-    var schedule = set$4(this, id),
-        tween = schedule.tween;
+    var schedule$$1 = set$4(this, id),
+        tween = schedule$$1.tween;
 
     // If this node shared tween with the previous node,
     // just assign the updated shared tween and we’re done!
@@ -5209,7 +5217,7 @@ function tweenRemove(id, name) {
       }
     }
 
-    schedule.tween = tween1;
+    schedule$$1.tween = tween1;
   };
 }
 
@@ -5217,8 +5225,8 @@ function tweenFunction(id, name, value) {
   var tween0, tween1;
   if (typeof value !== "function") throw new Error();
   return function () {
-    var schedule = set$4(this, id),
-        tween = schedule.tween;
+    var schedule$$1 = set$4(this, id),
+        tween = schedule$$1.tween;
 
     // If this node shared tween with the previous node,
     // just assign the updated shared tween and we’re done!
@@ -5234,7 +5242,7 @@ function tweenFunction(id, name, value) {
       if (i === n) tween1.push(t);
     }
 
-    schedule.tween = tween1;
+    schedule$$1.tween = tween1;
   };
 }
 
@@ -5260,8 +5268,8 @@ function tweenValue(transition, name, value) {
   var id = transition._id;
 
   transition.each(function () {
-    var schedule = set$4(this, id);
-    (schedule.value || (schedule.value = {}))[name] = value.apply(this, arguments);
+    var schedule$$1 = set$4(this, id);
+    (schedule$$1.value || (schedule$$1.value = {}))[name] = value.apply(this, arguments);
   });
 
   return function (node) {
@@ -5426,10 +5434,10 @@ var transition_filter = function (match) {
   return new Transition(subgroups, this._parents, this._name, this._id);
 };
 
-var transition_merge = function (transition) {
-  if (transition._id !== this._id) throw new Error();
+var transition_merge = function (transition$$1) {
+  if (transition$$1._id !== this._id) throw new Error();
 
-  for (var groups0 = this._groups, groups1 = transition._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
+  for (var groups0 = this._groups, groups1 = transition$$1._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
     for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) {
       if (node = group0[i] || group1[i]) {
         merge[i] = node;
@@ -5457,15 +5465,15 @@ function onFunction(id, name, listener) {
       on1,
       sit = start(name) ? init : set$4;
   return function () {
-    var schedule = sit(this, id),
-        on = schedule.on;
+    var schedule$$1 = sit(this, id),
+        on = schedule$$1.on;
 
     // If this node shared a dispatch with the previous node,
     // just assign the updated shared dispatch and we’re done!
     // Otherwise, copy-on-write.
     if (on !== on0) (on1 = (on0 = on).copy()).on(name, listener);
 
-    schedule.on = on1;
+    schedule$$1.on = on1;
   };
 }
 
@@ -6603,19 +6611,19 @@ var ParCoords = function ParCoords(config) {
             }
         });
     }
-    var pc = function pc(selection$$1) {
-        selection$$1 = pc.selection = select(selection$$1);
+    var pc = function pc(selection) {
+        selection = pc.selection = select(selection);
 
-        __.width = selection$$1.node().clientWidth;
-        __.height = selection$$1.node().clientHeight;
+        __.width = selection.node().clientWidth;
+        __.height = selection.node().clientHeight;
         // canvas data layers
         ["marks", "foreground", "brushed", "highlight"].forEach(function (layer) {
-            canvas[layer] = selection$$1.append("canvas").attr("class", layer).node();
+            canvas[layer] = selection.append("canvas").attr("class", layer).node();
             ctx[layer] = canvas[layer].getContext("2d");
         });
 
         // svg tick and brush layers
-        pc.svg = selection$$1.append("svg").attr("width", __.width).attr("height", __.height).style("font", "14px sans-serif").style("position", "absolute").append("svg:g").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+        pc.svg = selection.append("svg").attr("width", __.width).attr("height", __.height).style("font", "14px sans-serif").style("position", "absolute").append("svg:g").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
 
         return pc;
     };
@@ -8291,18 +8299,18 @@ var ParCoords = function ParCoords(config) {
         var arcs = {},
             strumRect = void 0;
 
-        function drawStrum(arc$$1, activePoint) {
+        function drawStrum(arc, activePoint) {
             var svg = pc.selection.select("svg").select("g#arcs"),
-                id = arc$$1.dims.i,
-                points = [arc$$1.p2, arc$$1.p3],
-                _line = svg.selectAll("line#arc-" + id).data([{ p1: arc$$1.p1, p2: arc$$1.p2 }, { p1: arc$$1.p1, p2: arc$$1.p3 }]),
+                id = arc.dims.i,
+                points = [arc.p2, arc.p3],
+                _line = svg.selectAll("line#arc-" + id).data([{ p1: arc.p1, p2: arc.p2 }, { p1: arc.p1, p2: arc.p3 }]),
                 circles = svg.selectAll("circle#arc-" + id).data(points),
                 _drag = drag(),
-                _path = svg.selectAll("path#arc-" + id).data([arc$$1]);
+                _path = svg.selectAll("path#arc-" + id).data([arc]);
 
             _path.enter().append("path").attr("id", "arc-" + id).attr("class", "arc").style("fill", "orange").style("opacity", 0.5);
 
-            _path.attr("d", arc$$1.arc).attr("transform", "translate(" + arc$$1.p1[0] + "," + arc$$1.p1[1] + ")");
+            _path.attr("d", arc.arc).attr("transform", "translate(" + arc.p1[0] + "," + arc.p1[1] + ")");
 
             _line.enter().append("line").attr("id", "arc-" + id).attr("class", "arc");
 
@@ -8322,23 +8330,23 @@ var ParCoords = function ParCoords(config) {
 
                 i = i + 2;
 
-                arc$$1["p" + i][0] = Math.min(Math.max(arc$$1.minX + 1, ev.x), arc$$1.maxX);
-                arc$$1["p" + i][1] = Math.min(Math.max(arc$$1.minY, ev.y), arc$$1.maxY);
+                arc["p" + i][0] = Math.min(Math.max(arc.minX + 1, ev.x), arc.maxX);
+                arc["p" + i][1] = Math.min(Math.max(arc.minY, ev.y), arc.maxY);
 
                 angle = i === 3 ? arcs.startAngle(id) : arcs.endAngle(id);
 
-                if (arc$$1.startAngle < Math.PI && arc$$1.endAngle < Math.PI && angle < Math.PI || arc$$1.startAngle >= Math.PI && arc$$1.endAngle >= Math.PI && angle >= Math.PI) {
+                if (arc.startAngle < Math.PI && arc.endAngle < Math.PI && angle < Math.PI || arc.startAngle >= Math.PI && arc.endAngle >= Math.PI && angle >= Math.PI) {
 
                     if (i === 2) {
-                        arc$$1.endAngle = angle;
-                        arc$$1.arc.endAngle(angle);
+                        arc.endAngle = angle;
+                        arc.arc.endAngle(angle);
                     } else if (i === 3) {
-                        arc$$1.startAngle = angle;
-                        arc$$1.arc.startAngle(angle);
+                        arc.startAngle = angle;
+                        arc.arc.startAngle(angle);
                     }
                 }
 
-                drawStrum(arc$$1, i - 2);
+                drawStrum(arc, i - 2);
             }).on("end", onDragEnd());
 
             circles.enter().append("circle").attr("id", "arc-" + id).attr("class", "arc");
@@ -8392,12 +8400,12 @@ var ParCoords = function ParCoords(config) {
             return function () {
                 var p = mouse(strumRect.node()),
                     dims = void 0,
-                    arc$$1 = void 0;
+                    arc = void 0;
 
                 p[0] = p[0] - __.margin.left;
                 p[1] = p[1] - __.margin.top;
 
-                dims = dimensionsForPoint(p), arc$$1 = {
+                dims = dimensionsForPoint(p), arc = {
                     p1: p,
                     dims: dims,
                     minX: xscale(dims.left),
@@ -8409,28 +8417,28 @@ var ParCoords = function ParCoords(config) {
                     arc: d3Arc().innerRadius(0)
                 };
 
-                arcs[dims.i] = arc$$1;
+                arcs[dims.i] = arc;
                 arcs.active = dims.i;
 
                 // Make sure that the point is within the bounds
-                arc$$1.p1[0] = Math.min(Math.max(arc$$1.minX, p[0]), arc$$1.maxX);
-                arc$$1.p2 = arc$$1.p1.slice();
-                arc$$1.p3 = arc$$1.p1.slice();
+                arc.p1[0] = Math.min(Math.max(arc.minX, p[0]), arc.maxX);
+                arc.p2 = arc.p1.slice();
+                arc.p3 = arc.p1.slice();
             };
         }
 
         function onDrag() {
             return function () {
                 var ev = event,
-                    arc$$1 = arcs[arcs.active];
+                    arc = arcs[arcs.active];
 
                 // Make sure that the point is within the bounds
-                arc$$1.p2[0] = Math.min(Math.max(arc$$1.minX + 1, ev.x - __.margin.left), arc$$1.maxX);
-                arc$$1.p2[1] = Math.min(Math.max(arc$$1.minY, ev.y - __.margin.top), arc$$1.maxY);
-                arc$$1.p3 = arc$$1.p2.slice();
+                arc.p2[0] = Math.min(Math.max(arc.minX + 1, ev.x - __.margin.left), arc.maxX);
+                arc.p2[1] = Math.min(Math.max(arc.minY, ev.y - __.margin.top), arc.maxY);
+                arc.p3 = arc.p2.slice();
                 // console.log(arcs.angle(arcs.active));
                 // console.log(signedAngle(arcs.unsignedAngle(arcs.active)));
-                drawStrum(arc$$1, 1);
+                drawStrum(arc, 1);
             };
         }
 
@@ -8472,9 +8480,9 @@ var ParCoords = function ParCoords(config) {
          * 'signed' angle, where 0 is the horizontal line (3 o'clock), and +/- PI/2
          * are 12 and 6 o'clock respectively.
          */
-        function containmentTest(arc$$1) {
-            var startAngle = signedAngle(arc$$1.startAngle);
-            var endAngle = signedAngle(arc$$1.endAngle);
+        function containmentTest(arc) {
+            var startAngle = signedAngle(arc.startAngle);
+            var endAngle = signedAngle(arc.endAngle);
 
             if (startAngle > endAngle) {
                 var tmp = startAngle;
@@ -8503,10 +8511,10 @@ var ParCoords = function ParCoords(config) {
             });
 
             function crossesStrum(d, id) {
-                var arc$$1 = arcs[id],
-                    test = containmentTest(arc$$1),
-                    d1 = arc$$1.dims.left,
-                    d2 = arc$$1.dims.right,
+                var arc = arcs[id],
+                    test = containmentTest(arc),
+                    d1 = arc.dims.left,
+                    d2 = arc.dims.right,
                     y1 = __.dimensions[d1].yscale,
                     y2 = __.dimensions[d2].yscale,
                     a = arcs.width(id),
@@ -8537,33 +8545,33 @@ var ParCoords = function ParCoords(config) {
         }
 
         function removeStrum() {
-            var arc$$1 = arcs[arcs.active],
+            var arc = arcs[arcs.active],
                 svg = pc.selection.select("svg").select("g#arcs");
 
             delete arcs[arcs.active];
             arcs.active = undefined;
-            svg.selectAll("line#arc-" + arc$$1.dims.i).remove();
-            svg.selectAll("circle#arc-" + arc$$1.dims.i).remove();
-            svg.selectAll("path#arc-" + arc$$1.dims.i).remove();
+            svg.selectAll("line#arc-" + arc.dims.i).remove();
+            svg.selectAll("circle#arc-" + arc.dims.i).remove();
+            svg.selectAll("path#arc-" + arc.dims.i).remove();
         }
 
         function onDragEnd() {
             return function () {
                 var brushed = __.data,
-                    arc$$1 = arcs[arcs.active];
+                    arc = arcs[arcs.active];
 
                 // Okay, somewhat unexpected, but not totally unsurprising, a mousclick is
                 // considered a drag without move. So we have to deal with that case
-                if (arc$$1 && arc$$1.p1[0] === arc$$1.p2[0] && arc$$1.p1[1] === arc$$1.p2[1]) {
+                if (arc && arc.p1[0] === arc.p2[0] && arc.p1[1] === arc.p2[1]) {
                     removeStrum(arcs);
                 }
 
-                if (arc$$1) {
+                if (arc) {
                     var angle = arcs.startAngle(arcs.active);
 
-                    arc$$1.startAngle = angle;
-                    arc$$1.endAngle = angle;
-                    arc$$1.arc.outerRadius(arcs.length(arcs.active)).startAngle(angle).endAngle(angle);
+                    arc.startAngle = angle;
+                    arc.endAngle = angle;
+                    arc.arc.outerRadius(arcs.length(arcs.active)).startAngle(angle).endAngle(angle);
                 }
 
                 brushed = selected(arcs);
@@ -8601,13 +8609,13 @@ var ParCoords = function ParCoords(config) {
             // implementation, we keep for when non-even spaced segments are supported as
             // well.
             arcs.width = function (id) {
-                var arc$$1 = arcs[id];
+                var arc = arcs[id];
 
-                if (arc$$1 === undefined) {
+                if (arc === undefined) {
                     return undefined;
                 }
 
-                return arc$$1.maxX - arc$$1.minX;
+                return arc.maxX - arc.minX;
             };
 
             // returns angles in [-PI/2, PI/2]
@@ -8621,14 +8629,14 @@ var ParCoords = function ParCoords(config) {
 
             // returns angles in [0, 2 * PI]
             arcs.endAngle = function (id) {
-                var arc$$1 = arcs[id];
-                if (arc$$1 === undefined) {
+                var arc = arcs[id];
+                if (arc === undefined) {
                     return undefined;
                 }
-                var sAngle = angle(arc$$1.p1, arc$$1.p2),
+                var sAngle = angle(arc.p1, arc.p2),
                     uAngle = -sAngle + Math.PI / 2;
 
-                if (arc$$1.p1[0] > arc$$1.p2[0]) {
+                if (arc.p1[0] > arc.p2[0]) {
                     uAngle = 2 * Math.PI - uAngle;
                 }
 
@@ -8636,15 +8644,15 @@ var ParCoords = function ParCoords(config) {
             };
 
             arcs.startAngle = function (id) {
-                var arc$$1 = arcs[id];
-                if (arc$$1 === undefined) {
+                var arc = arcs[id];
+                if (arc === undefined) {
                     return undefined;
                 }
 
-                var sAngle = angle(arc$$1.p1, arc$$1.p3),
+                var sAngle = angle(arc.p1, arc.p3),
                     uAngle = -sAngle + Math.PI / 2;
 
-                if (arc$$1.p1[0] > arc$$1.p3[0]) {
+                if (arc.p1[0] > arc.p3[0]) {
                     uAngle = 2 * Math.PI - uAngle;
                 }
 
@@ -8652,14 +8660,14 @@ var ParCoords = function ParCoords(config) {
             };
 
             arcs.length = function (id) {
-                var arc$$1 = arcs[id];
+                var arc = arcs[id];
 
-                if (arc$$1 === undefined) {
+                if (arc === undefined) {
                     return undefined;
                 }
 
-                var a = arc$$1.p1[0] - arc$$1.p2[0],
-                    b = arc$$1.p1[1] - arc$$1.p2[1],
+                var a = arc.p1[0] - arc.p2[0],
+                    b = arc.p1[1] - arc.p2[1],
                     c = hypothenuse(a, b);
 
                 return c;

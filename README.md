@@ -27,7 +27,7 @@ npm install parcoords-es --save
 
 ```
 import 'parcoords-es/parcoords.css';
-impoart ParCoords from 'parcoords-es';
+import ParCoords from 'parcoords-es';
 
 const _chart = ParCoords()....
 ```
@@ -41,7 +41,7 @@ parcoords.standalone.js contains all dependencies and can be used directly in yo
 var parcoords = ParCoords()("#example")
 ```
 
-You are free to use either D3 V3 or D3 V4 in your html. demo/superformula.html demonstrates how to use parcoords-es with d3 v3 libraries.
+You are free to use either D3 V3 or D3 V4 in your html. demo/superformula.html demonstrates how to use parcoords-es with d3 V3.
 
 ## Development
 
@@ -77,7 +77,12 @@ run all unit tests and generate test coverage report.
 npm run test:cover
 ```
 
+## Release Notes
+1.0.1 Bugfix: 
+* SVG is scaled along with canvas if Retina devices are detected. 
+* Events are exposed
 
+1.0.0 initial release
 ## Built With
 
 * [D3 V4](http://www.dropwizard.io/1.0.2/docs/) - D3 modules are used
