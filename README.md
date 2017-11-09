@@ -20,16 +20,16 @@ Limitation: parcoords-es doesn't have multi-brush mode. (all other brush modes w
 ### ES6
 1. Install library in your project
 ```
-npm install parcoords-es --save
+npm install parcoord-es --save
 ```
 
 2. import module
 
 ```
-import 'parcoords-es/parcoords.css';
-import ParCoords from 'parcoords-es';
+import 'parcoord-es/parcoords.css';
+import ParCoords from 'parcoord-es';
 
-const _chart = ParCoords()....
+const chart = ParCoords()....
 ```
 ### Standalone
 
