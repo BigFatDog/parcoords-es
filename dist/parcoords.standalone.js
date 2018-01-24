@@ -6753,7 +6753,7 @@ var ParCoords = function ParCoords(config) {
                 });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
-                    return point$1().domain([_extent[0]]).range(getRange());
+                    return point$1().domain(_extent).range(getRange());
                 }
                 if (__.flipAxes.includes(k)) {
                     var tempDate = [];
@@ -6770,7 +6770,7 @@ var ParCoords = function ParCoords(config) {
                 });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
-                    return ordinal().domain([_extent[0]]).range(getRange());
+                    return point$1().domain(_extent).range(getRange());
                 }
                 if (__.flipAxes.includes(k)) {
                     var temp = [];
@@ -7816,10 +7816,10 @@ var ParCoords = function ParCoords(config) {
                 extents = actives.map(function (p) {
                 var _brushRange = brushSelection(brushNodes[p]);
 
-                if (__.dimensions[p].type === 'string') {
-                    return _brushRange;
-                } else {
+                if (typeof __.dimensions[p].yscale.invert === 'function') {
                     return [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
+                } else {
+                    return _brushRange;
                 }
             });
             // We don't want to return the full data set when there are no axes brushed.

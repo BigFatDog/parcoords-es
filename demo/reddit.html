@@ -14,9 +14,9 @@ html, body { width: 100%; }
 #thumbnails img { height: 110px; padding-right: 12px; }
 </style>
 <script src="https://code.jquery.com/jquery-1.9.1.min.js"></script>
-<script src="lib/d3.v4.min.js"></script>
+<script src="./lib/d3.v3.min.js"></script>
 <script src="./parcoords.standalone.js"></script>
-<script src="lib/divgrid.js"></script>
+<script src="./lib/divgrid.js"></script>
 <div id="example" class="parcoords"></div>
 <div id="thumbnails"></div>
 <div id="grid"></div>
@@ -65,20 +65,20 @@ $.getJSON('http://www.reddit.com/.json?limit=100&jsonp=?', function(raw) {
   });
 
   function updateThumbnails(data) {
-    // var imgs = d3.select("#thumbnails")
-    //   .selectAll("img")
-    //   .data(data, function(d) { return d.thumbnail })
-    // imgs.exit().remove();
-    //
-    // imgs.enter()
-    //   .append("a")
-    //   .attr("href", function(d) { return d.url; })
-    //   .append("img")
-    //   .attr("src", function(d) { return d.thumbnail; })
-    //   .on({
-    //     "mouseover": function(d) { parcoords.highlight([d]) },
-    //     "mouseout": parcoords.unhighlight
-    //   })
+    var imgs = d3.select("#thumbnails")
+      .selectAll("img")
+      .data(data, function(d) { return d.thumbnail })
+    imgs.exit().remove();
+
+    imgs.enter()
+      .append("a")
+      .attr("href", function(d) { return d.url; })
+      .append("img")
+      .attr("src", function(d) { return d.thumbnail; })
+      .on({
+        "mouseover": function(d) { parcoords.highlight([d]) },
+        "mouseout": parcoords.unhighlight
+      })
   };
 });
 </script>
