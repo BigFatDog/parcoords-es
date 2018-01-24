@@ -300,7 +300,7 @@ var ParCoords = function ParCoords(config) {
                 });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
-                    return scalePoint().domain([_extent[0]]).range(getRange());
+                    return scalePoint().domain(_extent).range(getRange());
                 }
                 if (__.flipAxes.includes(k)) {
                     var tempDate = [];
@@ -317,7 +317,7 @@ var ParCoords = function ParCoords(config) {
                 });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
-                    return scaleOrdinal().domain([_extent[0]]).range(getRange());
+                    return scalePoint().domain(_extent).range(getRange());
                 }
                 if (__.flipAxes.includes(k)) {
                     var temp = [];
@@ -1362,8 +1362,12 @@ var ParCoords = function ParCoords(config) {
             var actives = keys(__.dimensions).filter(is_brushed),
                 extents = actives.map(function (p) {
                 var _brushRange = brushSelection(brushNodes[p]);
-                var _projected = [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
-                return _projected;
+
+                if (typeof __.dimensions[p].yscale.invert === 'function') {
+                    return [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
+                } else {
+                    return _brushRange;
+                }
             });
             // We don't want to return the full data set when there are no axes brushed.
             // Actually, when there are no axes brushed, by definition, no items are
@@ -1458,7 +1462,9 @@ var ParCoords = function ParCoords(config) {
         }
 
         function brushFor(axis, _selector) {
-            var _brush = brushY(_selector).extent([[-15, 0], [15, __.dimensions[axis].yscale.range()[0]]]);
+            var brushRangeMax = __.dimensions[axis].type === 'string' ? __.dimensions[axis].yscale.range()[__.dimensions[axis].yscale.range().length - 1] : __.dimensions[axis].yscale.range()[0];
+
+            var _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
             _brush.on("start", function () {
                 if (event.sourceEvent !== null) {
