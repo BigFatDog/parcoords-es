@@ -1392,9 +1392,13 @@ const ParCoords = (config)=> {
         function selected() {
             let actives = keys(__.dimensions).filter(is_brushed),
                 extents = actives.map(function(p) {
-                    let _brushRange = brushSelection(brushNodes[p]);
-                    let _projected = [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
-                    return _projected;
+                    const _brushRange = brushSelection(brushNodes[p]);
+
+                    if (__.dimensions[p].type === 'string') {
+                        return _brushRange;
+                    } else {
+                        return [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
+                    }
                 });
             // We don't want to return the full data set when there are no axes brushed.
             // Actually, when there are no axes brushed, by definition, no items are
@@ -1496,8 +1500,12 @@ const ParCoords = (config)=> {
         }
 
         function brushFor(axis, _selector) {
+            const brushRangeMax = __.dimensions[axis].type === 'string' ?
+                __.dimensions[axis].yscale.range()[__.dimensions[axis].yscale.range().length - 1] :
+                __.dimensions[axis].yscale.range()[0];
+
             let _brush = brushY(_selector)
-                .extent([[-15, 0], [15, __.dimensions[axis].yscale.range()[0]]]);
+                .extent([[-15, 0], [15, brushRangeMax]]);
 
             _brush
                 .on("start", function() {

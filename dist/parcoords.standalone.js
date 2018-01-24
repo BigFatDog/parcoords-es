@@ -2562,7 +2562,6 @@ var formatTypes = {
   }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4726,7 +4725,6 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7817,8 +7815,12 @@ var ParCoords = function ParCoords(config) {
             var actives = keys(__.dimensions).filter(is_brushed),
                 extents = actives.map(function (p) {
                 var _brushRange = brushSelection(brushNodes[p]);
-                var _projected = [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
-                return _projected;
+
+                if (__.dimensions[p].type === 'string') {
+                    return _brushRange;
+                } else {
+                    return [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
+                }
             });
             // We don't want to return the full data set when there are no axes brushed.
             // Actually, when there are no axes brushed, by definition, no items are
@@ -7913,7 +7915,9 @@ var ParCoords = function ParCoords(config) {
         }
 
         function brushFor(axis, _selector) {
-            var _brush = brushY(_selector).extent([[-15, 0], [15, __.dimensions[axis].yscale.range()[0]]]);
+            var brushRangeMax = __.dimensions[axis].type === 'string' ? __.dimensions[axis].yscale.range()[__.dimensions[axis].yscale.range().length - 1] : __.dimensions[axis].yscale.range()[0];
+
+            var _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
             _brush.on("start", function () {
                 if (event.sourceEvent !== null) {
