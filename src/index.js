@@ -217,7 +217,7 @@ const ParCoords = (config)=> {
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
                     return scalePoint()
-                        .domain([_extent[0]])
+                        .domain(_extent)
                         .range(getRange());
                 }
                 if (__.flipAxes.includes(k)) {
@@ -235,8 +235,8 @@ const ParCoords = (config)=> {
                 let _extent = extent(__.data, function(d) { return +d[k]; });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
-                    return scaleOrdinal()
-                        .domain([_extent[0]])
+                    return scalePoint()
+                        .domain(_extent)
                         .range(getRange());
                 }
                 if (__.flipAxes.includes(k)) {
@@ -1394,10 +1394,10 @@ const ParCoords = (config)=> {
                 extents = actives.map(function(p) {
                     const _brushRange = brushSelection(brushNodes[p]);
 
-                    if (__.dimensions[p].type === 'string') {
-                        return _brushRange;
-                    } else {
+                    if (typeof __.dimensions[p].yscale.invert === 'function') {
                         return [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
+                    } else {
+                        return _brushRange;
                     }
                 });
             // We don't want to return the full data set when there are no axes brushed.

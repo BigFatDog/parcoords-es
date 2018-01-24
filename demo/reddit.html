@@ -1,10 +1,10 @@
 <!doctype html>
 <title>Reddit Top 100 with Thumbnails</title>
 <link rel="stylesheet" type="text/css" href="./parcoords.css">
-<link rel="stylesheet" type="text/css" href="style.css">
+<link rel="stylesheet" type="text/css" href="./style.css">
 <style>
 html, body { width: 100%; }
-#example { width: 100%; height: 400px; position: fixed; top: 10px;}
+#example { width: 90%; height: 400px; position: fixed; top: 10px; left: 5%}
 #grid { height: 198px; width: 3800px;}
 #thumbnails { height: 110px; width: 3800px; overflow: hidden; margin-top: 412px; }
 .row, .header { clear: left; font-size: 12px; line-height: 18px; height: 18px; }
@@ -31,6 +31,7 @@ $.getJSON('http://www.reddit.com/.json?limit=100&jsonp=?', function(raw) {
   var data = raw['data']['children'].map(function(d) { return d.data });
 
   parcoords
+     .margin({ top: 20, bottom: 10, left: 20, right: 20})
     .data(data)
     .dimensions(dimensions)
     .render()
@@ -64,19 +65,20 @@ $.getJSON('http://www.reddit.com/.json?limit=100&jsonp=?', function(raw) {
   });
 
   function updateThumbnails(data) {
-    var imgs = d3.select("#thumbnails")
-      .selectAll("img")
-      .data(data, function(d) { return d.thumbnail })
-    imgs.exit().remove();
-    imgs.enter()
-      .append("a")
-      .attr("href", function(d) { return d.url; })
-      .append("img")
-      .attr("src", function(d) { return d.thumbnail; })
-      .on({
-        "mouseover": function(d) { parcoords.highlight([d]) },
-        "mouseout": parcoords.unhighlight
-      })
+    // var imgs = d3.select("#thumbnails")
+    //   .selectAll("img")
+    //   .data(data, function(d) { return d.thumbnail })
+    // imgs.exit().remove();
+    //
+    // imgs.enter()
+    //   .append("a")
+    //   .attr("href", function(d) { return d.url; })
+    //   .append("img")
+    //   .attr("src", function(d) { return d.thumbnail; })
+    //   .on({
+    //     "mouseover": function(d) { parcoords.highlight([d]) },
+    //     "mouseout": parcoords.unhighlight
+    //   })
   };
 });
 </script>
