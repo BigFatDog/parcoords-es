@@ -5,102 +5,131 @@
 }(this, (function (d3Selection,d3Collection,d3Dispatch,d3Array,d3Scale,d3Shape,d3Axis,d3Brush,d3Drag) { 'use strict';
 
 var renderQueue = function renderQueue(func) {
-    var _queue = [],
-        // data to be rendered
-    _rate = 1000,
-        // number of calls per frame
-    _invalidate = function _invalidate() {},
-        // invalidate last render queue
-    _clear = function _clear() {}; // clearing function
+  var _queue = [],
+      // data to be rendered
+  _rate = 1000,
+      // number of calls per frame
+  _invalidate = function _invalidate() {},
+      // invalidate last render queue
+  _clear = function _clear() {}; // clearing function
 
-    var rq = function rq(data) {
-        if (data) rq.data(data);
-        _invalidate();
-        _clear();
-        rq.render();
+  var rq = function rq(data) {
+    if (data) rq.data(data);
+    _invalidate();
+    _clear();
+    rq.render();
+  };
+
+  rq.render = function () {
+    var valid = true;
+    _invalidate = rq.invalidate = function () {
+      valid = false;
     };
 
-    rq.render = function () {
-        var valid = true;
-        _invalidate = rq.invalidate = function () {
-            valid = false;
-        };
+    function doFrame() {
+      if (!valid) return true;
+      var chunk = _queue.splice(0, _rate);
+      chunk.map(func);
+      requestAnimationFrame(doFrame);
+    }
 
-        function doFrame() {
-            if (!valid) return true;
-            var chunk = _queue.splice(0, _rate);
-            chunk.map(func);
-            requestAnimationFrame(doFrame);
-        }
+    doFrame();
+  };
 
-        doFrame();
-    };
-
-    rq.data = function (data) {
-        _invalidate();
-        _queue = data.slice(0); // creates a copy of the data
-        return rq;
-    };
-
-    rq.add = function (data) {
-        _queue = _queue.concat(data);
-    };
-
-    rq.rate = function (value) {
-        if (!arguments.length) return _rate;
-        _rate = value;
-        return rq;
-    };
-
-    rq.remaining = function () {
-        return _queue.length;
-    };
-
-    // clear the canvas
-    rq.clear = function (func) {
-        if (!arguments.length) {
-            _clear();
-            return rq;
-        }
-        _clear = func;
-        return rq;
-    };
-
-    rq.invalidate = _invalidate;
-
+  rq.data = function (data) {
+    _invalidate();
+    _queue = data.slice(0); // creates a copy of the data
     return rq;
+  };
+
+  rq.add = function (data) {
+    _queue = _queue.concat(data);
+  };
+
+  rq.rate = function (value) {
+    if (!arguments.length) return _rate;
+    _rate = value;
+    return rq;
+  };
+
+  rq.remaining = function () {
+    return _queue.length;
+  };
+
+  // clear the canvas
+  rq.clear = function (func) {
+    if (!arguments.length) {
+      _clear();
+      return rq;
+    }
+    _clear = func;
+    return rq;
+  };
+
+  rq.invalidate = _invalidate;
+
+  return rq;
 };
 
 var extend = function extend(target, source) {
-    for (var key in source) {
-        target[key] = source[key];
-    }
-    return target;
+  for (var key in source) {
+    target[key] = source[key];
+  }
+  return target;
 };
 
 var without = function without(arr, items) {
-    items.forEach(function (el) {
-        delete arr[el];
-    });
-    return arr;
+  items.forEach(function (el) {
+    delete arr[el];
+  });
+  return arr;
 };
 
 var d3_rebind = function d3_rebind(target, source, method) {
-    return function () {
-        var value = method.apply(source, arguments);
-        return value === source ? target : value;
-    };
+  return function () {
+    var value = method.apply(source, arguments);
+    return value === source ? target : value;
+  };
 };
 
 var _rebind = function _rebind(target, source, method) {
-    target[method] = d3_rebind(target, source, source[method]);
-    return target;
+  target[method] = d3_rebind(target, source, source[method]);
+  return target;
 };
 
 var _functor = function _functor(v) {
-    return typeof v === "function" ? v : function () {
-        return v;
-    };
+  return typeof v === 'function' ? v : function () {
+    return v;
+  };
+};
+
+var InitialState = {
+    data: [],
+    highlighted: [],
+    dimensions: {},
+    dimensionTitleRotation: 0,
+    brushes: [],
+    brushed: false,
+    brushedColor: null,
+    alphaOnBrushed: 0.0,
+    mode: 'default',
+    rate: 20,
+    width: 600,
+    height: 300,
+    margin: { top: 24, right: 20, bottom: 12, left: 20 },
+    nullValueSeparator: 'undefined', // set to "top" or "bottom"
+    nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
+    color: '#069',
+    composite: 'source-over',
+    alpha: 0.7,
+    bundlingStrength: 0.5,
+    bundleDimension: null,
+    smoothness: 0.0,
+    showControlPoints: false,
+    hideAxis: [],
+    flipAxes: [],
+    animationTime: 1100, // How long it takes to flip the axis when you double click
+    rotateLabels: false
 };
 
 var _this = undefined;
@@ -108,39 +137,10 @@ var _this = undefined;
 //============================================================================================
 
 var ParCoords = function ParCoords(config) {
-    var __ = {
-        data: [],
-        highlighted: [],
-        dimensions: {},
-        dimensionTitleRotation: 0,
-        brushes: [],
-        brushed: false,
-        brushedColor: null,
-        alphaOnBrushed: 0.0,
-        mode: "default",
-        rate: 20,
-        width: 600,
-        height: 300,
-        margin: { top: 24, right: 20, bottom: 12, left: 20 },
-        nullValueSeparator: "undefined", // set to "top" or "bottom"
-        nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
-        color: "#069",
-        composite: "source-over",
-        alpha: 0.7,
-        bundlingStrength: 0.5,
-        bundleDimension: null,
-        smoothness: 0.0,
-        showControlPoints: false,
-        hideAxis: [],
-        flipAxes: [],
-        animationTime: 1100, // How long it takes to flip the axis when you double click
-        rotateLabels: false
-    };
-
-    extend(__, config);
+    var __ = extend(InitialState, config);
 
     if (config && config.dimensionTitles) {
-        console.warn("dimensionTitles passed in config is deprecated. Add title to dimension object.");
+        console.warn('dimensionTitles passed in config is deprecated. Add title to dimension object.');
         d3Collection.entries(config.dimensionTitles).forEach(function (d) {
             if (__.dimensions[d.key]) {
                 __.dimensions[d.key].title = __.dimensions[d.key].title ? __.dimensions[d.key].title : d.value;
@@ -157,18 +157,18 @@ var ParCoords = function ParCoords(config) {
         __.width = selection.node().clientWidth;
         __.height = selection.node().clientHeight;
         // canvas data layers
-        ["marks", "foreground", "brushed", "highlight"].forEach(function (layer) {
-            canvas[layer] = selection.append("canvas").attr("class", layer).node();
-            ctx[layer] = canvas[layer].getContext("2d");
+        ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
+            canvas[layer] = selection.append('canvas').attr('class', layer).node();
+            ctx[layer] = canvas[layer].getContext('2d');
         });
 
         // svg tick and brush layers
-        pc.svg = selection.append("svg").attr("width", __.width).attr("height", __.height).style("font", "14px sans-serif").style("position", "absolute").append("svg:g").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+        pc.svg = selection.append('svg').attr('width', __.width).attr('height', __.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
         return pc;
     };
 
-    var eventTypes = ["render", "resize", "highlight", "brush", "brushend", "brushstart", "axesreorder"].concat(d3Collection.keys(__));
+    var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(d3Collection.keys(__));
     var events = d3Dispatch.dispatch.apply(_this, eventTypes),
         w = function w() {
         return __.width - __.margin.right - __.margin.left;
@@ -194,34 +194,34 @@ var ParCoords = function ParCoords(config) {
         clusterCentroids = [];
 
     // side effects for setters
-    var side_effects = d3Dispatch.dispatch.apply(_this, d3Collection.keys(__)).on("composite", function (d) {
+    var side_effects = d3Dispatch.dispatch.apply(_this, d3Collection.keys(__)).on('composite', function (d) {
         ctx.foreground.globalCompositeOperation = d.value;
         ctx.brushed.globalCompositeOperation = d.value;
-    }).on("alpha", function (d) {
+    }).on('alpha', function (d) {
         ctx.foreground.globalAlpha = d.value;
         ctx.brushed.globalAlpha = d.value;
-    }).on("brushedColor", function (d) {
+    }).on('brushedColor', function (d) {
         ctx.brushed.strokeStyle = d.value;
-    }).on("width", function (d) {
+    }).on('width', function (d) {
         pc.resize();
-    }).on("height", function (d) {
+    }).on('height', function (d) {
         pc.resize();
-    }).on("margin", function (d) {
+    }).on('margin', function (d) {
         pc.resize();
-    }).on("rate", function (d) {
+    }).on('rate', function (d) {
         brushedQueue.rate(d.value);
         foregroundQueue.rate(d.value);
-    }).on("dimensions", function (d) {
+    }).on('dimensions', function (d) {
         __.dimensions = pc.applyDimensionDefaults(d3Collection.keys(d.value));
         xscale.domain(pc.getOrderedDimensionKeys());
         pc.sortDimensions();
         if (flags.interactive) {
             pc.render().updateAxes();
         }
-    }).on("bundleDimension", function (d) {
+    }).on('bundleDimension', function (d) {
         if (!d3Collection.keys(__.dimensions).length) pc.detectDimensions();
         pc.autoscale();
-        if (typeof d.value === "number") {
+        if (typeof d.value === 'number') {
             if (d.value < d3Collection.keys(__.dimensions).length) {
                 __.bundleDimension = __.dimensions[d.value];
             } else if (d.value < __.hideAxis.length) {
@@ -235,10 +235,10 @@ var ParCoords = function ParCoords(config) {
         if (flags.interactive) {
             pc.render();
         }
-    }).on("hideAxis", function (d) {
+    }).on('hideAxis', function (d) {
         pc.dimensions(pc.applyDimensionDefaults());
         pc.dimensions(without(__.dimensions, d.value));
-    }).on("flipAxes", function (d) {
+    }).on('flipAxes', function (d) {
         if (d.value && d.value.length) {
             d.value.forEach(function (axis) {
                 flipAxisAndUpdatePCP(axis);
@@ -255,7 +255,8 @@ var ParCoords = function ParCoords(config) {
     getset(pc, __, events);
 
     // expose events
-    _rebind(pc, events, "on");
+    _rebind(pc, events, 'on');
+
     // getter/setter with event firing
     function getset(obj, state, events) {
         d3Collection.keys(state).forEach(function (key) {
@@ -264,13 +265,13 @@ var ParCoords = function ParCoords(config) {
                     return state[key];
                 }
                 if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-                    console.warn("pc.dimensions([]) is deprecated, use pc.dimensions({})");
+                    console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
                     x = pc.applyDimensionDefaults(x);
                 }
                 var old = state[key];
                 state[key] = x;
-                side_effects.call(key, pc, { "value": x, "previous": old });
-                events.call(key, pc, { "value": x, "previous": old });
+                side_effects.call(key, pc, { value: x, previous: old });
+                events.call(key, pc, { value: x, previous: old });
                 return obj;
             };
         });
@@ -278,9 +279,9 @@ var ParCoords = function ParCoords(config) {
 
     /** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
     function getRange() {
-        if (__.nullValueSeparator == "bottom") {
+        if (__.nullValueSeparator == 'bottom') {
             return [h() + 1 - __.nullValueSeparatorPadding.bottom - __.nullValueSeparatorPadding.top, 1];
-        } else if (__.nullValueSeparator == "top") {
+        } else if (__.nullValueSeparator == 'top') {
             return [h() + 1, 1 + __.nullValueSeparatorPadding.bottom + __.nullValueSeparatorPadding.top];
         }
         return [h() + 1, 1];
@@ -289,7 +290,7 @@ var ParCoords = function ParCoords(config) {
     pc.autoscale = function () {
         // yscale
         var defaultScales = {
-            "date": function date(k) {
+            date: function date(k) {
                 var _extent = d3Array.extent(__.data, function (d) {
                     return d[k] ? d[k].getTime() : null;
                 });
@@ -306,7 +307,7 @@ var ParCoords = function ParCoords(config) {
                 }
                 return d3Scale.scaleTime().domain(_extent).range(getRange());
             },
-            "number": function number(k) {
+            number: function number(k) {
                 var _extent = d3Array.extent(__.data, function (d) {
                     return +d[k];
                 });
@@ -323,13 +324,13 @@ var ParCoords = function ParCoords(config) {
                 }
                 return d3Scale.scaleLinear().domain(_extent).range(getRange());
             },
-            "string": function string(k) {
+            string: function string(k) {
                 var counts = {},
                     domain = [];
                 // Let's get the count for each value so that we can sort the domain based
                 // on the number of items for each value.
                 __.data.map(function (p) {
-                    if (p[k] === undefined && __.nullValueSeparator !== "undefined") {
+                    if (p[k] === undefined && __.nullValueSeparator !== 'undefined') {
                         return; // null values will be drawn beyond the horizontal null value separator!
                     }
                     if (counts[p[k]] === undefined) {
@@ -351,7 +352,7 @@ var ParCoords = function ParCoords(config) {
                 var categoricalRange = [];
                 if (domain.length === 1) {
                     //edge case
-                    domain = [" ", domain[0], " "];
+                    domain = [' ', domain[0], ' '];
                 }
                 var addBy = getRange()[0] / (domain.length - 1);
                 for (var j = 0; j < domain.length; j++) {
@@ -374,7 +375,7 @@ var ParCoords = function ParCoords(config) {
         var devicePixelRatio = window.devicePixelRatio || 1;
 
         // canvas sizes
-        pc.selection.selectAll("canvas").style("margin-top", __.margin.top + "px").style("margin-left", __.margin.left + "px").style("width", w() + 2 + "px").style("height", h() + 2 + "px").attr("width", (w() + 2) * devicePixelRatio).attr("height", (h() + 2) * devicePixelRatio);
+        pc.selection.selectAll('canvas').style('margin-top', __.margin.top + 'px').style('margin-left', __.margin.left + 'px').style('width', w() + 2 + 'px').style('height', h() + 2 + 'px').attr('width', (w() + 2) * devicePixelRatio).attr('height', (h() + 2) * devicePixelRatio);
         // default styles, needs to be set when canvas width changes
         ctx.foreground.strokeStyle = __.color;
         ctx.foreground.lineWidth = 1.4;
@@ -406,7 +407,7 @@ var ParCoords = function ParCoords(config) {
     };
 
     pc.commonScale = function (global, type) {
-        var t = type || "number";
+        var t = type || 'number';
         if (typeof global === 'undefined') {
             global = true;
         }
@@ -487,7 +488,7 @@ var ParCoords = function ParCoords(config) {
     // try to coerce to number before returning type
     pc.toTypeCoerceNumbers = function (v) {
         if (parseFloat(v) == v && v != null) {
-            return "number";
+            return 'number';
         }
         return pc.toType(v);
     };
@@ -574,8 +575,8 @@ var ParCoords = function ParCoords(config) {
             brushedQueue([]); // This is needed to clear the currently brushed items
         }
     };
-    function compute_cluster_centroids(d) {
 
+    function compute_cluster_centroids(d) {
         var clusterCentroids = d3Collection.map();
         var clusterCounts = d3Collection.map();
         // determine clusterCounts
@@ -653,7 +654,6 @@ var ParCoords = function ParCoords(config) {
     };
 
     function compute_control_points(centroids) {
-
         var cols = centroids.length;
         var a = __.smoothness;
         var cps = [];
@@ -703,7 +703,6 @@ var ParCoords = function ParCoords(config) {
 
     // draw single cubic bezier curve
     function single_curve(d, ctx) {
-
         var centroids = compute_centroids(d);
         var cps = compute_control_points(centroids);
 
@@ -730,13 +729,10 @@ var ParCoords = function ParCoords(config) {
     }
 
     // draw many polylines of the same color
-    
-
-    // returns the y-position just beyond the separating null value line
     function getNullPosition() {
-        if (__.nullValueSeparator == "bottom") {
+        if (__.nullValueSeparator == 'bottom') {
             return h() + 1;
-        } else if (__.nullValueSeparator == "top") {
+        } else if (__.nullValueSeparator == 'top') {
             return 1;
         } else {
             console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
@@ -773,24 +769,25 @@ var ParCoords = function ParCoords(config) {
         ctx.highlight.strokeStyle = _functor(__.color)(d, i);
         return color_path(d, ctx.highlight);
     }
+
     pc.clear = function (layer) {
         ctx[layer].clearRect(0, 0, w() + 2, h() + 2);
 
         // This will make sure that the foreground items are transparent
         // without the need for changing the opacity style of the foreground canvas
         // as this would stop the css styling from working
-        if (layer === "brushed" && isBrushed()) {
-            ctx.brushed.fillStyle = pc.selection.style("background-color");
+        if (layer === 'brushed' && isBrushed()) {
+            ctx.brushed.fillStyle = pc.selection.style('background-color');
             ctx.brushed.globalAlpha = 1 - __.alphaOnBrushed;
             ctx.brushed.fillRect(0, 0, w() + 2, h() + 2);
             ctx.brushed.globalAlpha = __.alpha;
         }
         return this;
     };
-    _rebind(pc, axis, "ticks", "orient", "tickValues", "tickSubdivide", "tickSize", "tickPadding", "tickFormat");
+    _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
 
     function flipAxisAndUpdatePCP(dimension) {
-        var g = pc.svg.selectAll(".dimension");
+        var g = pc.svg.selectAll('.dimension');
         pc.flip(dimension);
         pc.brushReset(dimension);
         d3Selection.select(this.parentElement).transition().duration(__.animationTime).call(axis.scale(__.dimensions[dimension].yscale));
@@ -805,7 +802,7 @@ var ParCoords = function ParCoords(config) {
         delta = delta > 0 ? 5 : delta;
 
         __.dimensionTitleRotation += delta;
-        pc.svg.selectAll("text.label").attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")");
+        pc.svg.selectAll('text.label').attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')');
         d3Selection.event.preventDefault();
     }
 
@@ -816,24 +813,24 @@ var ParCoords = function ParCoords(config) {
     pc.createAxes = function () {
         if (g) pc.removeAxes();
         // Add a group element for each dimension.
-        g = pc.svg.selectAll(".dimension").data(pc.getOrderedDimensionKeys(), function (d) {
+        g = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys(), function (d) {
             return d;
-        }).enter().append("svg:g").attr("class", "dimension").attr("transform", function (d) {
-            return "translate(" + xscale(d) + ")";
+        }).enter().append('svg:g').attr('class', 'dimension').attr('transform', function (d) {
+            return 'translate(' + xscale(d) + ')';
         });
         // Add an axis and title.
-        g.append("svg:g").attr("class", "axis").attr("transform", "translate(0,0)").each(function (d) {
+        g.append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
             var axisElement = d3Selection.select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
 
-            axisElement.selectAll("path").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
+            axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
-            axisElement.selectAll("line").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
-        }).append("svg:text").attr("text-anchor", "middle").attr("y", 0).attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")").attr("x", 0).attr("class", "label").text(dimensionLabels).on("dblclick", flipAxisAndUpdatePCP).on("wheel", rotateLabels);
+            axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+        }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
 
-        if (__.nullValueSeparator == "top") {
-            pc.svg.append("line").attr("x1", 0).attr("y1", 1 + __.nullValueSeparatorPadding.top).attr("x2", w()).attr("y2", 1 + __.nullValueSeparatorPadding.top).attr("stroke-width", 1).attr("stroke", "#777").attr("fill", "none").attr("shape-rendering", "crispEdges");
-        } else if (__.nullValueSeparator == "bottom") {
-            pc.svg.append("line").attr("x1", 0).attr("y1", h() + 1 - __.nullValueSeparatorPadding.bottom).attr("x2", w()).attr("y2", h() + 1 - __.nullValueSeparatorPadding.bottom).attr("stroke-width", 1).attr("stroke", "#777").attr("fill", "none").attr("shape-rendering", "crispEdges");
+        if (__.nullValueSeparator == 'top') {
+            pc.svg.append('line').attr('x1', 0).attr('y1', 1 + __.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + __.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
+        } else if (__.nullValueSeparator == 'bottom') {
+            pc.svg.append('line').attr('x1', 0).attr('y1', h() + 1 - __.nullValueSeparatorPadding.bottom).attr('x2', w()).attr('y2', h() + 1 - __.nullValueSeparatorPadding.bottom).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
         }
 
         flags.axes = true;
@@ -850,48 +847,48 @@ var ParCoords = function ParCoords(config) {
         if (typeof animationTime === 'undefined') {
             animationTime = __.animationTime;
         }
-        var g_data = pc.svg.selectAll(".dimension").data(pc.getOrderedDimensionKeys());
+        var g_data = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys());
         // Enter
-        g_data.enter().append("svg:g").attr("class", "dimension").attr("transform", function (p) {
-            return "translate(" + position(p) + ")";
-        }).style("opacity", 0).append("svg:g").attr("class", "axis").attr("transform", "translate(0,0)").each(function (d) {
+        g_data.enter().append('svg:g').attr('class', 'dimension').attr('transform', function (p) {
+            return 'translate(' + position(p) + ')';
+        }).style('opacity', 0).append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
             var axisElement = d3Selection.select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
 
-            axisElement.selectAll("path").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
+            axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
-            axisElement.selectAll("line").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
-        }).append("svg:text").attr({
-            "text-anchor": "middle",
-            "y": 0,
-            "transform": "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")",
-            "x": 0,
-            "class": "label"
-        }).text(dimensionLabels).on("dblclick", flipAxisAndUpdatePCP).on("wheel", rotateLabels);
+            axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+        }).append('svg:text').attr({
+            'text-anchor': 'middle',
+            y: 0,
+            transform: 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')',
+            x: 0,
+            class: 'label'
+        }).text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
 
         // Update
-        g_data.attr("opacity", 0);
-        g_data.select(".axis").transition().duration(animationTime).each(function (d) {
+        g_data.attr('opacity', 0);
+        g_data.select('.axis').transition().duration(animationTime).each(function (d) {
             d3Selection.select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
         });
-        g_data.select(".label").transition().duration(animationTime).text(dimensionLabels).attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")");
+        g_data.select('.label').transition().duration(animationTime).text(dimensionLabels).attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')');
 
         // Exit
         g_data.exit().remove();
 
-        g = pc.svg.selectAll(".dimension");
-        g.transition().duration(animationTime).attr("transform", function (p) {
-            return "translate(" + position(p) + ")";
-        }).style("opacity", 1);
+        g = pc.svg.selectAll('.dimension');
+        g.transition().duration(animationTime).attr('transform', function (p) {
+            return 'translate(' + position(p) + ')';
+        }).style('opacity', 1);
 
-        pc.svg.selectAll(".axis").transition().duration(animationTime).each(function (d) {
+        pc.svg.selectAll('.axis').transition().duration(animationTime).each(function (d) {
             d3Selection.select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
         });
 
         if (flags.brushable) pc.brushable();
         if (flags.reorderable) pc.reorderable();
-        if (pc.brushMode() !== "None") {
+        if (pc.brushMode() !== 'None') {
             var mode = pc.brushMode();
-            pc.brushMode("None");
+            pc.brushMode('None');
             pc.brushMode(mode);
         }
         return this;
@@ -931,18 +928,18 @@ var ParCoords = function ParCoords(config) {
         if (!g) pc.createAxes();
 
         // Add and store a brush for each axis.
-        g.append("svg:g").attr("class", "brush").each(function (d) {
+        g.append('svg:g').attr('class', 'brush').each(function (d) {
             if (__.dimensions[d] !== undefined) {
-                __.dimensions[d]["brush"] = d3Brush.brushY(d3Selection.select(this)).extent([[-15, 0], [15, __.dimensions[d].yscale.range()[0]]]);
-                d3Selection.select(this).call(__.dimensions[d]["brush"].on("start", function () {
+                __.dimensions[d]['brush'] = d3Brush.brushY(d3Selection.select(this)).extent([[-15, 0], [15, __.dimensions[d].yscale.range()[0]]]);
+                d3Selection.select(this).call(__.dimensions[d]['brush'].on('start', function () {
                     if (d3Selection.event.sourceEvent !== null && !d3Selection.event.sourceEvent.ctrlKey) {
                         pc.brushReset();
                     }
-                }).on("brush", function () {
+                }).on('brush', function () {
                     if (!d3Selection.event.sourceEvent.ctrlKey) {
                         pc.brush();
                     }
-                }).on("end", function () {
+                }).on('end', function () {
                     // save brush selection is ctrl key is held
                     // store important brush information and
                     // the html element of the selection,
@@ -961,13 +958,13 @@ var ParCoords = function ParCoords(config) {
                         d3Selection.select(d3Selection.select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
                         pc.brush();
                         __.dimensions[d].brush.move(d3Selection.select(this, null));
-                        d3Selection.select(this).select(".selection").attr("style", "display:none");
+                        d3Selection.select(this).select('.selection').attr('style', 'display:none');
                         pc.brushable();
                     } else {
                         pc.brush();
                     }
                 }));
-                d3Selection.select(this).on("dblclick", function () {
+                d3Selection.select(this).on('dblclick', function () {
                     pc.brushReset(d);
                 });
             }
@@ -979,7 +976,7 @@ var ParCoords = function ParCoords(config) {
 
     pc.brush = function () {
         __.brushed = pc.selected();
-        render.call("render");
+        render.call('render');
     };
 
     pc.brushReset = function (dimension) {
@@ -994,11 +991,11 @@ var ParCoords = function ParCoords(config) {
         __.brushed = false;
 
         if (g) {
-            var nodes = d3Selection.selectAll(".brush").nodes();
+            var nodes = d3Selection.selectAll('.brush').nodes();
             for (var i = 0; i < nodes.length; i++) {
                 if (nodes[i].__data__ === dimension) {
                     // remove all dummy brushes for this axis or the real brush
-                    d3Selection.select(d3Selection.select(nodes[i]).nodes()[0].parentNode).selectAll(".dummy").remove();
+                    d3Selection.select(d3Selection.select(nodes[i]).nodes()[0].parentNode).selectAll('.dummy').remove();
                     __.dimensions[dimension].brush.move(d3Selection.select(nodes[i], null));
                 }
             }
@@ -1014,13 +1011,13 @@ var ParCoords = function ParCoords(config) {
         //get brush selections from each node, convert to actual values
         //invert order of values in array to comply with the parcoords architecture
         if (__.brushes.length === 0) {
-            var nodes = d3Selection.selectAll(".brush").nodes();
+            var nodes = d3Selection.selectAll('.brush').nodes();
             for (var _k = 0; _k < nodes.length; _k++) {
                 if (d3Brush.brushSelection(nodes[_k]) !== null) {
                     actives.push(nodes[_k].__data__);
                     var values = [];
                     var ranger = d3Brush.brushSelection(nodes[_k]);
-                    if (typeof __.dimensions[nodes[_k].__data__].yscale.domain()[0] === "number") {
+                    if (typeof __.dimensions[nodes[_k].__data__].yscale.domain()[0] === 'number') {
                         for (var i = 0; i < ranger.length; i++) {
                             if (actives.includes(nodes[_k].__data__) && __.flipAxes.includes(nodes[_k].__data__)) {
                                 values.push(__.dimensions[nodes[_k].__data__].yscale.invert(ranger[i]));
@@ -1056,16 +1053,16 @@ var ParCoords = function ParCoords(config) {
             }
             // test if within range
             var within = {
-                "date": function date(d, p, dimension) {
+                date: function date(d, p, dimension) {
                     var category = d[p];
                     var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                     var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
                     return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
                 },
-                "number": function number(d, p, dimension) {
+                number: function number(d, p, dimension) {
                     return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
                 },
-                "string": function string(d, p, dimension) {
+                string: function string(d, p, dimension) {
                     var category = d[p];
                     var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                     var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
@@ -1088,7 +1085,7 @@ var ParCoords = function ParCoords(config) {
                 var values = [];
                 var ranger = brush.extent;
                 var actives = [brush.data];
-                if (typeof __.dimensions[brush.data].yscale.domain()[0] === "number") {
+                if (typeof __.dimensions[brush.data].yscale.domain()[0] === 'number') {
                     for (var _i = 0; _i < ranger.length; _i++) {
                         if (actives.includes(brush.data) && __.flipAxes.includes(brush.data)) {
                             values.push(__.dimensions[brush.data].yscale.invert(ranger[_i]));
@@ -1121,16 +1118,16 @@ var ParCoords = function ParCoords(config) {
                     }
                 }
                 var within = {
-                    "date": function date(d, p, dimension) {
+                    date: function date(d, p, dimension) {
                         var category = d[p];
                         var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                         var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
                         return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
                     },
-                    "number": function number(d, p, dimension) {
+                    number: function number(d, p, dimension) {
                         return extents[idx][0] <= d[p] && d[p] <= extents[idx][1];
                     },
-                    "string": function string(d, p, dimension) {
+                    string: function string(d, p, dimension) {
                         var category = d[p];
                         var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                         var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
@@ -1163,20 +1160,20 @@ var ParCoords = function ParCoords(config) {
     // Jason Davies, http://bl.ocks.org/1341281
     pc.reorderable = function () {
         if (!g) pc.createAxes();
-        g.style("cursor", "move").call(d3Drag.drag().on("start", function (d) {
+        g.style('cursor', 'move').call(d3Drag.drag().on('start', function (d) {
             dragging[d] = this.__origin__ = xscale(d);
-        }).on("drag", function (d) {
+        }).on('drag', function (d) {
             dragging[d] = Math.min(w(), Math.max(0, this.__origin__ += d3Selection.event.dx));
             pc.sortDimensions();
             xscale.domain(pc.getOrderedDimensionKeys());
             pc.render();
-            g.attr("transform", function (d) {
-                return "translate(" + position(d) + ")";
+            g.attr('transform', function (d) {
+                return 'translate(' + position(d) + ')';
             });
-        }).on("end", function (d) {
+        }).on('end', function (d) {
             delete this.__origin__;
             delete dragging[d];
-            d3Selection.select(this).transition().attr("transform", "translate(" + xscale(d) + ")");
+            d3Selection.select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
             pc.render();
         }));
         flags.reorderable = true;
@@ -1201,8 +1198,8 @@ var ParCoords = function ParCoords(config) {
             var highlighted = __.highlighted.slice(0);
             pc.unhighlight();
 
-            g.transition().duration(1500).attr("transform", function (d) {
-                return "translate(" + xscale(d) + ")";
+            g.transition().duration(1500).attr('transform', function (d) {
+                return 'translate(' + xscale(d) + ')';
             });
             pc.render();
 
@@ -1260,7 +1257,7 @@ var ParCoords = function ParCoords(config) {
 
     var brush = {
         modes: {
-            "None": {
+            None: {
                 install: function install(pc) {}, // Nothing to be done.
                 uninstall: function uninstall(pc) {}, // Nothing to be done.
                 selected: function selected() {
@@ -1271,8 +1268,8 @@ var ParCoords = function ParCoords(config) {
                 }
             }
         },
-        mode: "None",
-        predicate: "AND",
+        mode: 'None',
+        predicate: 'AND',
         currentMode: function currentMode() {
             return this.modes[this.mode];
         }
@@ -1295,8 +1292,8 @@ var ParCoords = function ParCoords(config) {
         }
 
         predicate = String(predicate).toUpperCase();
-        if (predicate !== "AND" && predicate !== "OR") {
-            throw new Error("Invalid predicate " + predicate);
+        if (predicate !== 'AND' && predicate !== 'OR') {
+            throw new Error('Invalid predicate ' + predicate);
         }
 
         brush.predicate = predicate;
@@ -1315,7 +1312,7 @@ var ParCoords = function ParCoords(config) {
         }
 
         if (pc.brushModes().indexOf(mode) === -1) {
-            throw new Error("pc.brushmode: Unsupported brush mode: " + mode);
+            throw new Error('pc.brushmode: Unsupported brush mode: ' + mode);
         }
 
         // Make sure that we don't trigger unnecessary events by checking if the mode
@@ -1323,7 +1320,7 @@ var ParCoords = function ParCoords(config) {
         if (mode !== brush.mode) {
             // When changing brush modes, the first thing we need to do is clearing any
             // brushes from the current mode, if any.
-            if (brush.mode !== "None") {
+            if (brush.mode !== 'None') {
                 pc.brushReset();
             }
 
@@ -1332,7 +1329,7 @@ var ParCoords = function ParCoords(config) {
             // Finally, we can install the requested one.
             brush.mode = mode;
             brush.modes[brush.mode].install();
-            if (mode === "None") {
+            if (mode === 'None') {
                 delete pc.brushPredicate;
             } else {
                 pc.brushPredicate = brushPredicate;
@@ -1374,39 +1371,39 @@ var ParCoords = function ParCoords(config) {
 
             // test if within range
             var within = {
-                "date": function date(d, p, dimension) {
-                    if (typeof __.dimensions[p].yscale.bandwidth === "function") {
+                date: function date(d, p, dimension) {
+                    if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
                         // if it is ordinal
                         return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
                     } else {
                         return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
                     }
                 },
-                "number": function number(d, p, dimension) {
-                    if (typeof __.dimensions[p].yscale.bandwidth === "function") {
+                number: function number(d, p, dimension) {
+                    if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
                         // if it is ordinal
                         return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
                     } else {
                         return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
                     }
                 },
-                "string": function string(d, p, dimension) {
+                string: function string(d, p, dimension) {
                     return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
                 }
             };
 
             return __.data.filter(function (d) {
                 switch (brush.predicate) {
-                    case "AND":
+                    case 'AND':
                         return actives.every(function (p, dimension) {
                             return within[__.dimensions[p].type](d, p, dimension);
                         });
-                    case "OR":
+                    case 'OR':
                         return actives.some(function (p, dimension) {
                             return within[__.dimensions[p].type](d, p, dimension);
                         });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
@@ -1461,14 +1458,15 @@ var ParCoords = function ParCoords(config) {
 
             var _brush = d3Brush.brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
-            _brush.on("start", function () {
+            _brush.on('start', function () {
                 if (d3Selection.event.sourceEvent !== null) {
                     events.call('brushstart', pc, __.brushed);
                     d3Selection.event.sourceEvent.stopPropagation();
                 }
-            }).on("brush", function () {
+            }).on('brush', function () {
                 brushUpdated(selected());
-            }).on("end", function () {
+            }).on('end', function () {
+                brushUpdated(selected());
                 events.call('brushend', pc, __.brushed);
             });
 
@@ -1502,26 +1500,26 @@ var ParCoords = function ParCoords(config) {
         function install() {
             if (!g) pc.createAxes();
             // Add and store a brush for each axis.
-            var brush = g.append("svg:g").attr("class", "brush").each(function (d) {
+            var brush = g.append('svg:g').attr('class', 'brush').each(function (d) {
                 d3Selection.select(this).call(brushFor(d, d3Selection.select(this)));
             });
-            brush.selectAll("rect").style("visibility", null).attr("x", -15).attr("width", 30);
+            brush.selectAll('rect').style('visibility', null).attr('x', -15).attr('width', 30);
 
-            brush.selectAll("rect.background").style("fill", "transparent");
+            brush.selectAll('rect.background').style('fill', 'transparent');
 
-            brush.selectAll("rect.extent").style("fill", "rgba(255,255,255,0.25)").style("stroke", "rgba(0,0,0,0.6)");
+            brush.selectAll('rect.extent').style('fill', 'rgba(255,255,255,0.25)').style('stroke', 'rgba(0,0,0,0.6)');
 
-            brush.selectAll(".resize rect").style("fill", "rgba(0,0,0,0.1)");
+            brush.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
 
             pc.brushExtents = brushExtents;
             pc.brushReset = brushReset;
             return pc;
         }
 
-        brush.modes["1D-axes"] = {
+        brush.modes['1D-axes'] = {
             install: install,
             uninstall: function uninstall() {
-                g.selectAll(".brush").remove();
+                g.selectAll('.brush').remove();
                 brushes = {};
                 delete pc.brushExtents;
                 delete pc.brushReset;
@@ -1538,45 +1536,45 @@ var ParCoords = function ParCoords(config) {
             strumRect = void 0;
 
         function drawStrum(strum, activePoint) {
-            var _svg = pc.selection.select("svg").select("g#strums"),
+            var _svg = pc.selection.select('svg').select('g#strums'),
                 id = strum.dims.i,
                 points = [strum.p1, strum.p2],
-                _line = _svg.selectAll("line#strum-" + id).data([strum]),
-                circles = _svg.selectAll("circle#strum-" + id).data(points),
+                _line = _svg.selectAll('line#strum-' + id).data([strum]),
+                circles = _svg.selectAll('circle#strum-' + id).data(points),
                 _drag = d3Drag.drag();
 
-            _line.enter().append("line").attr("id", "strum-" + id).attr("class", "strum");
+            _line.enter().append('line').attr('id', 'strum-' + id).attr('class', 'strum');
 
-            _line.attr("x1", function (d) {
+            _line.attr('x1', function (d) {
                 return d.p1[0];
-            }).attr("y1", function (d) {
+            }).attr('y1', function (d) {
                 return d.p1[1];
-            }).attr("x2", function (d) {
+            }).attr('x2', function (d) {
                 return d.p2[0];
-            }).attr("y2", function (d) {
+            }).attr('y2', function (d) {
                 return d.p2[1];
-            }).attr("stroke", "black").attr("stroke-width", 2);
+            }).attr('stroke', 'black').attr('stroke-width', 2);
 
-            _drag.on("drag", function (d, i) {
+            _drag.on('drag', function (d, i) {
                 var ev = d3Selection.event;
                 i = i + 1;
-                strum["p" + i][0] = Math.min(Math.max(strum.minX + 1, ev.x), strum.maxX);
-                strum["p" + i][1] = Math.min(Math.max(strum.minY, ev.y), strum.maxY);
+                strum['p' + i][0] = Math.min(Math.max(strum.minX + 1, ev.x), strum.maxX);
+                strum['p' + i][1] = Math.min(Math.max(strum.minY, ev.y), strum.maxY);
                 drawStrum(strum, i - 1);
-            }).on("end", onDragEnd());
+            }).on('end', onDragEnd());
 
-            circles.enter().append("circle").attr("id", "strum-" + id).attr("class", "strum");
+            circles.enter().append('circle').attr('id', 'strum-' + id).attr('class', 'strum');
 
-            circles.attr("cx", function (d) {
+            circles.attr('cx', function (d) {
                 return d[0];
-            }).attr("cy", function (d) {
+            }).attr('cy', function (d) {
                 return d[1];
-            }).attr("r", 5).style("opacity", function (d, i) {
+            }).attr('r', 5).style('opacity', function (d, i) {
                 return activePoint !== undefined && i === activePoint ? 0.8 : 0;
-            }).on("mouseover", function () {
-                d3Selection.select(this).style("opacity", 0.8);
-            }).on("mouseout", function () {
-                d3Selection.select(this).style("opacity", 0);
+            }).on('mouseover', function () {
+                d3Selection.select(this).style('opacity', 0.8);
+            }).on('mouseout', function () {
+                d3Selection.select(this).style('opacity', 0);
             }).call(_drag);
         }
 
@@ -1700,28 +1698,28 @@ var ParCoords = function ParCoords(config) {
 
             return brushed.filter(function (d) {
                 switch (brush.predicate) {
-                    case "AND":
+                    case 'AND':
                         return ids.every(function (id) {
                             return crossesStrum(d, id);
                         });
-                    case "OR":
+                    case 'OR':
                         return ids.some(function (id) {
                             return crossesStrum(d, id);
                         });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
 
         function removeStrum() {
             var strum = strums[strums.active],
-                svg = pc.selection.select("svg").select("g#strums");
+                svg = pc.selection.select('svg').select('g#strums');
 
             delete strums[strums.active];
             strums.active = undefined;
-            svg.selectAll("line#strum-" + strum.dims.i).remove();
-            svg.selectAll("circle#strum-" + strum.dims.i).remove();
+            svg.selectAll('line#strum-' + strum.dims.i).remove();
+            svg.selectAll('circle#strum-' + strum.dims.i).remove();
         }
 
         function onDragEnd() {
@@ -1779,7 +1777,7 @@ var ParCoords = function ParCoords(config) {
                 return strum.maxX - strum.minX;
             };
 
-            pc.on("axesreorder.strums", function () {
+            pc.on('axesreorder.strums', function () {
                 var ids = Object.getOwnPropertyNames(strums).filter(function (d) {
                     return !isNaN(d);
                 });
@@ -1808,25 +1806,25 @@ var ParCoords = function ParCoords(config) {
             });
 
             // Add a new svg group in which we draw the strums.
-            pc.selection.select("svg").append("g").attr("id", "strums").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+            pc.selection.select('svg').append('g').attr('id', 'strums').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
             // Install the required brushReset function
             pc.brushReset = brushReset(strums);
 
-            _drag.on("start", onDragStart(strums)).on("drag", onDrag(strums)).on("end", onDragEnd(strums));
+            _drag.on('start', onDragStart(strums)).on('drag', onDrag(strums)).on('end', onDragEnd(strums));
 
             // NOTE: The styling needs to be done here and not in the css. This is because
             //       for 1D brushing, the canvas layers should not listen to
             //       pointer-events._.
-            strumRect = pc.selection.select("svg").insert("rect", "g#strums").attr("id", "strum-events").attr("x", __.margin.left).attr("y", __.margin.top).attr("width", w()).attr("height", h() + 2).style("opacity", 0).call(_drag);
+            strumRect = pc.selection.select('svg').insert('rect', 'g#strums').attr('id', 'strum-events').attr('x', __.margin.left).attr('y', __.margin.top).attr('width', w()).attr('height', h() + 2).style('opacity', 0).call(_drag);
         }
 
-        brush.modes["2D-strums"] = {
+        brush.modes['2D-strums'] = {
             install: install,
             uninstall: function uninstall() {
-                pc.selection.select("svg").select("g#strums").remove();
-                pc.selection.select("svg").select("rect#strum-events").remove();
-                pc.on("axesreorder.strums", undefined);
+                pc.selection.select('svg').select('g#strums').remove();
+                pc.selection.select('svg').select('rect#strum-events').remove();
+                pc.on('axesreorder.strums', undefined);
                 delete pc.brushReset;
 
                 strumRect = undefined;
@@ -1846,43 +1844,42 @@ var ParCoords = function ParCoords(config) {
             strumRect = void 0;
 
         function drawStrum(arc$$1, activePoint) {
-            var svg = pc.selection.select("svg").select("g#arcs"),
+            var svg = pc.selection.select('svg').select('g#arcs'),
                 id = arc$$1.dims.i,
                 points = [arc$$1.p2, arc$$1.p3],
-                _line = svg.selectAll("line#arc-" + id).data([{ p1: arc$$1.p1, p2: arc$$1.p2 }, { p1: arc$$1.p1, p2: arc$$1.p3 }]),
-                circles = svg.selectAll("circle#arc-" + id).data(points),
+                _line = svg.selectAll('line#arc-' + id).data([{ p1: arc$$1.p1, p2: arc$$1.p2 }, { p1: arc$$1.p1, p2: arc$$1.p3 }]),
+                circles = svg.selectAll('circle#arc-' + id).data(points),
                 _drag = d3Drag.drag(),
-                _path = svg.selectAll("path#arc-" + id).data([arc$$1]);
+                _path = svg.selectAll('path#arc-' + id).data([arc$$1]);
 
-            _path.enter().append("path").attr("id", "arc-" + id).attr("class", "arc").style("fill", "orange").style("opacity", 0.5);
+            _path.enter().append('path').attr('id', 'arc-' + id).attr('class', 'arc').style('fill', 'orange').style('opacity', 0.5);
 
-            _path.attr("d", arc$$1.arc).attr("transform", "translate(" + arc$$1.p1[0] + "," + arc$$1.p1[1] + ")");
+            _path.attr('d', arc$$1.arc).attr('transform', 'translate(' + arc$$1.p1[0] + ',' + arc$$1.p1[1] + ')');
 
-            _line.enter().append("line").attr("id", "arc-" + id).attr("class", "arc");
+            _line.enter().append('line').attr('id', 'arc-' + id).attr('class', 'arc');
 
-            _line.attr("x1", function (d) {
+            _line.attr('x1', function (d) {
                 return d.p1[0];
-            }).attr("y1", function (d) {
+            }).attr('y1', function (d) {
                 return d.p1[1];
-            }).attr("x2", function (d) {
+            }).attr('x2', function (d) {
                 return d.p2[0];
-            }).attr("y2", function (d) {
+            }).attr('y2', function (d) {
                 return d.p2[1];
-            }).attr("stroke", "black").attr("stroke-width", 2);
+            }).attr('stroke', 'black').attr('stroke-width', 2);
 
-            _drag.on("drag", function (d, i) {
+            _drag.on('drag', function (d, i) {
                 var ev = d3Selection.event,
                     angle = 0;
 
                 i = i + 2;
 
-                arc$$1["p" + i][0] = Math.min(Math.max(arc$$1.minX + 1, ev.x), arc$$1.maxX);
-                arc$$1["p" + i][1] = Math.min(Math.max(arc$$1.minY, ev.y), arc$$1.maxY);
+                arc$$1['p' + i][0] = Math.min(Math.max(arc$$1.minX + 1, ev.x), arc$$1.maxX);
+                arc$$1['p' + i][1] = Math.min(Math.max(arc$$1.minY, ev.y), arc$$1.maxY);
 
                 angle = i === 3 ? arcs.startAngle(id) : arcs.endAngle(id);
 
                 if (arc$$1.startAngle < Math.PI && arc$$1.endAngle < Math.PI && angle < Math.PI || arc$$1.startAngle >= Math.PI && arc$$1.endAngle >= Math.PI && angle >= Math.PI) {
-
                     if (i === 2) {
                         arc$$1.endAngle = angle;
                         arc$$1.arc.endAngle(angle);
@@ -1893,20 +1890,20 @@ var ParCoords = function ParCoords(config) {
                 }
 
                 drawStrum(arc$$1, i - 2);
-            }).on("end", onDragEnd());
+            }).on('end', onDragEnd());
 
-            circles.enter().append("circle").attr("id", "arc-" + id).attr("class", "arc");
+            circles.enter().append('circle').attr('id', 'arc-' + id).attr('class', 'arc');
 
-            circles.attr("cx", function (d) {
+            circles.attr('cx', function (d) {
                 return d[0];
-            }).attr("cy", function (d) {
+            }).attr('cy', function (d) {
                 return d[1];
-            }).attr("r", 5).style("opacity", function (d, i) {
+            }).attr('r', 5).style('opacity', function (d, i) {
                 return activePoint !== undefined && i === activePoint ? 0.8 : 0;
-            }).on("mouseover", function () {
-                d3Selection.select(this).style("opacity", 0.8);
-            }).on("mouseout", function () {
-                d3Selection.select(this).style("opacity", 0);
+            }).on('mouseover', function () {
+                d3Selection.select(this).style('opacity', 0.8);
+            }).on('mouseout', function () {
+                d3Selection.select(this).style('opacity', 0);
             }).call(_drag);
         }
 
@@ -2038,7 +2035,6 @@ var ParCoords = function ParCoords(config) {
 
             // test if segment angle is contained in angle interval
             return function (a) {
-
                 if (a >= startAngle && a <= endAngle) {
                     return true;
                 }
@@ -2076,29 +2072,29 @@ var ParCoords = function ParCoords(config) {
 
             return brushed.filter(function (d) {
                 switch (brush.predicate) {
-                    case "AND":
+                    case 'AND':
                         return ids.every(function (id) {
                             return crossesStrum(d, id);
                         });
-                    case "OR":
+                    case 'OR':
                         return ids.some(function (id) {
                             return crossesStrum(d, id);
                         });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
 
         function removeStrum() {
             var arc$$1 = arcs[arcs.active],
-                svg = pc.selection.select("svg").select("g#arcs");
+                svg = pc.selection.select('svg').select('g#arcs');
 
             delete arcs[arcs.active];
             arcs.active = undefined;
-            svg.selectAll("line#arc-" + arc$$1.dims.i).remove();
-            svg.selectAll("circle#arc-" + arc$$1.dims.i).remove();
-            svg.selectAll("path#arc-" + arc$$1.dims.i).remove();
+            svg.selectAll('line#arc-' + arc$$1.dims.i).remove();
+            svg.selectAll('circle#arc-' + arc$$1.dims.i).remove();
+            svg.selectAll('path#arc-' + arc$$1.dims.i).remove();
         }
 
         function onDragEnd() {
@@ -2219,7 +2215,7 @@ var ParCoords = function ParCoords(config) {
                 return c;
             };
 
-            pc.on("axesreorder.arcs", function () {
+            pc.on('axesreorder.arcs', function () {
                 var ids = Object.getOwnPropertyNames(arcs).filter(function (d) {
                     return !isNaN(d);
                 });
@@ -2248,25 +2244,25 @@ var ParCoords = function ParCoords(config) {
             });
 
             // Add a new svg group in which we draw the arcs.
-            pc.selection.select("svg").append("g").attr("id", "arcs").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+            pc.selection.select('svg').append('g').attr('id', 'arcs').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
             // Install the required brushReset function
             pc.brushReset = brushReset(arcs);
 
-            _drag.on("start", onDragStart(arcs)).on("drag", onDrag(arcs)).on("end", onDragEnd(arcs));
+            _drag.on('start', onDragStart(arcs)).on('drag', onDrag(arcs)).on('end', onDragEnd(arcs));
 
             // NOTE: The styling needs to be done here and not in the css. This is because
             //       for 1D brushing, the canvas layers should not listen to
             //       pointer-events._.
-            strumRect = pc.selection.select("svg").insert("rect", "g#arcs").attr("id", "arc-events").attr("x", __.margin.left).attr("y", __.margin.top).attr("width", w()).attr("height", h() + 2).style("opacity", 0).call(_drag);
+            strumRect = pc.selection.select('svg').insert('rect', 'g#arcs').attr('id', 'arc-events').attr('x', __.margin.left).attr('y', __.margin.top).attr('width', w()).attr('height', h() + 2).style('opacity', 0).call(_drag);
         }
 
-        brush.modes["angular"] = {
+        brush.modes['angular'] = {
             install: install,
             uninstall: function uninstall() {
-                pc.selection.select("svg").select("g#arcs").remove();
-                pc.selection.select("svg").select("rect#arc-events").remove();
-                pc.on("axesreorder.arcs", undefined);
+                pc.selection.select('svg').select('g#arcs').remove();
+                pc.selection.select('svg').select('rect#arc-events').remove();
+                pc.on('axesreorder.arcs', undefined);
                 delete pc.brushReset;
 
                 strumRect = undefined;
@@ -2295,8 +2291,8 @@ var ParCoords = function ParCoords(config) {
     // TODO currently assumes chart is brushable, and destroys old brushes
     pc.resize = function () {
         // selection size
-        pc.selection.select("svg").attr("width", __.width).attr("height", __.height);
-        pc.svg.attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+        pc.selection.select('svg').attr('width', __.width).attr('height', __.height);
+        pc.svg.attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
         // FIXME: the current brush state should pass through
         if (flags.brushable) pc.brushReset();
@@ -2309,7 +2305,11 @@ var ParCoords = function ParCoords(config) {
         if (flags.brushable) pc.brushable();
         if (flags.reorderable) pc.reorderable();
 
-        events.call('resize', this, { width: __.width, height: __.height, margin: __.margin });
+        events.call('resize', this, {
+            width: __.width,
+            height: __.height,
+            margin: __.margin
+        });
         return this;
     };
 
@@ -2320,8 +2320,8 @@ var ParCoords = function ParCoords(config) {
         }
 
         __.highlighted = data;
-        pc.clear("highlight");
-        d3Selection.selectAll([canvas.foreground, canvas.brushed]).classed("faded", true);
+        pc.clear('highlight');
+        d3Selection.selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
         data.forEach(path_highlight);
         events.call('highlight', this, data);
         return this;
@@ -2330,8 +2330,8 @@ var ParCoords = function ParCoords(config) {
     // clear highlighting
     pc.unhighlight = function () {
         __.highlighted = [];
-        pc.clear("highlight");
-        d3Selection.selectAll([canvas.foreground, canvas.brushed]).classed("faded", false);
+        pc.clear('highlight');
+        d3Selection.selectAll([canvas.foreground, canvas.brushed]).classed('faded', false);
         return this;
     };
 
@@ -2359,15 +2359,15 @@ var ParCoords = function ParCoords(config) {
         var devicePixelRatio = window.devicePixelRatio || 1;
 
         // Create a canvas element to store the merged canvases
-        var mergedCanvas = document.createElement("canvas");
+        var mergedCanvas = document.createElement('canvas');
         mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
         mergedCanvas.height = (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
-        mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + "px";
-        mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + "px";
+        mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
+        mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
 
         // Give the canvas a white background
-        var context = mergedCanvas.getContext("2d");
-        context.fillStyle = "#ffffff";
+        var context = mergedCanvas.getContext('2d');
+        context.fillStyle = '#ffffff';
         context.fillRect(0, 0, mergedCanvas.width, mergedCanvas.height);
 
         // Merge all the canvases
@@ -2378,14 +2378,14 @@ var ParCoords = function ParCoords(config) {
         // Add SVG elements to canvas
         var DOMURL = window.URL || window.webkitURL || window;
         var serializer = new XMLSerializer();
-        var svgStr = serializer.serializeToString(pc.selection.select("svg").node());
+        var svgStr = serializer.serializeToString(pc.selection.select('svg').node());
 
         // Create a Data URI.
         var src = 'data:image/svg+xml;base64,' + window.btoa(svgStr);
         var img = new Image();
         img.onload = function () {
             context.drawImage(img, 0, 0, img.width * devicePixelRatio, img.height * devicePixelRatio);
-            if (typeof callback === "function") {
+            if (typeof callback === 'function') {
                 callback(mergedCanvas);
             }
         };
@@ -2396,10 +2396,10 @@ var ParCoords = function ParCoords(config) {
     install2DStrums();
     installAngularBrush();
 
-    pc.version = "0.7.0";
+    pc.version = '1.0.3';
     // this descriptive text should live with other introspective methods
     pc.toString = function () {
-        return "Parallel Coordinates: " + d3Collection.keys(__.dimensions).length + " dimensions (" + d3Collection.keys(__.data[0]).length + " total) , " + __.data.length + " rows";
+        return 'Parallel Coordinates: ' + d3Collection.keys(__.dimensions).length + ' dimensions (' + d3Collection.keys(__.data[0]).length + ' total) , ' + __.data.length + ' rows';
     };
 
     return pc;
