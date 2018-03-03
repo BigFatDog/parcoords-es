@@ -9005,6 +9005,7 @@ var ParCoords = function ParCoords(config) {
             }).on('brush', function () {
                 brushUpdated(selected());
             }).on('end', function () {
+                brushUpdated(selected());
                 events.call('brushend', pc, __.brushed);
             });
 

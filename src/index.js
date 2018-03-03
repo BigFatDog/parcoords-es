@@ -1738,6 +1738,7 @@ const ParCoords = config => {
                     brushUpdated(selected());
                 })
                 .on('end', function () {
+                    brushUpdated(selected());
                     events.call('brushend', pc, __.brushed);
                 });
 
