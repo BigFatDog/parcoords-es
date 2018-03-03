@@ -2855,7 +2855,7 @@ const ParCoords = config => {
     install2DStrums();
     installAngularBrush();
 
-    pc.version = '0.7.0';
+    pc.version = '1.0.3';
     // this descriptive text should live with other introspective methods
     pc.toString = function () {
         return (

@@ -1,6 +1,6 @@
 {
   "name": "parcoord-es",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "ES6 module of Parallel Coordinates, based on d3 v4",
   "main": "dist/parcoords.js",
   "module": "dist/parcoords.mjs",
