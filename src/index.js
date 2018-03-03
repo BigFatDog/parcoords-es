@@ -11,14 +11,14 @@ import {drag} from 'd3-drag';
 import './parallel-coordinates.css';
 import renderQueue from './RenderQueue';
 
-import {_functor, _rebind, extend, without} from './helper';
+import {_functor, _rebind, without} from './helper';
 
 import InitialState from './initialState';
 
 //============================================================================================
 
 const ParCoords = config => {
-    const __  = extend(InitialState, config);
+    const __  = Object.assign({}, InitialState, config);
 
     if (config && config.dimensionTitles) {
         console.warn(
