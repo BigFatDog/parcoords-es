@@ -8,11 +8,12 @@ import {axisBottom, axisLeft, axisRight, axisTop} from 'd3-axis';
 import {brushSelection, brushY} from 'd3-brush';
 import {drag} from 'd3-drag';
 
+
 import './parallel-coordinates.css';
 import renderQueue from './RenderQueue';
 
 import {_functor, _rebind, without} from './helper';
-
+import getRange from './util/getRange';
 import InitialState from './initialState';
 
 //============================================================================================
@@ -200,27 +201,6 @@ const ParCoords = config => {
         });
     }
 
-    /** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
-    function getRange() {
-        if (__.nullValueSeparator == 'bottom') {
-            return [
-                h() +
-                1 -
-                __.nullValueSeparatorPadding.bottom -
-                __.nullValueSeparatorPadding.top,
-                1,
-            ];
-        } else if (__.nullValueSeparator == 'top') {
-            return [
-                h() + 1,
-                1 +
-                __.nullValueSeparatorPadding.bottom +
-                __.nullValueSeparatorPadding.top,
-            ];
-        }
-        return [h() + 1, 1];
-    }
-
     pc.autoscale = function () {
         // yscale
         let defaultScales = {
@@ -232,7 +212,7 @@ const ParCoords = config => {
                 if (_extent[0] === _extent[1]) {
                     return scalePoint()
                         .domain(_extent)
-                        .range(getRange());
+                        .range(getRange(__));
                 }
                 if (__.flipAxes.includes(k)) {
                     let tempDate = [];
@@ -243,7 +223,7 @@ const ParCoords = config => {
                 }
                 return scaleTime()
                     .domain(_extent)
-                    .range(getRange());
+                    .range(getRange(__));
             },
             number: function (k) {
                 let _extent = extent(__.data, function (d) {
@@ -253,7 +233,7 @@ const ParCoords = config => {
                 if (_extent[0] === _extent[1]) {
                     return scalePoint()
                         .domain(_extent)
-                        .range(getRange());
+                        .range(getRange(__));
                 }
                 if (__.flipAxes.includes(k)) {
                     let temp = [];
@@ -264,7 +244,7 @@ const ParCoords = config => {
                 }
                 return scaleLinear()
                     .domain(_extent)
-                    .range(getRange());
+                    .range(getRange(__));
             },
             string: function (k) {
                 let counts = {},
@@ -296,7 +276,7 @@ const ParCoords = config => {
                     //edge case
                     domain = [' ', domain[0], ' '];
                 }
-                let addBy = getRange()[0] / (domain.length - 1);
+                let addBy = getRange(__)[0] / (domain.length - 1);
                 for (let j = 0; j < domain.length; j++) {
                     if (categoricalRange.length === 0) {
                         categoricalRange.push(0);

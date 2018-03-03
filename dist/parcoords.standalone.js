@@ -7610,13 +7610,6 @@ var renderQueue = function renderQueue(func) {
   return rq;
 };
 
-var extend$3 = function extend(target, source) {
-  for (var key in source) {
-    target[key] = source[key];
-  }
-  return target;
-};
-
 var without = function without(arr, items) {
   items.forEach(function (el) {
     delete arr[el];
@@ -7640,6 +7633,18 @@ var _functor = function _functor(v) {
   return typeof v === 'function' ? v : function () {
     return v;
   };
+};
+
+/** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
+var getRange = function getRange(config) {
+    var h = config.height - config.margin.top - config.margin.bottom;
+
+    if (config.nullValueSeparator == 'bottom') {
+        return [h + 1 - config.nullValueSeparatorPadding.bottom - config.nullValueSeparatorPadding.top, 1];
+    } else if (config.nullValueSeparator == 'top') {
+        return [h + 1, 1 + config.nullValueSeparatorPadding.bottom + config.nullValueSeparatorPadding.top];
+    }
+    return [h + 1, 1];
 };
 
 var InitialState = {
@@ -7673,10 +7678,8 @@ var InitialState = {
 
 var _this = undefined;
 
-//============================================================================================
-
 var ParCoords = function ParCoords(config) {
-    var __ = extend$3(InitialState, config);
+    var __ = Object.assign({}, InitialState, config);
 
     if (config && config.dimensionTitles) {
         console.warn('dimensionTitles passed in config is deprecated. Add title to dimension object.');
@@ -7690,24 +7693,9 @@ var ParCoords = function ParCoords(config) {
             }
         });
     }
-    var pc = function pc(selection) {
-        selection = pc.selection = select(selection);
-
-        __.width = selection.node().clientWidth;
-        __.height = selection.node().clientHeight;
-        // canvas data layers
-        ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
-            canvas[layer] = selection.append('canvas').attr('class', layer).node();
-            ctx[layer] = canvas[layer].getContext('2d');
-        });
-
-        // svg tick and brush layers
-        pc.svg = selection.append('svg').attr('width', __.width).attr('height', __.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
-
-        return pc;
-    };
 
     var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(__));
+
     var events = dispatch.apply(_this, eventTypes),
         w = function w() {
         return __.width - __.margin.right - __.margin.left;
@@ -7731,6 +7719,23 @@ var ParCoords = function ParCoords(config) {
     ctx = {},
         canvas = {},
         clusterCentroids = [];
+
+    var pc = function pc(selection) {
+        selection = pc.selection = select(selection);
+
+        __.width = selection.node().clientWidth;
+        __.height = selection.node().clientHeight;
+        // canvas data layers
+        ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
+            canvas[layer] = selection.append('canvas').attr('class', layer).node();
+            ctx[layer] = canvas[layer].getContext('2d');
+        });
+
+        // svg tick and brush layers
+        pc.svg = selection.append('svg').attr('width', __.width).attr('height', __.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
+
+        return pc;
+    };
 
     // side effects for setters
     var side_effects = dispatch.apply(_this, keys(__)).on('composite', function (d) {
@@ -7816,16 +7821,6 @@ var ParCoords = function ParCoords(config) {
         });
     }
 
-    /** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
-    function getRange() {
-        if (__.nullValueSeparator == 'bottom') {
-            return [h() + 1 - __.nullValueSeparatorPadding.bottom - __.nullValueSeparatorPadding.top, 1];
-        } else if (__.nullValueSeparator == 'top') {
-            return [h() + 1, 1 + __.nullValueSeparatorPadding.bottom + __.nullValueSeparatorPadding.top];
-        }
-        return [h() + 1, 1];
-    }
-
     pc.autoscale = function () {
         // yscale
         var defaultScales = {
@@ -7835,7 +7830,7 @@ var ParCoords = function ParCoords(config) {
                 });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
-                    return point$1().domain(_extent).range(getRange());
+                    return point$1().domain(_extent).range(getRange(__));
                 }
                 if (__.flipAxes.includes(k)) {
                     var tempDate = [];
@@ -7844,7 +7839,7 @@ var ParCoords = function ParCoords(config) {
                     });
                     _extent = tempDate;
                 }
-                return scaleTime().domain(_extent).range(getRange());
+                return scaleTime().domain(_extent).range(getRange(__));
             },
             number: function number(k) {
                 var _extent = extent(__.data, function (d) {
@@ -7852,7 +7847,7 @@ var ParCoords = function ParCoords(config) {
                 });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
-                    return point$1().domain(_extent).range(getRange());
+                    return point$1().domain(_extent).range(getRange(__));
                 }
                 if (__.flipAxes.includes(k)) {
                     var temp = [];
@@ -7861,7 +7856,7 @@ var ParCoords = function ParCoords(config) {
                     });
                     _extent = temp;
                 }
-                return linear().domain(_extent).range(getRange());
+                return linear().domain(_extent).range(getRange(__));
             },
             string: function string(k) {
                 var counts = {},
@@ -7893,7 +7888,7 @@ var ParCoords = function ParCoords(config) {
                     //edge case
                     domain = [' ', domain[0], ' '];
                 }
-                var addBy = getRange()[0] / (domain.length - 1);
+                var addBy = getRange(__)[0] / (domain.length - 1);
                 for (var j = 0; j < domain.length; j++) {
                     if (categoricalRange.length === 0) {
                         categoricalRange.push(0);
