@@ -24,7 +24,7 @@ const ParCoords = config => {
         console.warn(
             'dimensionTitles passed in config is deprecated. Add title to dimension object.'
         );
-        entries(config.dimensionTitles).forEach(function (d) {
+        entries(config.dimensionTitles).forEach((d)=> {
             if (__.dimensions[d.key]) {
                 __.dimensions[d.key].title = __.dimensions[d.key].title
                     ? __.dimensions[d.key].title
@@ -36,7 +36,38 @@ const ParCoords = config => {
             }
         });
     }
-    let pc = function (selection) {
+
+    const eventTypes = [
+        'render',
+        'resize',
+        'highlight',
+        'brush',
+        'brushend',
+        'brushstart',
+        'axesreorder',
+    ].concat(keys(__));
+
+
+    let events = dispatch.apply(this, eventTypes),
+        w = ()=> __.width - __.margin.right - __.margin.left,
+        h = ()=> __.height - __.margin.top - __.margin.bottom,
+        flags = {
+            brushable: false,
+            reorderable: false,
+            axes: false,
+            interactive: false,
+            debug: false,
+        },
+        xscale = scalePoint(),
+        dragging = {},
+        _line = line(),
+        axis = axisLeft().ticks(5),
+        g, // groups for axes, brushes
+        ctx = {},
+        canvas = {},
+        clusterCentroids = [];
+
+    const pc = function (selection) {
         selection = pc.selection = select(selection);
 
         __.width = selection.node().clientWidth;
@@ -67,37 +98,6 @@ const ParCoords = config => {
         return pc;
     };
 
-    let eventTypes = [
-        'render',
-        'resize',
-        'highlight',
-        'brush',
-        'brushend',
-        'brushstart',
-        'axesreorder',
-    ].concat(keys(__));
-    let events = dispatch.apply(this, eventTypes),
-        w = function () {
-            return __.width - __.margin.right - __.margin.left;
-        },
-        h = function () {
-            return __.height - __.margin.top - __.margin.bottom;
-        },
-        flags = {
-            brushable: false,
-            reorderable: false,
-            axes: false,
-            interactive: false,
-            debug: false,
-        },
-        xscale = scalePoint(),
-        dragging = {},
-        _line = line(),
-        axis = axisLeft().ticks(5),
-        g, // groups for axes, brushes
-        ctx = {},
-        canvas = {},
-        clusterCentroids = [];
 
     // side effects for setters
     let side_effects = dispatch
