@@ -1,108 +1,94 @@
-import { select, selectAll, event, mouse } from 'd3-selection';
-import { keys, entries, map } from 'd3-collection';
-import { dispatch } from 'd3-dispatch';
-import { extent, ascending, min } from 'd3-array';
-import { scalePoint, scaleOrdinal, scaleTime, scaleLinear } from 'd3-scale';
-import { line, arc as d3Arc } from 'd3-shape';
-import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
-import { brushSelection, brushY } from 'd3-brush';
-import { drag } from 'd3-drag';
+import {select, selectAll, event, mouse} from 'd3-selection';
+import {keys, entries, map} from 'd3-collection';
+import {dispatch} from 'd3-dispatch';
+import {extent, ascending, min} from 'd3-array';
+import {scalePoint, scaleOrdinal, scaleTime, scaleLinear} from 'd3-scale';
+import {line, arc as d3Arc} from 'd3-shape';
+import {axisBottom, axisLeft, axisRight, axisTop} from 'd3-axis';
+import {brushSelection, brushY} from 'd3-brush';
+import {drag} from 'd3-drag';
 
 import './parallel-coordinates.css';
 import renderQueue from './RenderQueue';
 
-import {
-    _functor,
-    _rebind,
-    extend,
-    without
-} from './helper';
+import {_functor, _rebind, extend, without} from './helper';
 
+import InitialState from './initialState';
 
 //============================================================================================
 
-const ParCoords = (config)=> {
-    let __ = {
-        data: [],
-        highlighted: [],
-        dimensions: {},
-        dimensionTitleRotation: 0,
-        brushes: [],
-        brushed: false,
-        brushedColor: null,
-        alphaOnBrushed: 0.0,
-        mode: "default",
-        rate: 20,
-        width: 600,
-        height: 300,
-        margin: { top: 24, right: 20, bottom: 12, left: 20 },
-        nullValueSeparator: "undefined", // set to "top" or "bottom"
-        nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
-        color: "#069",
-        composite: "source-over",
-        alpha: 0.7,
-        bundlingStrength: 0.5,
-        bundleDimension: null,
-        smoothness: 0.0,
-        showControlPoints: false,
-        hideAxis : [],
-        flipAxes: [],
-        animationTime: 1100, // How long it takes to flip the axis when you double click
-        rotateLabels: false
-    };
-
-    extend(__, config);
+const ParCoords = config => {
+    const __  = extend(InitialState, config);
 
     if (config && config.dimensionTitles) {
-        console.warn("dimensionTitles passed in config is deprecated. Add title to dimension object.");
-        entries(config.dimensionTitles).forEach(function(d) {
+        console.warn(
+            'dimensionTitles passed in config is deprecated. Add title to dimension object.'
+        );
+        entries(config.dimensionTitles).forEach(function (d) {
             if (__.dimensions[d.key]) {
-                __.dimensions[d.key].title = __.dimensions[d.key].title ? __.dimensions[d.key].title : d.value;
+                __.dimensions[d.key].title = __.dimensions[d.key].title
+                    ? __.dimensions[d.key].title
+                    : d.value;
             } else {
                 __.dimensions[d.key] = {
-                    title: d.value
+                    title: d.value,
                 };
             }
         });
     }
-    let pc = function(selection) {
+    let pc = function (selection) {
         selection = pc.selection = select(selection);
 
         __.width = selection.node().clientWidth;
         __.height = selection.node().clientHeight;
         // canvas data layers
-        ["marks", "foreground", "brushed", "highlight"].forEach(function(layer) {
+        ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
             canvas[layer] = selection
-                .append("canvas")
-                .attr("class", layer).node();
-            ctx[layer] = canvas[layer].getContext("2d");
+                .append('canvas')
+                .attr('class', layer)
+                .node();
+            ctx[layer] = canvas[layer].getContext('2d');
         });
-
 
         // svg tick and brush layers
         pc.svg = selection
-            .append("svg")
-            .attr("width", __.width )
-            .attr("height", __.height)
-            .style("font", "14px sans-serif")
-            .style("position", "absolute")
+            .append('svg')
+            .attr('width', __.width)
+            .attr('height', __.height)
+            .style('font', '14px sans-serif')
+            .style('position', 'absolute')
 
-            .append("svg:g")
-            .attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+            .append('svg:g')
+            .attr(
+                'transform',
+                'translate(' + __.margin.left + ',' + __.margin.top + ')'
+            );
 
         return pc;
     };
 
-    let eventTypes = ["render", "resize", "highlight", "brush", "brushend", "brushstart", "axesreorder"].concat(keys(__));
+    let eventTypes = [
+        'render',
+        'resize',
+        'highlight',
+        'brush',
+        'brushend',
+        'brushstart',
+        'axesreorder',
+    ].concat(keys(__));
     let events = dispatch.apply(this, eventTypes),
-        w = function() { return __.width - __.margin.right - __.margin.left; },
-        h = function() { return __.height - __.margin.top - __.margin.bottom; },
+        w = function () {
+            return __.width - __.margin.right - __.margin.left;
+        },
+        h = function () {
+            return __.height - __.margin.top - __.margin.bottom;
+        },
         flags = {
             brushable: false,
             reorderable: false,
             axes: false,
             interactive: false,
-            debug: false
+            debug: false,
         },
         xscale = scalePoint(),
         dragging = {},
@@ -114,35 +100,44 @@ const ParCoords = (config)=> {
         clusterCentroids = [];
 
     // side effects for setters
-    let side_effects = dispatch.apply(this, keys(__))
-        .on("composite", function(d) {
+    let side_effects = dispatch
+        .apply(this, keys(__))
+        .on('composite', function (d) {
             ctx.foreground.globalCompositeOperation = d.value;
             ctx.brushed.globalCompositeOperation = d.value;
         })
-        .on("alpha", function(d) {
+        .on('alpha', function (d) {
             ctx.foreground.globalAlpha = d.value;
             ctx.brushed.globalAlpha = d.value;
         })
-        .on("brushedColor", function (d) {
+        .on('brushedColor', function (d) {
             ctx.brushed.strokeStyle = d.value;
         })
-        .on("width", function(d) { pc.resize(); })
-        .on("height", function(d) { pc.resize(); })
-        .on("margin", function(d) { pc.resize(); })
-        .on("rate", function(d) {
+        .on('width', function (d) {
+            pc.resize();
+        })
+        .on('height', function (d) {
+            pc.resize();
+        })
+        .on('margin', function (d) {
+            pc.resize();
+        })
+        .on('rate', function (d) {
             brushedQueue.rate(d.value);
             foregroundQueue.rate(d.value);
         })
-        .on("dimensions", function(d) {
+        .on('dimensions', function (d) {
             __.dimensions = pc.applyDimensionDefaults(keys(d.value));
             xscale.domain(pc.getOrderedDimensionKeys());
             pc.sortDimensions();
-            if (flags.interactive){pc.render().updateAxes();}
+            if (flags.interactive) {
+                pc.render().updateAxes();
+            }
         })
-        .on("bundleDimension", function(d) {
+        .on('bundleDimension', function (d) {
             if (!keys(__.dimensions).length) pc.detectDimensions();
             pc.autoscale();
-            if (typeof d.value === "number") {
+            if (typeof d.value === 'number') {
                 if (d.value < keys(__.dimensions).length) {
                     __.bundleDimension = __.dimensions[d.value];
                 } else if (d.value < __.hideAxis.length) {
@@ -153,15 +148,17 @@ const ParCoords = (config)=> {
             }
 
             __.clusterCentroids = compute_cluster_centroids(__.bundleDimension);
-            if (flags.interactive){pc.render();}
+            if (flags.interactive) {
+                pc.render();
+            }
         })
-        .on("hideAxis", function(d) {
+        .on('hideAxis', function (d) {
             pc.dimensions(pc.applyDimensionDefaults());
             pc.dimensions(without(__.dimensions, d.value));
         })
-        .on("flipAxes", function(d) {
+        .on('flipAxes', function (d) {
             if (d.value && d.value.length) {
-                d.value.forEach(function(axis) {
+                d.value.forEach(function (axis) {
                     flipAxisAndUpdatePCP(axis);
                 });
                 pc.updateAxes(0);
@@ -176,42 +173,59 @@ const ParCoords = (config)=> {
     getset(pc, __, events);
 
     // expose events
-    _rebind(pc, events, "on");
+    _rebind(pc, events, 'on');
+
     // getter/setter with event firing
-    function getset(obj,state,events)  {
-        keys(state).forEach(function(key) {
-            obj[key] = function(x) {
+    function getset(obj, state, events) {
+        keys(state).forEach(function (key) {
+            obj[key] = function (x) {
                 if (!arguments.length) {
                     return state[key];
                 }
-                if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-                    console.warn("pc.dimensions([]) is deprecated, use pc.dimensions({})");
+                if (
+                    key === 'dimensions' &&
+                    Object.prototype.toString.call(x) === '[object Array]'
+                ) {
+                    console.warn(
+                        'pc.dimensions([]) is deprecated, use pc.dimensions({})'
+                    );
                     x = pc.applyDimensionDefaults(x);
                 }
                 let old = state[key];
                 state[key] = x;
-                side_effects.call(key, pc, {"value": x, "previous": old});
-                events.call(key ,pc, {"value": x, "previous": old});
+                side_effects.call(key, pc, {value: x, previous: old});
+                events.call(key, pc, {value: x, previous: old});
                 return obj;
             };
         });
-    };
+    }
 
     /** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
     function getRange() {
-        if (__.nullValueSeparator=="bottom") {
-            return [h()+1-__.nullValueSeparatorPadding.bottom-__.nullValueSeparatorPadding.top, 1];
-        } else if (__.nullValueSeparator=="top") {
-            return [h()+1, 1+__.nullValueSeparatorPadding.bottom+__.nullValueSeparatorPadding.top];
+        if (__.nullValueSeparator == 'bottom') {
+            return [
+                h() +
+                1 -
+                __.nullValueSeparatorPadding.bottom -
+                __.nullValueSeparatorPadding.top,
+                1,
+            ];
+        } else if (__.nullValueSeparator == 'top') {
+            return [
+                h() + 1,
+                1 +
+                __.nullValueSeparatorPadding.bottom +
+                __.nullValueSeparatorPadding.top,
+            ];
         }
-        return [h()+1, 1];
-    };
+        return [h() + 1, 1];
+    }
 
-    pc.autoscale = function() {
+    pc.autoscale = function () {
         // yscale
         let defaultScales = {
-            "date": function(k) {
-                let _extent = extent(__.data, function(d) {
+            date: function (k) {
+                let _extent = extent(__.data, function (d) {
                     return d[k] ? d[k].getTime() : null;
                 });
                 // special case if single value
@@ -231,8 +245,10 @@ const ParCoords = (config)=> {
                     .domain(_extent)
                     .range(getRange());
             },
-            "number": function(k) {
-                let _extent = extent(__.data, function(d) { return +d[k]; });
+            number: function (k) {
+                let _extent = extent(__.data, function (d) {
+                    return +d[k];
+                });
                 // special case if single value
                 if (_extent[0] === _extent[1]) {
                     return scalePoint()
@@ -250,13 +266,13 @@ const ParCoords = (config)=> {
                     .domain(_extent)
                     .range(getRange());
             },
-            "string": function(k) {
+            string: function (k) {
                 let counts = {},
                     domain = [];
                 // Let's get the count for each value so that we can sort the domain based
                 // on the number of items for each value.
-                __.data.map(function(p) {
-                    if (p[k] === undefined && __.nullValueSeparator!== "undefined"){
+                __.data.map(function (p) {
+                    if (p[k] === undefined && __.nullValueSeparator !== 'undefined') {
                         return; // null values will be drawn beyond the horizontal null value separator!
                     }
                     if (counts[p[k]] === undefined) {
@@ -276,8 +292,9 @@ const ParCoords = (config)=> {
 
                 //need to create an ordinal scale for categorical data
                 let categoricalRange = [];
-                if (domain.length === 1) { //edge case
-                    domain = [" ", domain[0], " "];
+                if (domain.length === 1) {
+                    //edge case
+                    domain = [' ', domain[0], ' '];
                 }
                 let addBy = getRange()[0] / (domain.length - 1);
                 for (let j = 0; j < domain.length; j++) {
@@ -285,14 +302,14 @@ const ParCoords = (config)=> {
                         categoricalRange.push(0);
                         continue;
                     }
-                    categoricalRange.push(categoricalRange[j - 1] + addBy)
+                    categoricalRange.push(categoricalRange[j - 1] + addBy);
                 }
                 return scaleOrdinal()
                     .domain(domain)
                     .range(categoricalRange);
-            }
+            },
         };
-        keys(__.dimensions).forEach(function(k) {
+        keys(__.dimensions).forEach(function (k) {
             __.dimensions[k].yscale = defaultScales[__.dimensions[k].type](k);
         });
 
@@ -302,13 +319,14 @@ const ParCoords = (config)=> {
         let devicePixelRatio = window.devicePixelRatio || 1;
 
         // canvas sizes
-        pc.selection.selectAll("canvas")
-            .style("margin-top", __.margin.top + "px")
-            .style("margin-left", __.margin.left + "px")
-            .style("width", (w()+2) + "px")
-            .style("height", (h()+2) + "px")
-            .attr("width", (w()+2) * devicePixelRatio)
-            .attr("height", (h()+2) * devicePixelRatio);
+        pc.selection
+            .selectAll('canvas')
+            .style('margin-top', __.margin.top + 'px')
+            .style('margin-left', __.margin.left + 'px')
+            .style('width', w() + 2 + 'px')
+            .style('height', h() + 2 + 'px')
+            .attr('width', (w() + 2) * devicePixelRatio)
+            .attr('height', (h() + 2) * devicePixelRatio);
         // default styles, needs to be set when canvas width changes
         ctx.foreground.strokeStyle = __.color;
         ctx.foreground.lineWidth = 1.4;
@@ -326,50 +344,57 @@ const ParCoords = (config)=> {
         return this;
     };
 
-    pc.scale = function(d, domain) {
+    pc.scale = function (d, domain) {
         __.dimensions[d].yscale.domain(domain);
 
         return this;
     };
 
-    pc.flip = function(d) {
+    pc.flip = function (d) {
         //__.dimensions[d].yscale.domain().reverse();                               // does not work
         __.dimensions[d].yscale.domain(__.dimensions[d].yscale.domain().reverse()); // works
 
         return this;
     };
 
-    pc.commonScale = function(global, type) {
-        let t = type || "number";
+    pc.commonScale = function (global, type) {
+        let t = type || 'number';
         if (typeof global === 'undefined') {
             global = true;
         }
 
         // try to autodetect dimensions and create scales
         if (!keys(__.dimensions).length) {
-            pc.detectDimensions()
+            pc.detectDimensions();
         }
         pc.autoscale();
 
         // scales of the same type
-        let scales = keys(__.dimensions).filter(function(p) {
+        let scales = keys(__.dimensions).filter(function (p) {
             return __.dimensions[p].type == t;
         });
 
         if (global) {
-            let _extent = extent(scales.map(function(d,i) {
-                return __.dimensions[d].yscale.domain();
-            }).reduce(function(a,b) {
-                return a.concat(b);
-            }));
+            let _extent = extent(
+                scales
+                    .map(function (d, i) {
+                        return __.dimensions[d].yscale.domain();
+                    })
+                    .reduce(function (a, b) {
+                        return a.concat(b);
+                    })
+            );
 
-            scales.forEach(function(d) {
+            scales.forEach(function (d) {
                 __.dimensions[d].yscale.domain(_extent);
             });
-
         } else {
-            scales.forEach(function(d) {
-                __.dimensions[d].yscale.domain(extent(__.data, function(d) { return +d[k]; }));
+            scales.forEach(function (d) {
+                __.dimensions[d].yscale.domain(
+                    extent(__.data, function (d) {
+                        return +d[k];
+                    })
+                );
             });
         }
 
@@ -380,65 +405,73 @@ const ParCoords = (config)=> {
 
         return this;
     };
-    pc.detectDimensions = function() {
+    pc.detectDimensions = function () {
         pc.dimensions(pc.applyDimensionDefaults());
         return this;
     };
 
-    pc.applyDimensionDefaults = function(dims) {
+    pc.applyDimensionDefaults = function (dims) {
         let types = pc.detectDimensionTypes(__.data);
         dims = dims ? dims : keys(types);
         let newDims = {};
         let currIndex = 0;
-        dims.forEach(function(k) {
+        dims.forEach(function (k) {
             newDims[k] = __.dimensions[k] ? __.dimensions[k] : {};
             //Set up defaults
-            newDims[k].orient= newDims[k].orient ? newDims[k].orient : 'left';
-            newDims[k].ticks= newDims[k].ticks != null ? newDims[k].ticks : 5;
-            newDims[k].innerTickSize= newDims[k].innerTickSize != null ? newDims[k].innerTickSize : 6;
-            newDims[k].outerTickSize= newDims[k].outerTickSize != null ? newDims[k].outerTickSize : 0;
-            newDims[k].tickPadding= newDims[k].tickPadding != null ? newDims[k].tickPadding : 3;
-            newDims[k].type= newDims[k].type ? newDims[k].type : types[k];
+            newDims[k].orient = newDims[k].orient ? newDims[k].orient : 'left';
+            newDims[k].ticks = newDims[k].ticks != null ? newDims[k].ticks : 5;
+            newDims[k].innerTickSize =
+                newDims[k].innerTickSize != null ? newDims[k].innerTickSize : 6;
+            newDims[k].outerTickSize =
+                newDims[k].outerTickSize != null ? newDims[k].outerTickSize : 0;
+            newDims[k].tickPadding =
+                newDims[k].tickPadding != null ? newDims[k].tickPadding : 3;
+            newDims[k].type = newDims[k].type ? newDims[k].type : types[k];
 
-            newDims[k].index = newDims[k].index != null ? newDims[k].index : currIndex;
+            newDims[k].index =
+                newDims[k].index != null ? newDims[k].index : currIndex;
             currIndex++;
         });
         return newDims;
     };
 
-    pc.getOrderedDimensionKeys = function(){
-        return keys(__.dimensions).sort(function(x, y){
+    pc.getOrderedDimensionKeys = function () {
+        return keys(__.dimensions).sort(function (x, y) {
             return ascending(__.dimensions[x].index, __.dimensions[y].index);
         });
     };
 
-// a better "typeof" from this post: http://stackoverflow.com/questions/7390426/better-way-to-get-type-of-a-javascript-variable
-    pc.toType = function(v) {
-        return ({}).toString.call(v).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
+    // a better "typeof" from this post: http://stackoverflow.com/questions/7390426/better-way-to-get-type-of-a-javascript-variable
+    pc.toType = function (v) {
+        return {}.toString
+            .call(v)
+            .match(/\s([a-zA-Z]+)/)[1]
+            .toLowerCase();
     };
 
-// try to coerce to number before returning type
-    pc.toTypeCoerceNumbers = function(v) {
-        if ((parseFloat(v) == v) && (v != null)) {
-            return "number";
+    // try to coerce to number before returning type
+    pc.toTypeCoerceNumbers = function (v) {
+        if (parseFloat(v) == v && v != null) {
+            return 'number';
         }
         return pc.toType(v);
     };
 
-// attempt to determine types of each dimension based on first row of data
-    pc.detectDimensionTypes = function(data) {
+    // attempt to determine types of each dimension based on first row of data
+    pc.detectDimensionTypes = function (data) {
         let types = {};
-        keys(data[0])
-            .forEach(function(col) {
-                types[isNaN(Number(col)) ? col : parseInt(col)] = pc.toTypeCoerceNumbers(data[0][col]);
-            });
+        keys(data[0]).forEach(function (col) {
+            types[isNaN(Number(col)) ? col : parseInt(col)] = pc.toTypeCoerceNumbers(
+                data[0][col]
+            );
+        });
         return types;
     };
 
-    pc.render = function() {
+    pc.render = function () {
         // try to autodetect dimensions and create scales
         if (!keys(__.dimensions).length) {
-            pc.detectDimensions()
+            pc.detectDimensions();
         }
         pc.autoscale();
 
@@ -448,7 +481,7 @@ const ParCoords = (config)=> {
         return this;
     };
 
-    pc.renderBrushed = function() {
+    pc.renderBrushed = function () {
         if (!keys(__.dimensions).length) pc.detectDimensions();
 
         pc.renderBrushed[__.mode]();
@@ -457,8 +490,7 @@ const ParCoords = (config)=> {
     };
 
     function isBrushed() {
-        if (__.brushed && __.brushed.length !== __.data.length)
-            return true;
+        if (__.brushed && __.brushed.length !== __.data.length) return true;
 
         let object = brush.currentMode().brushState();
 
@@ -468,9 +500,9 @@ const ParCoords = (config)=> {
             }
         }
         return false;
-    };
+    }
 
-    pc.render.default = function() {
+    pc.render.default = function () {
         pc.clear('foreground');
         pc.clear('highlight');
 
@@ -481,18 +513,18 @@ const ParCoords = (config)=> {
 
     let foregroundQueue = renderQueue(path_foreground)
         .rate(50)
-        .clear(function() {
+        .clear(function () {
             pc.clear('foreground');
             pc.clear('highlight');
         });
 
-    pc.render.queue = function() {
+    pc.render.queue = function () {
         pc.renderBrushed.queue();
 
         foregroundQueue(__.data);
     };
 
-    pc.renderBrushed.default = function() {
+    pc.renderBrushed.default = function () {
         pc.clear('brushed');
 
         if (isBrushed()) {
@@ -502,23 +534,23 @@ const ParCoords = (config)=> {
 
     let brushedQueue = renderQueue(path_brushed)
         .rate(50)
-        .clear(function() {
+        .clear(function () {
             pc.clear('brushed');
         });
 
-    pc.renderBrushed.queue = function() {
+    pc.renderBrushed.queue = function () {
         if (isBrushed()) {
             brushedQueue(__.brushed);
         } else {
             brushedQueue([]); // This is needed to clear the currently brushed items
         }
     };
-    function compute_cluster_centroids(d) {
 
+    function compute_cluster_centroids(d) {
         let clusterCentroids = map();
         let clusterCounts = map();
         // determine clusterCounts
-        __.data.forEach(function(row) {
+        __.data.forEach(function (row) {
             let scaled = __.dimensions[d].yscale(row[d]);
             if (!clusterCounts.has(scaled)) {
                 clusterCounts.set(scaled, 0);
@@ -527,8 +559,8 @@ const ParCoords = (config)=> {
             clusterCounts.set(scaled, count + 1);
         });
 
-        __.data.forEach(function(row) {
-            keys(__.dimensions).map(function(p, i) {
+        __.data.forEach(function (row) {
+            keys(__.dimensions).map(function (p, i) {
                 let scaled = __.dimensions[d].yscale(row[d]);
                 if (!clusterCentroids.has(scaled)) {
                     let _map = map();
@@ -544,7 +576,6 @@ const ParCoords = (config)=> {
         });
 
         return clusterCentroids;
-
     }
 
     function compute_centroids(row) {
@@ -552,7 +583,7 @@ const ParCoords = (config)=> {
 
         let p = keys(__.dimensions);
         let cols = p.length;
-        let a = 0.5;			// center between axes
+        let a = 0.5; // center between axes
         for (let i = 0; i < cols; ++i) {
             // centroids on 'real' axes
             let x = position(p[i]);
@@ -561,11 +592,19 @@ const ParCoords = (config)=> {
 
             // centroids on 'virtual' axes
             if (i < cols - 1) {
-                let cx = x + a * (position(p[i+1]) - x);
-                let cy = y + a * (__.dimensions[p[i+1]].yscale(row[p[i+1]]) - y);
+                let cx = x + a * (position(p[i + 1]) - x);
+                let cy = y + a * (__.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
                 if (__.bundleDimension !== null) {
-                    let leftCentroid = __.clusterCentroids.get(__.dimensions[__.bundleDimension].yscale(row[__.bundleDimension])).get(p[i]);
-                    let rightCentroid = __.clusterCentroids.get(__.dimensions[__.bundleDimension].yscale(row[__.bundleDimension])).get(p[i+1]);
+                    let leftCentroid = __.clusterCentroids
+                        .get(
+                            __.dimensions[__.bundleDimension].yscale(row[__.bundleDimension])
+                        )
+                        .get(p[i]);
+                    let rightCentroid = __.clusterCentroids
+                        .get(
+                            __.dimensions[__.bundleDimension].yscale(row[__.bundleDimension])
+                        )
+                        .get(p[i + 1]);
                     let centroid = 0.5 * (leftCentroid + rightCentroid);
                     cy = centroid + (1 - __.bundlingStrength) * (cy - centroid);
                 }
@@ -576,7 +615,7 @@ const ParCoords = (config)=> {
         return centroids;
     }
 
-    pc.compute_real_centroids = function(row) {
+    pc.compute_real_centroids = function (row) {
         let realCentroids = [];
 
         let p = keys(__.dimensions);
@@ -590,16 +629,20 @@ const ParCoords = (config)=> {
         }
 
         return realCentroids;
-    }
+    };
 
     function compute_control_points(centroids) {
-
         let cols = centroids.length;
         let a = __.smoothness;
         let cps = [];
 
         cps.push(centroids[0]);
-        cps.push($V([centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)), centroids[0].e(2)]));
+        cps.push(
+            $V([
+                centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)),
+                centroids[0].e(2),
+            ])
+        );
         for (let col = 1; col < cols - 1; ++col) {
             let mid = centroids[col];
             let left = centroids[col - 1];
@@ -610,30 +653,42 @@ const ParCoords = (config)=> {
             cps.push(mid);
             cps.push(mid.subtract(diff.x(a)));
         }
-        cps.push($V([centroids[cols - 1].e(1) + a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)), centroids[cols - 1].e(2)]));
+        cps.push(
+            $V([
+                centroids[cols - 1].e(1) +
+                a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)),
+                centroids[cols - 1].e(2),
+            ])
+        );
         cps.push(centroids[cols - 1]);
 
         return cps;
     }
 
-    pc.shadows = function() {
+    pc.shadows = function () {
         flags.shadows = true;
         pc.alphaOnBrushed(0.1);
         pc.render();
         return this;
     };
 
-// draw dots with radius r on the axis line where data intersects
-    pc.axisDots = function(_r) {
+    // draw dots with radius r on the axis line where data intersects
+    pc.axisDots = function (_r) {
         let r = _r || 0.1;
         let ctx = pc.ctx.marks;
         let startAngle = 0;
         let endAngle = 2 * Math.PI;
-        ctx.globalAlpha = min([ 1 / Math.pow(__.data.length, 1 / 2), 1 ]);
-        __.data.forEach(function(d) {
-            entries(__.dimensions).forEach(function(p, i) {
+        ctx.globalAlpha = min([1 / Math.pow(__.data.length, 1 / 2), 1]);
+        __.data.forEach(function (d) {
+            entries(__.dimensions).forEach(function (p, i) {
                 ctx.beginPath();
-                ctx.arc(position(p), __.dimensions[p.key].yscale(d[p]), r, startAngle, endAngle);
+                ctx.arc(
+                    position(p),
+                    __.dimensions[p.key].yscale(d[p]),
+                    r,
+                    startAngle,
+                    endAngle
+                );
                 ctx.stroke();
                 ctx.fill();
             });
@@ -643,7 +698,6 @@ const ParCoords = (config)=> {
 
     // draw single cubic bezier curve
     function single_curve(d, ctx) {
-
         let centroids = compute_centroids(d);
         let cps = compute_control_points(centroids);
 
@@ -651,60 +705,85 @@ const ParCoords = (config)=> {
         for (let i = 1; i < cps.length; i += 3) {
             if (__.showControlPoints) {
                 for (let j = 0; j < 3; j++) {
-                    ctx.fillRect(cps[i+j].e(1), cps[i+j].e(2), 2, 2);
+                    ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
                 }
             }
-            ctx.bezierCurveTo(cps[i].e(1), cps[i].e(2), cps[i+1].e(1), cps[i+1].e(2), cps[i+2].e(1), cps[i+2].e(2));
+            ctx.bezierCurveTo(
+                cps[i].e(1),
+                cps[i].e(2),
+                cps[i + 1].e(1),
+                cps[i + 1].e(2),
+                cps[i + 2].e(1),
+                cps[i + 2].e(2)
+            );
         }
-    };
+    }
 
     // draw single polyline
     function color_path(d, ctx) {
         ctx.beginPath();
-        if ((__.bundleDimension !== null && __.bundlingStrength > 0) || __.smoothness > 0) {
+        if (
+            (__.bundleDimension !== null && __.bundlingStrength > 0) ||
+            __.smoothness > 0
+        ) {
             single_curve(d, ctx);
         } else {
             single_path(d, ctx);
         }
         ctx.stroke();
-    };
+    }
 
-
-// draw many polylines of the same color
+    // draw many polylines of the same color
     function paths(data, ctx) {
         ctx.clearRect(-1, -1, w() + 2, h() + 2);
         ctx.beginPath();
-        data.forEach(function(d) {
-            if ((__.bundleDimension !== null && __.bundlingStrength > 0) || __.smoothness > 0) {
+        data.forEach(function (d) {
+            if (
+                (__.bundleDimension !== null && __.bundlingStrength > 0) ||
+                __.smoothness > 0
+            ) {
                 single_curve(d, ctx);
             } else {
                 single_path(d, ctx);
             }
         });
         ctx.stroke();
-    };
+    }
 
-// returns the y-position just beyond the separating null value line
+    // returns the y-position just beyond the separating null value line
     function getNullPosition() {
-        if (__.nullValueSeparator=="bottom") {
-            return h()+1;
-        } else if (__.nullValueSeparator=="top") {
+        if (__.nullValueSeparator == 'bottom') {
+            return h() + 1;
+        } else if (__.nullValueSeparator == 'top') {
             return 1;
         } else {
-            console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
+            console.log(
+                "A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'."
+            );
         }
-        return h()+1;
-    };
+        return h() + 1;
+    }
 
     function single_path(d, ctx) {
-        entries(__.dimensions).forEach(function(p, i) {  //p isn't really p
+        entries(__.dimensions).forEach(function (p, i) {
+            //p isn't really p
             if (i == 0) {
-                ctx.moveTo(position(p.key), typeof d[p.key] =='undefined' ? getNullPosition() : __.dimensions[p.key].yscale(d[p.key]));
+                ctx.moveTo(
+                    position(p.key),
+                    typeof d[p.key] == 'undefined'
+                        ? getNullPosition()
+                        : __.dimensions[p.key].yscale(d[p.key])
+                );
             } else {
-                ctx.lineTo(position(p.key), typeof d[p.key] =='undefined' ? getNullPosition() : __.dimensions[p.key].yscale(d[p.key]));
+                ctx.lineTo(
+                    position(p.key),
+                    typeof d[p.key] == 'undefined'
+                        ? getNullPosition()
+                        : __.dimensions[p.key].yscale(d[p.key])
+                );
             }
         });
-    };
+    }
 
     function path_brushed(d, i) {
         if (__.brushedColor !== null) {
@@ -712,42 +791,53 @@ const ParCoords = (config)=> {
         } else {
             ctx.brushed.strokeStyle = _functor(__.color)(d, i);
         }
-        return color_path(d, ctx.brushed)
-    };
+        return color_path(d, ctx.brushed);
+    }
 
     function path_foreground(d, i) {
         ctx.foreground.strokeStyle = _functor(__.color)(d, i);
         return color_path(d, ctx.foreground);
-    };
+    }
 
     function path_highlight(d, i) {
         ctx.highlight.strokeStyle = _functor(__.color)(d, i);
         return color_path(d, ctx.highlight);
-    };
-    pc.clear = function(layer) {
+    }
+
+    pc.clear = function (layer) {
         ctx[layer].clearRect(0, 0, w() + 2, h() + 2);
 
         // This will make sure that the foreground items are transparent
         // without the need for changing the opacity style of the foreground canvas
         // as this would stop the css styling from working
-        if(layer === "brushed" && isBrushed()) {
-            ctx.brushed.fillStyle = pc.selection.style("background-color");
+        if (layer === 'brushed' && isBrushed()) {
+            ctx.brushed.fillStyle = pc.selection.style('background-color');
             ctx.brushed.globalAlpha = 1 - __.alphaOnBrushed;
             ctx.brushed.fillRect(0, 0, w() + 2, h() + 2);
             ctx.brushed.globalAlpha = __.alpha;
         }
         return this;
     };
-    _rebind(pc, axis, "ticks", "orient", "tickValues", "tickSubdivide", "tickSize", "tickPadding", "tickFormat");
+    _rebind(
+        pc,
+        axis,
+        'ticks',
+        'orient',
+        'tickValues',
+        'tickSubdivide',
+        'tickSize',
+        'tickPadding',
+        'tickFormat'
+    );
 
     function flipAxisAndUpdatePCP(dimension) {
-        let g = pc.svg.selectAll(".dimension");
+        let g = pc.svg.selectAll('.dimension');
         pc.flip(dimension);
         pc.brushReset(dimension);
         select(this.parentElement)
             .transition()
             .duration(__.animationTime)
-            .call(axis.scale(__.dimensions[dimension].yscale))
+            .call(axis.scale(__.dimensions[dimension].yscale));
         pc.render();
     }
 
@@ -759,163 +849,201 @@ const ParCoords = (config)=> {
         delta = delta > 0 ? 5 : delta;
 
         __.dimensionTitleRotation += delta;
-        pc.svg.selectAll("text.label")
-            .attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")");
+        pc.svg
+            .selectAll('text.label')
+            .attr(
+                'transform',
+                'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')'
+            );
         event.preventDefault();
     }
 
     function dimensionLabels(d) {
-        return __.dimensions[d].title ? __.dimensions[d].title : d;  // dimension display names
+        return __.dimensions[d].title ? __.dimensions[d].title : d; // dimension display names
     }
 
-    pc.createAxes = function() {
+    pc.createAxes = function () {
         if (g) pc.removeAxes();
         // Add a group element for each dimension.
-        g = pc.svg.selectAll(".dimension")
-            .data(pc.getOrderedDimensionKeys(), function(d) {
+        g = pc.svg
+            .selectAll('.dimension')
+            .data(pc.getOrderedDimensionKeys(), function (d) {
                 return d;
             })
-            .enter().append("svg:g")
-            .attr("class", "dimension")
-            .attr("transform", function(d) {
-                return "translate(" + xscale(d) + ")";
+            .enter()
+            .append('svg:g')
+            .attr('class', 'dimension')
+            .attr('transform', function (d) {
+                return 'translate(' + xscale(d) + ')';
             });
         // Add an axis and title.
-        g.append("svg:g")
-            .attr("class", "axis")
-            .attr("transform", "translate(0,0)")
-            .each(function(d) {
-                let axisElement = select(this).call( pc.applyAxisConfig(axis, __.dimensions[d]) );
+        g
+            .append('svg:g')
+            .attr('class', 'axis')
+            .attr('transform', 'translate(0,0)')
+            .each(function (d) {
+                let axisElement = select(this).call(
+                    pc.applyAxisConfig(axis, __.dimensions[d])
+                );
 
-                axisElement.selectAll("path")
-                    .style("fill", "none")
-                    .style("stroke", "#222")
-                    .style("shape-rendering", "crispEdges");
+                axisElement
+                    .selectAll('path')
+                    .style('fill', 'none')
+                    .style('stroke', '#222')
+                    .style('shape-rendering', 'crispEdges');
 
-                axisElement.selectAll("line")
-                    .style("fill", "none")
-                    .style("stroke", "#222")
-                    .style("shape-rendering", "crispEdges");
+                axisElement
+                    .selectAll('line')
+                    .style('fill', 'none')
+                    .style('stroke', '#222')
+                    .style('shape-rendering', 'crispEdges');
             })
 
-            .append("svg:text")
-            .attr("text-anchor", "middle")
-            .attr("y", 0)
-            .attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")")
-            .attr("x", 0)
-            .attr("class", "label")
+            .append('svg:text')
+            .attr('text-anchor', 'middle')
+            .attr('y', 0)
+            .attr(
+                'transform',
+                'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')'
+            )
+            .attr('x', 0)
+            .attr('class', 'label')
             .text(dimensionLabels)
-            .on("dblclick", flipAxisAndUpdatePCP)
-            .on("wheel", rotateLabels);
+            .on('dblclick', flipAxisAndUpdatePCP)
+            .on('wheel', rotateLabels);
 
-        if (__.nullValueSeparator=="top") {
-            pc.svg.append("line")
-                .attr("x1", 0)
-                .attr("y1", 1+__.nullValueSeparatorPadding.top)
-                .attr("x2", w())
-                .attr("y2", 1+__.nullValueSeparatorPadding.top)
-                .attr("stroke-width", 1)
-                .attr("stroke", "#777")
-                .attr("fill", "none")
-                .attr("shape-rendering", "crispEdges");
-        } else if (__.nullValueSeparator=="bottom") {
-            pc.svg.append("line")
-                .attr("x1", 0)
-                .attr("y1", h()+1-__.nullValueSeparatorPadding.bottom)
-                .attr("x2", w())
-                .attr("y2", h()+1-__.nullValueSeparatorPadding.bottom)
-                .attr("stroke-width", 1)
-                .attr("stroke", "#777")
-                .attr("fill", "none")
-                .attr("shape-rendering", "crispEdges");
+        if (__.nullValueSeparator == 'top') {
+            pc.svg
+                .append('line')
+                .attr('x1', 0)
+                .attr('y1', 1 + __.nullValueSeparatorPadding.top)
+                .attr('x2', w())
+                .attr('y2', 1 + __.nullValueSeparatorPadding.top)
+                .attr('stroke-width', 1)
+                .attr('stroke', '#777')
+                .attr('fill', 'none')
+                .attr('shape-rendering', 'crispEdges');
+        } else if (__.nullValueSeparator == 'bottom') {
+            pc.svg
+                .append('line')
+                .attr('x1', 0)
+                .attr('y1', h() + 1 - __.nullValueSeparatorPadding.bottom)
+                .attr('x2', w())
+                .attr('y2', h() + 1 - __.nullValueSeparatorPadding.bottom)
+                .attr('stroke-width', 1)
+                .attr('stroke', '#777')
+                .attr('fill', 'none')
+                .attr('shape-rendering', 'crispEdges');
         }
 
-        flags.axes= true;
+        flags.axes = true;
         return this;
     };
 
-    pc.removeAxes = function() {
+    pc.removeAxes = function () {
         g.remove();
         g = undefined;
         return this;
     };
 
-    pc.updateAxes = function(animationTime) {
+    pc.updateAxes = function (animationTime) {
         if (typeof animationTime === 'undefined') {
             animationTime = __.animationTime;
         }
-        let g_data = pc.svg.selectAll(".dimension").data(pc.getOrderedDimensionKeys());
+        let g_data = pc.svg
+            .selectAll('.dimension')
+            .data(pc.getOrderedDimensionKeys());
         // Enter
-        g_data.enter().append("svg:g")
-            .attr("class", "dimension")
-            .attr("transform", function(p) { return "translate(" + position(p) + ")"; })
-            .style("opacity", 0)
-            .append("svg:g")
-            .attr("class", "axis")
-            .attr("transform", "translate(0,0)")
-            .each(function(d) {
-                let axisElement = select(this).call( pc.applyAxisConfig(axis, __.dimensions[d]) );
-
-                axisElement.selectAll("path")
-                    .style("fill", "none")
-                    .style("stroke", "#222")
-                    .style("shape-rendering", "crispEdges");
-
-                axisElement.selectAll("line")
-                    .style("fill", "none")
-                    .style("stroke", "#222")
-                    .style("shape-rendering", "crispEdges");
+        g_data
+            .enter()
+            .append('svg:g')
+            .attr('class', 'dimension')
+            .attr('transform', function (p) {
+                return 'translate(' + position(p) + ')';
             })
-            .append("svg:text")
+            .style('opacity', 0)
+            .append('svg:g')
+            .attr('class', 'axis')
+            .attr('transform', 'translate(0,0)')
+            .each(function (d) {
+                let axisElement = select(this).call(
+                    pc.applyAxisConfig(axis, __.dimensions[d])
+                );
+
+                axisElement
+                    .selectAll('path')
+                    .style('fill', 'none')
+                    .style('stroke', '#222')
+                    .style('shape-rendering', 'crispEdges');
+
+                axisElement
+                    .selectAll('line')
+                    .style('fill', 'none')
+                    .style('stroke', '#222')
+                    .style('shape-rendering', 'crispEdges');
+            })
+            .append('svg:text')
             .attr({
-                "text-anchor": "middle",
-                "y": 0,
-                "transform": "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")",
-                "x": 0,
-                "class": "label"
+                'text-anchor': 'middle',
+                y: 0,
+                transform: 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')',
+                x: 0,
+                class: 'label',
             })
             .text(dimensionLabels)
-            .on("dblclick", flipAxisAndUpdatePCP)
-            .on("wheel", rotateLabels);
+            .on('dblclick', flipAxisAndUpdatePCP)
+            .on('wheel', rotateLabels);
 
         // Update
-        g_data.attr("opacity", 0);
-        g_data.select(".axis")
+        g_data.attr('opacity', 0);
+        g_data
+            .select('.axis')
             .transition()
             .duration(animationTime)
-            .each(function(d) { select(this).call( pc.applyAxisConfig(axis, __.dimensions[d]) )
+            .each(function (d) {
+                select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
             });
-        g_data.select(".label")
+        g_data
+            .select('.label')
             .transition()
             .duration(animationTime)
             .text(dimensionLabels)
-            .attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")");
+            .attr(
+                'transform',
+                'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')'
+            );
 
         // Exit
         g_data.exit().remove();
 
-        g = pc.svg.selectAll(".dimension");
-        g.transition().duration(animationTime)
-            .attr("transform", function(p) { return "translate(" + position(p) + ")"; })
-            .style("opacity", 1);
-
-        pc.svg.selectAll(".axis")
+        g = pc.svg.selectAll('.dimension');
+        g
             .transition()
             .duration(animationTime)
-            .each(function(d) { select(this).call( pc.applyAxisConfig(axis, __.dimensions[d]) );
+            .attr('transform', function (p) {
+                return 'translate(' + position(p) + ')';
+            })
+            .style('opacity', 1);
+
+        pc.svg
+            .selectAll('.axis')
+            .transition()
+            .duration(animationTime)
+            .each(function (d) {
+                select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
             });
 
         if (flags.brushable) pc.brushable();
         if (flags.reorderable) pc.reorderable();
-        if (pc.brushMode() !== "None") {
+        if (pc.brushMode() !== 'None') {
             let mode = pc.brushMode();
-            pc.brushMode("None");
+            pc.brushMode('None');
             pc.brushMode(mode);
         }
         return this;
     };
 
-    pc.applyAxisConfig = function(axis, dimension) {
+    pc.applyAxisConfig = function (axis, dimension) {
         let axisCfg;
 
         switch (dimension.orient) {
@@ -940,7 +1068,8 @@ const ParCoords = (config)=> {
                 break;
         }
 
-        axisCfg.ticks(dimension.ticks)
+        axisCfg
+            .ticks(dimension.ticks)
             .tickValues(dimension.tickValues)
             .tickSizeInner(dimension.innerTickSize)
             .tickSizeOuter(dimension.outerTickSize)
@@ -950,63 +1079,72 @@ const ParCoords = (config)=> {
         return axisCfg;
     };
 
-    pc.brushable = function() {
+    pc.brushable = function () {
         if (!g) pc.createAxes();
 
         // Add and store a brush for each axis.
-        g.append("svg:g")
-            .attr("class", "brush")
-            .each(function(d) {
+        g
+            .append('svg:g')
+            .attr('class', 'brush')
+            .each(function (d) {
                 if (__.dimensions[d] !== undefined) {
-                    __.dimensions[d]["brush"] = brushY(select(this))
-                        .extent([[-15, 0], [15, __.dimensions[d].yscale.range()[0]]]);
+                    __.dimensions[d]['brush'] = brushY(select(this)).extent([
+                        [-15, 0],
+                        [15, __.dimensions[d].yscale.range()[0]],
+                    ]);
                     select(this).call(
-                        __.dimensions[d]["brush"]
-                            .on("start", function() {
+                        __.dimensions[d]['brush']
+                            .on('start', function () {
                                 if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
                                     pc.brushReset();
                                 }
                             })
-                            .on("brush", function () {
+                            .on('brush', function () {
                                 if (!event.sourceEvent.ctrlKey) {
                                     pc.brush();
                                 }
                             })
-                            .on("end", function() {
+                            .on('end', function () {
                                 // save brush selection is ctrl key is held
                                 // store important brush information and
                                 // the html element of the selection,
                                 // to make a dummy selection element
                                 if (event.sourceEvent.ctrlKey) {
-                                    let html = select(this).select('.selection').nodes()[0].outerHTML;
-                                    html = html.replace('class="selection"', ('class="selection dummy' + ' selection-' + __.brushes.length + '"'));
+                                    let html = select(this)
+                                        .select('.selection')
+                                        .nodes()[0].outerHTML;
+                                    html = html.replace(
+                                        'class="selection"',
+                                        'class="selection dummy' +
+                                        ' selection-' +
+                                        __.brushes.length +
+                                        '"'
+                                    );
                                     let dat = select(this).nodes()[0].__data__;
                                     let brush = {
                                         id: __.brushes.length,
                                         extent: brushSelection(this),
                                         html: html,
-                                        data: dat
+                                        data: dat,
                                     };
                                     __.brushes.push(brush);
-                                    select(
-                                        select(this)
-                                            .nodes()[0].parentNode
-                                    )
+                                    select(select(this).nodes()[0].parentNode)
                                         .select('.axis')
                                         .nodes()[0].outerHTML += html;
                                     pc.brush();
                                     __.dimensions[d].brush.move(select(this, null));
-                                    select(this).select(".selection").attr("style", "display:none");
+                                    select(this)
+                                        .select('.selection')
+                                        .attr('style', 'display:none');
                                     pc.brushable();
                                 } else {
                                     pc.brush();
                                 }
                             })
                     );
-                    select(this)
-                        .on("dblclick", function () {
-                            pc.brushReset(d);
-                        });
+                    select(this).on('dblclick', function () {
+                        pc.brushReset(d);
+                    });
                 }
             });
 
@@ -1014,12 +1152,12 @@ const ParCoords = (config)=> {
         return this;
     };
 
-    pc.brush = function() {
+    pc.brush = function () {
         __.brushed = pc.selected();
-        render.call("render");
-    }
+        render.call('render');
+    };
 
-    pc.brushReset = function(dimension) {
+    pc.brushReset = function (dimension) {
         let brushesToKeep = [];
         for (let j = 0; j < __.brushes.length; j++) {
             if (__.brushes[j].data !== dimension) {
@@ -1031,11 +1169,13 @@ const ParCoords = (config)=> {
         __.brushed = false;
 
         if (g) {
-            let nodes = selectAll(".brush").nodes();
+            let nodes = selectAll('.brush').nodes();
             for (let i = 0; i < nodes.length; i++) {
                 if (nodes[i].__data__ === dimension) {
                     // remove all dummy brushes for this axis or the real brush
-                    select(select(nodes[i]).nodes()[0].parentNode).selectAll(".dummy").remove();
+                    select(select(nodes[i]).nodes()[0].parentNode)
+                        .selectAll('.dummy')
+                        .remove();
                     __.dimensions[dimension].brush.move(select(nodes[i], null));
                 }
             }
@@ -1044,28 +1184,38 @@ const ParCoords = (config)=> {
         return this;
     };
 
-    pc.selected = function() {
+    pc.selected = function () {
         let actives = [];
         let extents = [];
         let ranges = {};
         //get brush selections from each node, convert to actual values
         //invert order of values in array to comply with the parcoords architecture
         if (__.brushes.length === 0) {
-            let nodes = selectAll(".brush").nodes();
+            let nodes = selectAll('.brush').nodes();
             for (let k = 0; k < nodes.length; k++) {
                 if (brushSelection(nodes[k]) !== null) {
                     actives.push(nodes[k].__data__);
                     let values = [];
                     let ranger = brushSelection(nodes[k]);
-                    if (typeof __.dimensions[nodes[k].__data__].yscale.domain()[0] === "number") {
+                    if (
+                        typeof __.dimensions[nodes[k].__data__].yscale.domain()[0] ===
+                        'number'
+                    ) {
                         for (let i = 0; i < ranger.length; i++) {
-                            if (actives.includes(nodes[k].__data__) && __.flipAxes.includes(nodes[k].__data__)) {
-                                values.push(__.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
-                            } else if (__.dimensions[nodes[k].__data__].yscale() !== 1)  {
-                                values.unshift(__.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
+                            if (
+                                actives.includes(nodes[k].__data__) &&
+                                __.flipAxes.includes(nodes[k].__data__)
+                            ) {
+                                values.push(
+                                    __.dimensions[nodes[k].__data__].yscale.invert(ranger[i])
+                                );
+                            } else if (__.dimensions[nodes[k].__data__].yscale() !== 1) {
+                                values.unshift(
+                                    __.dimensions[nodes[k].__data__].yscale.invert(ranger[i])
+                                );
                             }
                         }
-                        extents.push(values)
+                        extents.push(values);
                         for (let ii = 0; ii < extents.length; ii++) {
                             if (extents[ii].length === 0) {
                                 extents[ii] = [1, 1];
@@ -1076,7 +1226,12 @@ const ParCoords = (config)=> {
                         let dimRange = __.dimensions[nodes[k].__data__].yscale.range();
                         let dimDomain = __.dimensions[nodes[k].__data__].yscale.domain();
                         for (let j = 0; j < dimRange.length; j++) {
-                            if ((dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) && actives.includes(nodes[k].__data__) && __.flipAxes.includes(nodes[k].__data__)) {
+                            if (
+                                dimRange[j] >= ranger[0] &&
+                                dimRange[j] <= ranger[1] &&
+                                actives.includes(nodes[k].__data__) &&
+                                __.flipAxes.includes(nodes[k].__data__)
+                            ) {
                                 values.push(dimRange[j]);
                             } else if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) {
                                 values.unshift(dimRange[j]);
@@ -1093,28 +1248,41 @@ const ParCoords = (config)=> {
             }
             // test if within range
             let within = {
-                "date": function(d,p,dimension) {
+                date: function (d, p, dimension) {
                     let category = d[p];
-                    let categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
-                    let categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
-                    return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+                    let categoryIndex = __.dimensions[p].yscale
+                        .domain()
+                        .indexOf(category);
+                    let categoryRangeValue = __.dimensions[p].yscale.range()[
+                        categoryIndex
+                        ];
+                    return (
+                        categoryRangeValue >= ranges[p][0] &&
+                        categoryRangeValue <= ranges[p][1]
+                    );
                 },
-                "number": function(d,p,dimension) {
+                number: function (d, p, dimension) {
                     return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
                 },
-                "string": function(d,p,dimension) {
+                string: function (d, p, dimension) {
                     let category = d[p];
-                    let categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
-                    let categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
-                    return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-                }
+                    let categoryIndex = __.dimensions[p].yscale
+                        .domain()
+                        .indexOf(category);
+                    let categoryRangeValue = __.dimensions[p].yscale.range()[
+                        categoryIndex
+                        ];
+                    return (
+                        categoryRangeValue >= ranges[p][0] &&
+                        categoryRangeValue <= ranges[p][1]
+                    );
+                },
             };
-            return __.data
-                .filter(function(d) {
-                    return actives.every(function(p, dimension) {
-                        return within[__.dimensions[p].type](d,p,dimension);
-                    });
+            return __.data.filter(function (d) {
+                return actives.every(function (p, dimension) {
+                    return within[__.dimensions[p].type](d, p, dimension);
                 });
+            });
         } else {
             // need to get data from each brush instead of each axis
             // first must find active axes by iterating through all brushes
@@ -1125,15 +1293,20 @@ const ParCoords = (config)=> {
                 let values = [];
                 let ranger = brush.extent;
                 let actives = [brush.data];
-                if (typeof __.dimensions[brush.data].yscale.domain()[0] === "number") {
+                if (typeof __.dimensions[brush.data].yscale.domain()[0] === 'number') {
                     for (let i = 0; i < ranger.length; i++) {
-                        if (actives.includes(brush.data) && __.flipAxes.includes(brush.data)) {
+                        if (
+                            actives.includes(brush.data) &&
+                            __.flipAxes.includes(brush.data)
+                        ) {
                             values.push(__.dimensions[brush.data].yscale.invert(ranger[i]));
-                        } else if (__.dimensions[brush.data].yscale() !== 1)  {
-                            values.unshift(__.dimensions[brush.data].yscale.invert(ranger[i]));
+                        } else if (__.dimensions[brush.data].yscale() !== 1) {
+                            values.unshift(
+                                __.dimensions[brush.data].yscale.invert(ranger[i])
+                            );
                         }
                     }
-                    extents.push(values)
+                    extents.push(values);
                     for (let ii = 0; ii < extents.length; ii++) {
                         if (extents[ii].length === 0) {
                             extents[ii] = [1, 1];
@@ -1144,7 +1317,12 @@ const ParCoords = (config)=> {
                     let dimRange = __.dimensions[brush.data].yscale.range();
                     let dimDomain = __.dimensions[brush.data].yscale.domain();
                     for (let j = 0; j < dimRange.length; j++) {
-                        if ((dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) && actives.includes(brush.data) && __.flipAxes.includes(brush.data)) {
+                        if (
+                            dimRange[j] >= ranger[0] &&
+                            dimRange[j] <= ranger[1] &&
+                            actives.includes(brush.data) &&
+                            __.flipAxes.includes(brush.data)
+                        ) {
                             values.push(dimRange[j]);
                         } else if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) {
                             values.unshift(dimRange[j]);
@@ -1158,32 +1336,45 @@ const ParCoords = (config)=> {
                     }
                 }
                 let within = {
-                    "date": function(d,p,dimension) {
+                    date: function (d, p, dimension) {
                         let category = d[p];
-                        let categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
-                        let categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
-                        return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+                        let categoryIndex = __.dimensions[p].yscale
+                            .domain()
+                            .indexOf(category);
+                        let categoryRangeValue = __.dimensions[p].yscale.range()[
+                            categoryIndex
+                            ];
+                        return (
+                            categoryRangeValue >= ranges[p][0] &&
+                            categoryRangeValue <= ranges[p][1]
+                        );
                     },
-                    "number": function(d,p,dimension) {
+                    number: function (d, p, dimension) {
                         return extents[idx][0] <= d[p] && d[p] <= extents[idx][1];
                     },
-                    "string": function(d,p,dimension) {
+                    string: function (d, p, dimension) {
                         let category = d[p];
-                        let categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
-                        let categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
-                        return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-                    }
+                        let categoryIndex = __.dimensions[p].yscale
+                            .domain()
+                            .indexOf(category);
+                        let categoryRangeValue = __.dimensions[p].yscale.range()[
+                            categoryIndex
+                            ];
+                        return (
+                            categoryRangeValue >= ranges[p][0] &&
+                            categoryRangeValue <= ranges[p][1]
+                        );
+                    },
                 };
 
                 // filter data, but instead of returning it now,
                 // put it into multiBrush data which is returned after
                 // all brushes are iterated through.
-                let filtered = __.data
-                    .filter(function(d) {
-                        return actives.every(function(p, dimension) {
-                            return within[__.dimensions[p].type](d,p,dimension);
-                        });
+                let filtered = __.data.filter(function (d) {
+                    return actives.every(function (p, dimension) {
+                        return within[__.dimensions[p].type](d, p, dimension);
                     });
+                });
                 for (let z = 0; z < filtered.length; z++) {
                     multiBrushData.push(filtered[z]);
                 }
@@ -1192,41 +1383,45 @@ const ParCoords = (config)=> {
             }
             return multiBrushData;
         }
-
-
     };
 
-// Jason Davies, http://bl.ocks.org/1341281
-    pc.reorderable = function() {
+    // Jason Davies, http://bl.ocks.org/1341281
+    pc.reorderable = function () {
         if (!g) pc.createAxes();
-        g.style("cursor", "move")
-            .call(drag()
-                .on("start", function(d) {
+        g.style('cursor', 'move').call(
+            drag()
+                .on('start', function (d) {
                     dragging[d] = this.__origin__ = xscale(d);
                 })
-                .on("drag", function(d) {
-                    dragging[d] = Math.min(w(), Math.max(0, this.__origin__ += event.dx));
+                .on('drag', function (d) {
+                    dragging[d] = Math.min(
+                        w(),
+                        Math.max(0, (this.__origin__ += event.dx))
+                    );
                     pc.sortDimensions();
                     xscale.domain(pc.getOrderedDimensionKeys());
                     pc.render();
-                    g.attr("transform", function(d) {
-                        return "translate(" + position(d) + ")";
+                    g.attr('transform', function (d) {
+                        return 'translate(' + position(d) + ')';
                     });
                 })
-                .on("end", function(d) {
+                .on('end', function (d) {
                     delete this.__origin__;
                     delete dragging[d];
-                    select(this).transition().attr("transform", "translate(" + xscale(d) + ")");
+                    select(this)
+                        .transition()
+                        .attr('transform', 'translate(' + xscale(d) + ')');
                     pc.render();
-                }));
+                })
+        );
         flags.reorderable = true;
         return this;
     };
 
-// Reorder dimensions, such that the highest value (visually) is on the left and
-// the lowest on the right. Visual values are determined by the data values in
-// the given row.
-    pc.reorder = function(rowdata) {
+    // Reorder dimensions, such that the highest value (visually) is on the left and
+    // the lowest on the right. Visual values are determined by the data values in
+    // the given row.
+    pc.reorder = function (rowdata) {
         let firstDim = pc.getOrderedDimensionKeys()[0];
 
         pc.sortDimensionsByRowData(rowdata);
@@ -1241,10 +1436,11 @@ const ParCoords = (config)=> {
             let highlighted = __.highlighted.slice(0);
             pc.unhighlight();
 
-            g.transition()
+            g
+                .transition()
                 .duration(1500)
-                .attr("transform", function(d) {
-                    return "translate(" + xscale(d) + ")";
+                .attr('transform', function (d) {
+                    return 'translate(' + xscale(d) + ')';
                 });
             pc.render();
 
@@ -1253,12 +1449,14 @@ const ParCoords = (config)=> {
                 pc.highlight(highlighted);
             }
         }
-    }
+    };
 
-    pc.sortDimensionsByRowData = function(rowdata) {
+    pc.sortDimensionsByRowData = function (rowdata) {
         let copy = __.dimensions;
-        let positionSortedKeys = keys(__.dimensions).sort(function(a, b) {
-            let pixelDifference = __.dimensions[a].yscale(rowdata[a]) - __.dimensions[b].yscale(rowdata[b]);
+        let positionSortedKeys = keys(__.dimensions).sort(function (a, b) {
+            let pixelDifference =
+                __.dimensions[a].yscale(rowdata[a]) -
+                __.dimensions[b].yscale(rowdata[b]);
 
             // Array.sort is not necessarily stable, this means that if pixelDifference is zero
             // the ordering of dimensions might change unexpectedly. This is solved by sorting on
@@ -1269,15 +1467,15 @@ const ParCoords = (config)=> {
             return pixelDifference;
         });
         __.dimensions = {};
-        positionSortedKeys.forEach(function(p, i){
+        positionSortedKeys.forEach(function (p, i) {
             __.dimensions[p] = copy[p];
             __.dimensions[p].index = i;
         });
-    }
+    };
 
-    pc.sortDimensions = function() {
+    pc.sortDimensions = function () {
         let copy = __.dimensions;
-        let positionSortedKeys = keys(__.dimensions).sort(function(a, b) {
+        let positionSortedKeys = keys(__.dimensions).sort(function (a, b) {
             if (position(a) - position(b) === 0) {
                 return 1;
             } else {
@@ -1285,54 +1483,62 @@ const ParCoords = (config)=> {
             }
         });
         __.dimensions = {};
-        positionSortedKeys.forEach(function(p, i){
+        positionSortedKeys.forEach(function (p, i) {
             __.dimensions[p] = copy[p];
             __.dimensions[p].index = i;
-        })
+        });
     };
 
-// pairs of adjacent dimensions
-    pc.adjacent_pairs = function(arr) {
+    // pairs of adjacent dimensions
+    pc.adjacent_pairs = function (arr) {
         let ret = [];
-        for (let i = 0; i < arr.length-1; i++) {
-            ret.push([arr[i],arr[i+1]]);
-        };
+        for (let i = 0; i < arr.length - 1; i++) {
+            ret.push([arr[i], arr[i + 1]]);
+        }
         return ret;
     };
 
     let brush = {
         modes: {
-            "None": {
-                install: function(pc) {},            // Nothing to be done.
-                uninstall: function(pc) {},          // Nothing to be done.
-                selected: function() { return []; }, // Nothing to return
-                brushState: function() { return {}; }
-            }
+            None: {
+                install: function (pc) {
+                }, // Nothing to be done.
+                uninstall: function (pc) {
+                }, // Nothing to be done.
+                selected: function () {
+                    return [];
+                }, // Nothing to return
+                brushState: function () {
+                    return {};
+                },
+            },
         },
-        mode: "None",
-        predicate: "AND",
-        currentMode: function() {
+        mode: 'None',
+        predicate: 'AND',
+        currentMode: function () {
             return this.modes[this.mode];
-        }
+        },
     };
 
-// This function can be used for 'live' updates of brushes. That is, during the
-// specification of a brush, this method can be called to update the view.
-//
-// @param newSelection - The new set of data items that is currently contained
-//                       by the brushes
+    // This function can be used for 'live' updates of brushes. That is, during the
+    // specification of a brush, this method can be called to update the view.
+    //
+    // @param newSelection - The new set of data items that is currently contained
+    //                       by the brushes
     function brushUpdated(newSelection) {
         __.brushed = newSelection;
-        events.call('brush', pc,__.brushed);
+        events.call('brush', pc, __.brushed);
         pc.renderBrushed();
     }
 
     function brushPredicate(predicate) {
-        if (!arguments.length) { return brush.predicate; }
+        if (!arguments.length) {
+            return brush.predicate;
+        }
 
         predicate = String(predicate).toUpperCase();
-        if (predicate !== "AND" && predicate !== "OR") {
-            throw new Error("Invalid predicate " + predicate);
+        if (predicate !== 'AND' && predicate !== 'OR') {
+            throw new Error('Invalid predicate ' + predicate);
         }
 
         brush.predicate = predicate;
@@ -1341,17 +1547,17 @@ const ParCoords = (config)=> {
         return pc;
     }
 
-    pc.brushModes = function() {
+    pc.brushModes = function () {
         return Object.getOwnPropertyNames(brush.modes);
     };
 
-    pc.brushMode = function(mode) {
+    pc.brushMode = function (mode) {
         if (arguments.length === 0) {
             return brush.mode;
         }
 
         if (pc.brushModes().indexOf(mode) === -1) {
-            throw new Error("pc.brushmode: Unsupported brush mode: " + mode);
+            throw new Error('pc.brushmode: Unsupported brush mode: ' + mode);
         }
 
         // Make sure that we don't trigger unnecessary events by checking if the mode
@@ -1359,7 +1565,7 @@ const ParCoords = (config)=> {
         if (mode !== brush.mode) {
             // When changing brush modes, the first thing we need to do is clearing any
             // brushes from the current mode, if any.
-            if (brush.mode !== "None") {
+            if (brush.mode !== 'None') {
                 pc.brushReset();
             }
 
@@ -1368,7 +1574,7 @@ const ParCoords = (config)=> {
             // Finally, we can install the requested one.
             brush.mode = mode;
             brush.modes[brush.mode].install();
-            if (mode === "None") {
+            if (mode === 'None') {
                 delete pc.brushPredicate;
             } else {
                 pc.brushPredicate = brushPredicate;
@@ -1379,7 +1585,7 @@ const ParCoords = (config)=> {
     };
 
     // brush mode: 1D-Axes
-    const install1DAxes = ()=> {
+    const install1DAxes = () => {
         let brushes = {};
         let brushNodes = {};
 
@@ -1391,11 +1597,14 @@ const ParCoords = (config)=> {
         // data within extents
         function selected() {
             let actives = keys(__.dimensions).filter(is_brushed),
-                extents = actives.map(function(p) {
+                extents = actives.map(function (p) {
                     const _brushRange = brushSelection(brushNodes[p]);
 
                     if (typeof __.dimensions[p].yscale.invert === 'function') {
-                        return [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
+                        return [
+                            __.dimensions[p].yscale.invert(_brushRange[1]),
+                            __.dimensions[p].yscale.invert(_brushRange[0]),
+                        ];
                     } else {
                         return _brushRange;
                     }
@@ -1410,47 +1619,60 @@ const ParCoords = (config)=> {
 
             // test if within range
             let within = {
-                "date": function(d,p,dimension) {
-                    if (typeof __.dimensions[p].yscale.bandwidth === "function") { // if it is ordinal
-                        return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1]
+                date: function (d, p, dimension) {
+                    if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
+                        // if it is ordinal
+                        return (
+                            extents[dimension][0] <= __.dimensions[p].yscale(d[p]) &&
+                            __.dimensions[p].yscale(d[p]) <= extents[dimension][1]
+                        );
                     } else {
-                        return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1]
+                        return (
+                            extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1]
+                        );
                     }
                 },
-                "number": function(d,p,dimension) {
-                    if (typeof __.dimensions[p].yscale.bandwidth === "function") { // if it is ordinal
-                        return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1]
+                number: function (d, p, dimension) {
+                    if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
+                        // if it is ordinal
+                        return (
+                            extents[dimension][0] <= __.dimensions[p].yscale(d[p]) &&
+                            __.dimensions[p].yscale(d[p]) <= extents[dimension][1]
+                        );
                     } else {
-                        return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1]
+                        return (
+                            extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1]
+                        );
                     }
                 },
-                "string": function(d,p,dimension) {
-                    return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1]
-                }
+                string: function (d, p, dimension) {
+                    return (
+                        extents[dimension][0] <= __.dimensions[p].yscale(d[p]) &&
+                        __.dimensions[p].yscale(d[p]) <= extents[dimension][1]
+                    );
+                },
             };
 
-            return __.data
-                .filter(function(d) {
-                    switch(brush.predicate) {
-                        case "AND":
-                            return actives.every(function(p, dimension) {
-                                return within[__.dimensions[p].type](d,p,dimension);
-                            });
-                        case "OR":
-                            return actives.some(function(p, dimension) {
-                                return within[__.dimensions[p].type](d,p,dimension);
-                            });
-                        default:
-                            throw new Error("Unknown brush predicate " + __.brushPredicate);
-                    }
-                });
-        };
+            return __.data.filter(function (d) {
+                switch (brush.predicate) {
+                    case 'AND':
+                        return actives.every(function (p, dimension) {
+                            return within[__.dimensions[p].type](d, p, dimension);
+                        });
+                    case 'OR':
+                        return actives.some(function (p, dimension) {
+                            return within[__.dimensions[p].type](d, p, dimension);
+                        });
+                    default:
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
+                }
+            });
+        }
 
         function brushExtents(extents) {
-            if(typeof(extents) === 'undefined')
-            {
+            if (typeof extents === 'undefined') {
                 let extents = {};
-                keys(__.dimensions).forEach(function(d) {
+                keys(__.dimensions).forEach(function (d) {
                     let brush = brushes[d];
                     //todo: brush check
                     if (brush !== undefined && brushSelection(brushNodes[d]) !== null) {
@@ -1459,20 +1681,16 @@ const ParCoords = (config)=> {
                     }
                 });
                 return extents;
-            }
-            else
-            {
+            } else {
                 //first get all the brush selections
                 let brushSelections = {};
-                g.selectAll('.brush')
-                    .each(function(d) {
-                        brushSelections[d] = select(this);
-
-                    });
+                g.selectAll('.brush').each(function (d) {
+                    brushSelections[d] = select(this);
+                });
 
                 // loop over each dimension and update appropriately (if it was passed in through extents)
-                keys(__.dimensions).forEach(function(d) {
-                    if (extents[d] === undefined){
+                keys(__.dimensions).forEach(function (d) {
+                    if (extents[d] === undefined) {
                         return;
                     }
 
@@ -1500,167 +1718,182 @@ const ParCoords = (config)=> {
         }
 
         function brushFor(axis, _selector) {
-            const brushRangeMax = __.dimensions[axis].type === 'string' ?
-                __.dimensions[axis].yscale.range()[__.dimensions[axis].yscale.range().length - 1] :
-                __.dimensions[axis].yscale.range()[0];
+            const brushRangeMax =
+                __.dimensions[axis].type === 'string'
+                    ? __.dimensions[axis].yscale.range()[
+                    __.dimensions[axis].yscale.range().length - 1
+                        ]
+                    : __.dimensions[axis].yscale.range()[0];
 
-            let _brush = brushY(_selector)
-                .extent([[-15, 0], [15, brushRangeMax]]);
+            let _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
             _brush
-                .on("start", function() {
-                    if(event.sourceEvent !== null) {
+                .on('start', function () {
+                    if (event.sourceEvent !== null) {
                         events.call('brushstart', pc, __.brushed);
                         event.sourceEvent.stopPropagation();
                     }
                 })
-                .on("brush", function() {
+                .on('brush', function () {
                     brushUpdated(selected());
                 })
-                .on("end", function() {
+                .on('end', function () {
+                    brushUpdated(selected());
                     events.call('brushend', pc, __.brushed);
                 });
 
             brushes[axis] = _brush;
             brushNodes[axis] = _selector.node();
             return _brush;
-        };
+        }
 
         function brushReset(dimension) {
-            if (dimension===undefined) {
+            if (dimension === undefined) {
                 __.brushed = false;
                 if (g) {
-                    g.selectAll('.brush')
-                        .each(function(d) {
-                            select(this)
-                                .call(brushes[d].move, null);
-                        });
+                    g.selectAll('.brush').each(function(d) {
+                        select(this).call(brushes[d].move, null);
+                    });
                     pc.renderBrushed();
                 }
-            }
-            else {
+            } else {
                 if (g) {
-                    g.selectAll('.brush')
-                        .each(function(d) {
-                            if (d!=dimension) return;
-                            select(this)
-                                .call(brushes[d].move, null);
-                            brushes[d].event(select(this));
-                        });
+                    g.selectAll('.brush').each(function(d) {
+                        if (d != dimension) return;
+                        select(this).call(brushes[d].move, null);
+                        brushes[d].event(select(this));
+                    });
                     pc.renderBrushed();
                 }
             }
             return this;
-        };
+        }
+
 
         function install() {
             if (!g) pc.createAxes();
             // Add and store a brush for each axis.
-            let brush = g.append("svg:g")
-                .attr("class", "brush")
-                .each(function(d) {
+            let brush = g
+                .append('svg:g')
+                .attr('class', 'brush')
+                .each(function (d) {
                     select(this).call(brushFor(d, select(this)));
-                })
-            brush.selectAll("rect")
-                .style("visibility", null)
-                .attr("x", -15)
-                .attr("width", 30);
+                });
+            brush
+                .selectAll('rect')
+                .style('visibility', null)
+                .attr('x', -15)
+                .attr('width', 30);
 
-            brush.selectAll("rect.background")
-                .style("fill", "transparent");
+            brush.selectAll('rect.background').style('fill', 'transparent');
 
-            brush.selectAll("rect.extent")
-                .style("fill", "rgba(255,255,255,0.25)")
-                .style("stroke", "rgba(0,0,0,0.6)");
+            brush
+                .selectAll('rect.extent')
+                .style('fill', 'rgba(255,255,255,0.25)')
+                .style('stroke', 'rgba(0,0,0,0.6)');
 
-            brush.selectAll(".resize rect")
-                .style("fill", "rgba(0,0,0,0.1)");
+            brush.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
 
             pc.brushExtents = brushExtents;
             pc.brushReset = brushReset;
             return pc;
-        };
+        }
 
-        brush.modes["1D-axes"] = {
+        brush.modes['1D-axes'] = {
             install: install,
-            uninstall: function() {
-                g.selectAll(".brush").remove();
+            uninstall: function () {
+                g.selectAll('.brush').remove();
                 brushes = {};
                 delete pc.brushExtents;
                 delete pc.brushReset;
             },
             selected: selected,
-            brushState: brushExtents
-        }
-    }
+            brushState: brushExtents,
+        };
+    };
 
     // brush mode: 2D-strums
     // bl.ocks.org/syntagmatic/5441022
-    const install2DStrums = ()=> {
+    const install2DStrums = () => {
         let strums = {},
             strumRect;
 
         function drawStrum(strum, activePoint) {
-            let _svg = pc.selection.select("svg").select("g#strums"),
+            let _svg = pc.selection.select('svg').select('g#strums'),
                 id = strum.dims.i,
                 points = [strum.p1, strum.p2],
-                _line = _svg.selectAll("line#strum-" + id).data([strum]),
-                circles = _svg.selectAll("circle#strum-" + id).data(points),
+                _line = _svg.selectAll('line#strum-' + id).data([strum]),
+                circles = _svg.selectAll('circle#strum-' + id).data(points),
                 _drag = drag();
 
-            _line.enter()
-                .append("line")
-                .attr("id", "strum-" + id)
-                .attr("class", "strum");
+            _line
+                .enter()
+                .append('line')
+                .attr('id', 'strum-' + id)
+                .attr('class', 'strum');
 
             _line
-                .attr("x1", function(d) {
-                    return d.p1[0]; })
-                .attr("y1", function(d) {
-                    return d.p1[1]; })
-                .attr("x2", function(d) {
-                    return d.p2[0]; })
-                .attr("y2", function(d) {
-                    return d.p2[1]; })
-                .attr("stroke", "black")
-                .attr("stroke-width", 2);
+                .attr('x1', function (d) {
+                    return d.p1[0];
+                })
+                .attr('y1', function (d) {
+                    return d.p1[1];
+                })
+                .attr('x2', function (d) {
+                    return d.p2[0];
+                })
+                .attr('y2', function (d) {
+                    return d.p2[1];
+                })
+                .attr('stroke', 'black')
+                .attr('stroke-width', 2);
 
             _drag
-                .on("drag", function(d, i) {
+                .on('drag', function (d, i) {
                     let ev = event;
                     i = i + 1;
-                    strum["p" + i][0] = Math.min(Math.max(strum.minX + 1, ev.x), strum.maxX);
-                    strum["p" + i][1] = Math.min(Math.max(strum.minY, ev.y), strum.maxY);
+                    strum['p' + i][0] = Math.min(
+                        Math.max(strum.minX + 1, ev.x),
+                        strum.maxX
+                    );
+                    strum['p' + i][1] = Math.min(Math.max(strum.minY, ev.y), strum.maxY);
                     drawStrum(strum, i - 1);
                 })
-                .on("end", onDragEnd());
-
-            circles.enter()
-                .append("circle")
-                .attr("id", "strum-" + id)
-                .attr("class", "strum");
+                .on('end', onDragEnd());
 
             circles
-                .attr("cx", function(d) { return d[0]; })
-                .attr("cy", function(d) { return d[1]; })
-                .attr("r", 5)
-                .style("opacity", function(d, i) {
-                    return (activePoint !== undefined && i === activePoint) ? 0.8 : 0;
+                .enter()
+                .append('circle')
+                .attr('id', 'strum-' + id)
+                .attr('class', 'strum');
+
+            circles
+                .attr('cx', function (d) {
+                    return d[0];
                 })
-                .on("mouseover", function() {
-                    select(this).style("opacity", 0.8);
+                .attr('cy', function (d) {
+                    return d[1];
                 })
-                .on("mouseout", function() {
-                    select(this).style("opacity", 0);
+                .attr('r', 5)
+                .style('opacity', function (d, i) {
+                    return activePoint !== undefined && i === activePoint ? 0.8 : 0;
+                })
+                .on('mouseover', function () {
+                    select(this).style('opacity', 0.8);
+                })
+                .on('mouseout', function () {
+                    select(this).style('opacity', 0);
                 })
                 .call(_drag);
         }
 
         function dimensionsForPoint(p) {
-            let dims = { i: -1, left: undefined, right: undefined };
-            keys(__.dimensions).some(function(dim, i) {
+            let dims = {i: -1, left: undefined, right: undefined};
+            keys(__.dimensions).some(function (dim, i) {
                 if (xscale(dim) < p[0]) {
-                    let next = keys(__.dimensions)[pc.getOrderedDimensionKeys().indexOf(dim)+1];
+                    let next = keys(__.dimensions)[
+                    pc.getOrderedDimensionKeys().indexOf(dim) + 1
+                        ];
                     dims.i = i;
                     dims.left = dim;
                     dims.right = next;
@@ -1678,7 +1911,9 @@ const ParCoords = (config)=> {
                 // Event on the right side of the last axis
                 dims.i = keys(__.dimensions).length - 1;
                 dims.right = dims.left;
-                dims.left = pc.getOrderedDimensionKeys()[keys(__.dimensions).length - 2];
+                dims.left = pc.getOrderedDimensionKeys()[
+                keys(__.dimensions).length - 2
+                    ];
             }
 
             return dims;
@@ -1689,7 +1924,7 @@ const ParCoords = (config)=> {
             // This will determine the freedom of movement, because a strum can
             // logically only happen between two axes, so no movement outside these axes
             // should be allowed.
-            return function() {
+            return function () {
                 let p = mouse(strumRect.node()),
                     dims,
                     strum;
@@ -1697,15 +1932,15 @@ const ParCoords = (config)=> {
                 p[0] = p[0] - __.margin.left;
                 p[1] = p[1] - __.margin.top;
 
-                dims = dimensionsForPoint(p),
-                    strum = {
+                (dims = dimensionsForPoint(p)),
+                    (strum = {
                         p1: p,
                         dims: dims,
                         minX: xscale(dims.left),
                         maxX: xscale(dims.right),
                         minY: 0,
-                        maxY: h()
-                    };
+                        maxY: h(),
+                    });
 
                 strums[dims.i] = strum;
                 strums.active = dims.i;
@@ -1717,13 +1952,19 @@ const ParCoords = (config)=> {
         }
 
         function onDrag() {
-            return function() {
+            return function () {
                 let ev = event,
                     strum = strums[strums.active];
 
                 // Make sure that the point is within the bounds
-                strum.p2[0] = Math.min(Math.max(strum.minX + 1, ev.x - __.margin.left), strum.maxX);
-                strum.p2[1] = Math.min(Math.max(strum.minY, ev.y - __.margin.top), strum.maxY);
+                strum.p2[0] = Math.min(
+                    Math.max(strum.minX + 1, ev.x - __.margin.left),
+                    strum.maxX
+                );
+                strum.p2[1] = Math.min(
+                    Math.max(strum.minY, ev.y - __.margin.top),
+                    strum.maxY
+                );
                 drawStrum(strum, 1);
             };
         }
@@ -1737,7 +1978,7 @@ const ParCoords = (config)=> {
                 b2 = p2[1] * (1 - m2);
 
             // test if point falls between lines
-            return function(p) {
+            return function (p) {
                 let x = p[0],
                     y = p[1],
                     y1 = m1 * x + b1,
@@ -1756,7 +1997,7 @@ const ParCoords = (config)=> {
                 brushed = __.data;
 
             // Get the ids of the currently active strums.
-            ids = ids.filter(function(d) {
+            ids = ids.filter(function (d) {
                 return !isNaN(d);
             });
 
@@ -1771,38 +2012,48 @@ const ParCoords = (config)=> {
                 return test(point);
             }
 
-            if (ids.length === 0) { return brushed; }
+            if (ids.length === 0) {
+                return brushed;
+            }
 
-            return brushed.filter(function(d) {
-                switch(brush.predicate) {
-                    case "AND":
-                        return ids.every(function(id) { return crossesStrum(d, id); });
-                    case "OR":
-                        return ids.some(function(id) { return crossesStrum(d, id); });
+            return brushed.filter(function (d) {
+                switch (brush.predicate) {
+                    case 'AND':
+                        return ids.every(function (id) {
+                            return crossesStrum(d, id);
+                        });
+                    case 'OR':
+                        return ids.some(function (id) {
+                            return crossesStrum(d, id);
+                        });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
 
         function removeStrum() {
             let strum = strums[strums.active],
-                svg = pc.selection.select("svg").select("g#strums");
+                svg = pc.selection.select('svg').select('g#strums');
 
             delete strums[strums.active];
             strums.active = undefined;
-            svg.selectAll("line#strum-" + strum.dims.i).remove();
-            svg.selectAll("circle#strum-" + strum.dims.i).remove();
+            svg.selectAll('line#strum-' + strum.dims.i).remove();
+            svg.selectAll('circle#strum-' + strum.dims.i).remove();
         }
 
         function onDragEnd() {
-            return function() {
+            return function () {
                 let brushed = __.data,
                     strum = strums[strums.active];
 
                 // Okay, somewhat unexpected, but not totally unsurprising, a mousclick is
                 // considered a drag without move. So we have to deal with that case
-                if (strum && strum.p1[0] === strum.p2[0] && strum.p1[1] === strum.p2[1]) {
+                if (
+                    strum &&
+                    strum.p1[0] === strum.p2[0] &&
+                    strum.p1[1] === strum.p2[1]
+                ) {
                     removeStrum(strums);
                 }
 
@@ -1815,12 +2066,12 @@ const ParCoords = (config)=> {
         }
 
         function brushReset(strums) {
-            return function() {
-                let ids = Object.getOwnPropertyNames(strums).filter(function(d) {
+            return function () {
+                let ids = Object.getOwnPropertyNames(strums).filter(function (d) {
                     return !isNaN(d);
                 });
 
-                ids.forEach(function(d) {
+                ids.forEach(function (d) {
                     strums.active = d;
                     removeStrum(strums);
                 });
@@ -1830,7 +2081,7 @@ const ParCoords = (config)=> {
 
         function install() {
             if (!g) pc.createAxes();
-            
+
             let _drag = drag();
 
             // Map of current strums. Strums are stored per segment of the PC. A segment,
@@ -1840,7 +2091,7 @@ const ParCoords = (config)=> {
             // placed. NOTE: even though they are evenly spaced in our current
             // implementation, we keep for when non-even spaced segments are supported as
             // well.
-            strums.width = function(id) {
+            strums.width = function (id) {
                 let strum = strums[id];
 
                 if (strum === undefined) {
@@ -1850,23 +2101,24 @@ const ParCoords = (config)=> {
                 return strum.maxX - strum.minX;
             };
 
-            pc.on("axesreorder.strums", function() {
-                let ids = Object.getOwnPropertyNames(strums).filter(function(d) {
+            pc.on('axesreorder.strums', function () {
+                let ids = Object.getOwnPropertyNames(strums).filter(function (d) {
                     return !isNaN(d);
                 });
 
                 // Checks if the first dimension is directly left of the second dimension.
                 function consecutive(first, second) {
                     let length = keys(__.dimensions).length;
-                    return keys(__.dimensions).some(function(d, i) {
-                        return (d === first)
+                    return keys(__.dimensions).some(function (d, i) {
+                        return d === first
                             ? i + i < length && __.dimensions[i + 1] === second
                             : false;
                     });
                 }
 
-                if (ids.length > 0) { // We have some strums, which might need to be removed.
-                    ids.forEach(function(d) {
+                if (ids.length > 0) {
+                    // We have some strums, which might need to be removed.
+                    ids.forEach(function (d) {
                         let dims = strums[d].dims;
                         strums.active = d;
                         // If the two dimensions of the current strum are not next to each other
@@ -1880,103 +2132,133 @@ const ParCoords = (config)=> {
             });
 
             // Add a new svg group in which we draw the strums.
-            pc.selection.select("svg").append("g")
-                .attr("id", "strums")
-                .attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+            pc.selection
+                .select('svg')
+                .append('g')
+                .attr('id', 'strums')
+                .attr(
+                    'transform',
+                    'translate(' + __.margin.left + ',' + __.margin.top + ')'
+                );
 
             // Install the required brushReset function
             pc.brushReset = brushReset(strums);
 
             _drag
-                .on("start", onDragStart(strums))
-                .on("drag", onDrag(strums))
-                .on("end", onDragEnd(strums));
+                .on('start', onDragStart(strums))
+                .on('drag', onDrag(strums))
+                .on('end', onDragEnd(strums));
 
             // NOTE: The styling needs to be done here and not in the css. This is because
             //       for 1D brushing, the canvas layers should not listen to
             //       pointer-events._.
-            strumRect = pc.selection.select("svg").insert("rect", "g#strums")
-                .attr("id", "strum-events")
-                .attr("x", __.margin.left)
-                .attr("y", __.margin.top)
-                .attr("width", w())
-                .attr("height", h() + 2)
-                .style("opacity", 0)
+            strumRect = pc.selection
+                .select('svg')
+                .insert('rect', 'g#strums')
+                .attr('id', 'strum-events')
+                .attr('x', __.margin.left)
+                .attr('y', __.margin.top)
+                .attr('width', w())
+                .attr('height', h() + 2)
+                .style('opacity', 0)
                 .call(_drag);
         }
 
-        brush.modes["2D-strums"] = {
+        brush.modes['2D-strums'] = {
             install: install,
-            uninstall: function() {
-                pc.selection.select("svg").select("g#strums").remove();
-                pc.selection.select("svg").select("rect#strum-events").remove();
-                pc.on("axesreorder.strums", undefined);
+            uninstall: function () {
+                pc.selection
+                    .select('svg')
+                    .select('g#strums')
+                    .remove();
+                pc.selection
+                    .select('svg')
+                    .select('rect#strum-events')
+                    .remove();
+                pc.on('axesreorder.strums', undefined);
                 delete pc.brushReset;
 
                 strumRect = undefined;
             },
             selected: selected,
-            brushState: function () { return strums; }
+            brushState: function () {
+                return strums;
+            },
         };
+    };
 
-    }
+    // brush mode: angular
+    // code based on 2D.strums.js
 
-
-// brush mode: angular
-// code based on 2D.strums.js
-
-    const installAngularBrush = ()=> {
+    const installAngularBrush = () => {
         let arcs = {},
             strumRect;
 
         function drawStrum(arc, activePoint) {
-            let svg = pc.selection.select("svg").select("g#arcs"),
+            let svg = pc.selection.select('svg').select('g#arcs'),
                 id = arc.dims.i,
                 points = [arc.p2, arc.p3],
-                _line = svg.selectAll("line#arc-" + id).data([{p1:arc.p1,p2:arc.p2},{p1:arc.p1,p2:arc.p3}]),
-                circles = svg.selectAll("circle#arc-" + id).data(points),
+                _line = svg
+                    .selectAll('line#arc-' + id)
+                    .data([{p1: arc.p1, p2: arc.p2}, {p1: arc.p1, p2: arc.p3}]),
+                circles = svg.selectAll('circle#arc-' + id).data(points),
                 _drag = drag(),
-                _path = svg.selectAll("path#arc-" + id).data([arc]);
-
-            _path.enter()
-                .append("path")
-                .attr("id", "arc-" + id)
-                .attr("class", "arc")
-                .style("fill", "orange")
-                .style("opacity", 0.5);
+                _path = svg.selectAll('path#arc-' + id).data([arc]);
 
             _path
-                .attr("d", arc.arc)
-                .attr("transform", "translate(" + arc.p1[0] + "," + arc.p1[1] + ")");
+                .enter()
+                .append('path')
+                .attr('id', 'arc-' + id)
+                .attr('class', 'arc')
+                .style('fill', 'orange')
+                .style('opacity', 0.5);
 
-            _line.enter()
-                .append("line")
-                .attr("id", "arc-" + id)
-                .attr("class", "arc");
+            _path
+                .attr('d', arc.arc)
+                .attr('transform', 'translate(' + arc.p1[0] + ',' + arc.p1[1] + ')');
 
             _line
-                .attr("x1", function(d) { return d.p1[0]; })
-                .attr("y1", function(d) { return d.p1[1]; })
-                .attr("x2", function(d) { return d.p2[0]; })
-                .attr("y2", function(d) { return d.p2[1]; })
-                .attr("stroke", "black")
-                .attr("stroke-width", 2);
+                .enter()
+                .append('line')
+                .attr('id', 'arc-' + id)
+                .attr('class', 'arc');
+
+            _line
+                .attr('x1', function (d) {
+                    return d.p1[0];
+                })
+                .attr('y1', function (d) {
+                    return d.p1[1];
+                })
+                .attr('x2', function (d) {
+                    return d.p2[0];
+                })
+                .attr('y2', function (d) {
+                    return d.p2[1];
+                })
+                .attr('stroke', 'black')
+                .attr('stroke-width', 2);
 
             _drag
-                .on("drag", function(d, i) {
+                .on('drag', function (d, i) {
                     let ev = event,
                         angle = 0;
 
                     i = i + 2;
 
-                    arc["p" + i][0] = Math.min(Math.max(arc.minX + 1, ev.x), arc.maxX);
-                    arc["p" + i][1] = Math.min(Math.max(arc.minY, ev.y), arc.maxY);
+                    arc['p' + i][0] = Math.min(Math.max(arc.minX + 1, ev.x), arc.maxX);
+                    arc['p' + i][1] = Math.min(Math.max(arc.minY, ev.y), arc.maxY);
 
                     angle = i === 3 ? arcs.startAngle(id) : arcs.endAngle(id);
 
-                    if ((arc.startAngle < Math.PI && arc.endAngle < Math.PI && angle < Math.PI) ||
-                        (arc.startAngle >= Math.PI && arc.endAngle >= Math.PI && angle >= Math.PI)) {
-
+                    if (
+                        (arc.startAngle < Math.PI &&
+                            arc.endAngle < Math.PI &&
+                            angle < Math.PI) ||
+                        (arc.startAngle >= Math.PI &&
+                            arc.endAngle >= Math.PI &&
+                            angle >= Math.PI)
+                    ) {
                         if (i === 2) {
                             arc.endAngle = angle;
                             arc.arc.endAngle(angle);
@@ -1984,39 +2266,45 @@ const ParCoords = (config)=> {
                             arc.startAngle = angle;
                             arc.arc.startAngle(angle);
                         }
-
                     }
 
                     drawStrum(arc, i - 2);
                 })
-                .on("end", onDragEnd());
-
-            circles.enter()
-                .append("circle")
-                .attr("id", "arc-" + id)
-                .attr("class", "arc");
+                .on('end', onDragEnd());
 
             circles
-                .attr("cx", function(d) { return d[0]; })
-                .attr("cy", function(d) { return d[1]; })
-                .attr("r", 5)
-                .style("opacity", function(d, i) {
-                    return (activePoint !== undefined && i === activePoint) ? 0.8 : 0;
+                .enter()
+                .append('circle')
+                .attr('id', 'arc-' + id)
+                .attr('class', 'arc');
+
+            circles
+                .attr('cx', function (d) {
+                    return d[0];
                 })
-                .on("mouseover", function() {
-                    select(this).style("opacity", 0.8);
+                .attr('cy', function (d) {
+                    return d[1];
                 })
-                .on("mouseout", function() {
-                    select(this).style("opacity", 0);
+                .attr('r', 5)
+                .style('opacity', function (d, i) {
+                    return activePoint !== undefined && i === activePoint ? 0.8 : 0;
+                })
+                .on('mouseover', function () {
+                    select(this).style('opacity', 0.8);
+                })
+                .on('mouseout', function () {
+                    select(this).style('opacity', 0);
                 })
                 .call(_drag);
         }
 
         function dimensionsForPoint(p) {
-            let dims = { i: -1, left: undefined, right: undefined };
-            keys(__.dimensions).some(function(dim, i) {
+            let dims = {i: -1, left: undefined, right: undefined};
+            keys(__.dimensions).some(function (dim, i) {
                 if (xscale(dim) < p[0]) {
-                    let next = keys(__.dimensions)[pc.getOrderedDimensionKeys().indexOf(dim)+1];
+                    let next = keys(__.dimensions)[
+                    pc.getOrderedDimensionKeys().indexOf(dim) + 1
+                        ];
                     dims.i = i;
                     dims.left = dim;
                     dims.right = next;
@@ -2034,7 +2322,9 @@ const ParCoords = (config)=> {
                 // Event on the right side of the last axis
                 dims.i = keys(__.dimensions).length - 1;
                 dims.right = dims.left;
-                dims.left = pc.getOrderedDimensionKeys()[keys(__.dimensions).length - 2];
+                dims.left = pc.getOrderedDimensionKeys()[
+                keys(__.dimensions).length - 2
+                    ];
             }
 
             return dims;
@@ -2045,7 +2335,7 @@ const ParCoords = (config)=> {
             // This will determine the freedom of movement, because a arc can
             // logically only happen between two axes, so no movement outside these axes
             // should be allowed.
-            return function() {
+            return function () {
                 let p = mouse(strumRect.node()),
                     dims,
                     arc;
@@ -2053,8 +2343,8 @@ const ParCoords = (config)=> {
                 p[0] = p[0] - __.margin.left;
                 p[1] = p[1] - __.margin.top;
 
-                dims = dimensionsForPoint(p),
-                    arc = {
+                (dims = dimensionsForPoint(p)),
+                    (arc = {
                         p1: p,
                         dims: dims,
                         minX: xscale(dims.left),
@@ -2063,8 +2353,8 @@ const ParCoords = (config)=> {
                         maxY: h(),
                         startAngle: undefined,
                         endAngle: undefined,
-                        arc: d3Arc().innerRadius(0)
-                    };
+                        arc: d3Arc().innerRadius(0),
+                    });
 
                 arcs[dims.i] = arc;
                 arcs.active = dims.i;
@@ -2077,13 +2367,19 @@ const ParCoords = (config)=> {
         }
 
         function onDrag() {
-            return function() {
+            return function () {
                 let ev = event,
                     arc = arcs[arcs.active];
 
                 // Make sure that the point is within the bounds
-                arc.p2[0] = Math.min(Math.max(arc.minX + 1, ev.x - __.margin.left), arc.maxX);
-                arc.p2[1] = Math.min(Math.max(arc.minY, ev.y - __.margin.top), arc.maxY);
+                arc.p2[0] = Math.min(
+                    Math.max(arc.minX + 1, ev.x - __.margin.left),
+                    arc.maxX
+                );
+                arc.p2[1] = Math.min(
+                    Math.max(arc.minY, ev.y - __.margin.top),
+                    arc.maxY
+                );
                 arc.p3 = arc.p2.slice();
                 // console.log(arcs.angle(arcs.active));
                 // console.log(signedAngle(arcs.unsignedAngle(arcs.active)));
@@ -2093,25 +2389,25 @@ const ParCoords = (config)=> {
 
         // some helper functions
         function hypothenuse(a, b) {
-            return Math.sqrt(a*a + b*b);
+            return Math.sqrt(a * a + b * b);
         }
 
-        let rad = (function() {
+        let rad = (function () {
             let c = Math.PI / 180;
-            return function(angle) {
+            return function (angle) {
                 return angle * c;
             };
         })();
 
-        let deg = (function() {
+        let deg = (function () {
             let c = 180 / Math.PI;
-            return function(angle) {
+            return function (angle) {
                 return angle * c;
             };
         })();
 
         // [0, 2*PI] -> [-PI/2, PI/2]
-        let signedAngle = function(angle) {
+        let signedAngle = function (angle) {
             let ret = angle;
             if (angle > Math.PI) {
                 ret = angle - 1.5 * Math.PI;
@@ -2121,7 +2417,7 @@ const ParCoords = (config)=> {
                 ret = angle - 0.5 * Math.PI;
             }
             return -ret;
-        }
+        };
 
         /**
          * angles are stored in radians from in [0, 2*PI], where 0 in 12 o'clock.
@@ -2140,8 +2436,7 @@ const ParCoords = (config)=> {
             }
 
             // test if segment angle is contained in angle interval
-            return function(a) {
-
+            return function (a) {
                 if (a >= startAngle && a <= endAngle) {
                     return true;
                 }
@@ -2155,7 +2450,7 @@ const ParCoords = (config)=> {
                 brushed = __.data;
 
             // Get the ids of the currently active arcs.
-            ids = ids.filter(function(d) {
+            ids = ids.filter(function (d) {
                 return !isNaN(d);
             });
 
@@ -2169,37 +2464,43 @@ const ParCoords = (config)=> {
                     a = arcs.width(id),
                     b = y1(d[d1]) - y2(d[d2]),
                     c = hypothenuse(a, b),
-                    angle = Math.asin(b/c); // rad in [-PI/2, PI/2]
+                    angle = Math.asin(b / c); // rad in [-PI/2, PI/2]
                 return test(angle);
             }
 
-            if (ids.length === 0) { return brushed; }
+            if (ids.length === 0) {
+                return brushed;
+            }
 
-            return brushed.filter(function(d) {
-                switch(brush.predicate) {
-                    case "AND":
-                        return ids.every(function(id) { return crossesStrum(d, id); });
-                    case "OR":
-                        return ids.some(function(id) { return crossesStrum(d, id); });
+            return brushed.filter(function (d) {
+                switch (brush.predicate) {
+                    case 'AND':
+                        return ids.every(function (id) {
+                            return crossesStrum(d, id);
+                        });
+                    case 'OR':
+                        return ids.some(function (id) {
+                            return crossesStrum(d, id);
+                        });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
 
         function removeStrum() {
             let arc = arcs[arcs.active],
-                svg = pc.selection.select("svg").select("g#arcs");
+                svg = pc.selection.select('svg').select('g#arcs');
 
             delete arcs[arcs.active];
             arcs.active = undefined;
-            svg.selectAll("line#arc-" + arc.dims.i).remove();
-            svg.selectAll("circle#arc-" + arc.dims.i).remove();
-            svg.selectAll("path#arc-" + arc.dims.i).remove();
+            svg.selectAll('line#arc-' + arc.dims.i).remove();
+            svg.selectAll('circle#arc-' + arc.dims.i).remove();
+            svg.selectAll('path#arc-' + arc.dims.i).remove();
         }
 
         function onDragEnd() {
-            return function() {
+            return function () {
                 let brushed = __.data,
                     arc = arcs[arcs.active];
 
@@ -2220,7 +2521,6 @@ const ParCoords = (config)=> {
                         .endAngle(angle);
                 }
 
-
                 brushed = selected(arcs);
                 arcs.active = undefined;
                 __.brushed = brushed;
@@ -2230,12 +2530,12 @@ const ParCoords = (config)=> {
         }
 
         function brushReset(arcs) {
-            return function() {
-                let ids = Object.getOwnPropertyNames(arcs).filter(function(d) {
+            return function () {
+                let ids = Object.getOwnPropertyNames(arcs).filter(function (d) {
                     return !isNaN(d);
                 });
 
-                ids.forEach(function(d) {
+                ids.forEach(function (d) {
                     arcs.active = d;
                     removeStrum(arcs);
                 });
@@ -2255,7 +2555,7 @@ const ParCoords = (config)=> {
             // placed. NOTE: even though they are evenly spaced in our current
             // implementation, we keep for when non-even spaced segments are supported as
             // well.
-            arcs.width = function(id) {
+            arcs.width = function (id) {
                 let arc = arcs[id];
 
                 if (arc === undefined) {
@@ -2266,16 +2566,16 @@ const ParCoords = (config)=> {
             };
 
             // returns angles in [-PI/2, PI/2]
-            let angle = function(p1, p2) {
+            let angle = function (p1, p2) {
                 let a = p1[0] - p2[0],
                     b = p1[1] - p2[1],
                     c = hypothenuse(a, b);
 
-                return Math.asin(b/c);
-            }
+                return Math.asin(b / c);
+            };
 
             // returns angles in [0, 2 * PI]
-            arcs.endAngle = function(id) {
+            arcs.endAngle = function (id) {
                 let arc = arcs[id];
                 if (arc === undefined) {
                     return undefined;
@@ -2288,9 +2588,9 @@ const ParCoords = (config)=> {
                 }
 
                 return uAngle;
-            }
+            };
 
-            arcs.startAngle = function(id) {
+            arcs.startAngle = function (id) {
                 let arc = arcs[id];
                 if (arc === undefined) {
                     return undefined;
@@ -2304,9 +2604,9 @@ const ParCoords = (config)=> {
                 }
 
                 return uAngle;
-            }
+            };
 
-            arcs.length = function(id) {
+            arcs.length = function (id) {
                 let arc = arcs[id];
 
                 if (arc === undefined) {
@@ -2317,26 +2617,27 @@ const ParCoords = (config)=> {
                     b = arc.p1[1] - arc.p2[1],
                     c = hypothenuse(a, b);
 
-                return(c);
-            }
+                return c;
+            };
 
-            pc.on("axesreorder.arcs", function() {
-                let ids = Object.getOwnPropertyNames(arcs).filter(function(d) {
+            pc.on('axesreorder.arcs', function () {
+                let ids = Object.getOwnPropertyNames(arcs).filter(function (d) {
                     return !isNaN(d);
                 });
 
                 // Checks if the first dimension is directly left of the second dimension.
                 function consecutive(first, second) {
                     let length = keys(__.dimensions).length;
-                    return keys(__.dimensions).some(function(d, i) {
-                        return (d === first)
+                    return keys(__.dimensions).some(function (d, i) {
+                        return d === first
                             ? i + i < length && __.dimensions[i + 1] === second
                             : false;
                     });
                 }
 
-                if (ids.length > 0) { // We have some arcs, which might need to be removed.
-                    ids.forEach(function(d) {
+                if (ids.length > 0) {
+                    // We have some arcs, which might need to be removed.
+                    ids.forEach(function (d) {
                         let dims = arcs[d].dims;
                         arcs.active = d;
                         // If the two dimensions of the current arc are not next to each other
@@ -2350,66 +2651,86 @@ const ParCoords = (config)=> {
             });
 
             // Add a new svg group in which we draw the arcs.
-            pc.selection.select("svg").append("g")
-                .attr("id", "arcs")
-                .attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+            pc.selection
+                .select('svg')
+                .append('g')
+                .attr('id', 'arcs')
+                .attr(
+                    'transform',
+                    'translate(' + __.margin.left + ',' + __.margin.top + ')'
+                );
 
             // Install the required brushReset function
             pc.brushReset = brushReset(arcs);
 
             _drag
-                .on("start", onDragStart(arcs))
-                .on("drag", onDrag(arcs))
-                .on("end", onDragEnd(arcs));
+                .on('start', onDragStart(arcs))
+                .on('drag', onDrag(arcs))
+                .on('end', onDragEnd(arcs));
 
             // NOTE: The styling needs to be done here and not in the css. This is because
             //       for 1D brushing, the canvas layers should not listen to
             //       pointer-events._.
-            strumRect = pc.selection.select("svg").insert("rect", "g#arcs")
-                .attr("id", "arc-events")
-                .attr("x", __.margin.left)
-                .attr("y", __.margin.top)
-                .attr("width", w())
-                .attr("height", h() + 2)
-                .style("opacity", 0)
+            strumRect = pc.selection
+                .select('svg')
+                .insert('rect', 'g#arcs')
+                .attr('id', 'arc-events')
+                .attr('x', __.margin.left)
+                .attr('y', __.margin.top)
+                .attr('width', w())
+                .attr('height', h() + 2)
+                .style('opacity', 0)
                 .call(_drag);
         }
 
-        brush.modes["angular"] = {
+        brush.modes['angular'] = {
             install: install,
-            uninstall: function() {
-                pc.selection.select("svg").select("g#arcs").remove();
-                pc.selection.select("svg").select("rect#arc-events").remove();
-                pc.on("axesreorder.arcs", undefined);
+            uninstall: function () {
+                pc.selection
+                    .select('svg')
+                    .select('g#arcs')
+                    .remove();
+                pc.selection
+                    .select('svg')
+                    .select('rect#arc-events')
+                    .remove();
+                pc.on('axesreorder.arcs', undefined);
                 delete pc.brushReset;
 
                 strumRect = undefined;
             },
             selected: selected,
-            brushState: function () { return arcs; }
+            brushState: function () {
+                return arcs;
+            },
         };
-
     };
 
-    pc.interactive = function() {
+    pc.interactive = function () {
         flags.interactive = true;
         return this;
     };
 
-// expose a few objects
+    // expose a few objects
     pc.xscale = xscale;
     pc.ctx = ctx;
     pc.canvas = canvas;
-    pc.g = function() { return g; };
+    pc.g = function () {
+        return g;
+    };
 
-// rescale for height, width and margins
-// TODO currently assumes chart is brushable, and destroys old brushes
-    pc.resize = function() {
+    // rescale for height, width and margins
+    // TODO currently assumes chart is brushable, and destroys old brushes
+    pc.resize = function () {
         // selection size
-        pc.selection.select("svg")
-            .attr("width", __.width)
-            .attr("height", __.height)
-        pc.svg.attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+        pc.selection
+            .select('svg')
+            .attr('width', __.width)
+            .attr('height', __.height);
+        pc.svg.attr(
+            'transform',
+            'translate(' + __.margin.left + ',' + __.margin.top + ')'
+        );
 
         // FIXME: the current brush state should pass through
         if (flags.brushable) pc.brushReset();
@@ -2422,38 +2743,48 @@ const ParCoords = (config)=> {
         if (flags.brushable) pc.brushable();
         if (flags.reorderable) pc.reorderable();
 
-        events.call('resize', this, {width: __.width, height: __.height, margin: __.margin});
+        events.call('resize', this, {
+            width: __.width,
+            height: __.height,
+            margin: __.margin,
+        });
         return this;
     };
 
-// highlight an array of data
-    pc.highlight = function(data) {
+    // highlight an array of data
+    pc.highlight = function (data) {
         if (arguments.length === 0) {
             return __.highlighted;
         }
 
         __.highlighted = data;
-        pc.clear("highlight");
-        selectAll([canvas.foreground, canvas.brushed]).classed("faded", true);
+        pc.clear('highlight');
+        selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
         data.forEach(path_highlight);
         events.call('highlight', this, data);
         return this;
     };
 
-// clear highlighting
-    pc.unhighlight = function() {
+    // clear highlighting
+    pc.unhighlight = function () {
         __.highlighted = [];
-        pc.clear("highlight");
-        selectAll([canvas.foreground, canvas.brushed]).classed("faded", false);
+        pc.clear('highlight');
+        selectAll([canvas.foreground, canvas.brushed]).classed('faded', false);
         return this;
     };
 
-// calculate 2d intersection of line a->b with line c->d
-// points are objects with x and y properties
-    pc.intersection =  function(a, b, c, d) {
+    // calculate 2d intersection of line a->b with line c->d
+    // points are objects with x and y properties
+    pc.intersection = function (a, b, c, d) {
         return {
-            x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
-            y: ((a.x * b.y - a.y * b.x) * (c.y - d.y) - (a.y - b.y) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x))
+            x:
+            ((a.x * b.y - a.y * b.x) * (c.x - d.x) -
+                (a.x - b.x) * (c.x * d.y - c.y * d.x)) /
+            ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
+            y:
+            ((a.x * b.y - a.y * b.x) * (c.y - d.y) -
+                (a.y - b.y) * (c.x * d.y - c.y * d.x)) /
+            ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
         };
     };
 
@@ -2465,57 +2796,80 @@ const ParCoords = (config)=> {
         return v == null ? xscale(d) : v;
     }
 
-// Merges the canvases and SVG elements into one canvas element which is then passed into the callback
-// (so you can choose to save it to disk, etc.)
-    pc.mergeParcoords = function(callback) {
+    // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
+    // (so you can choose to save it to disk, etc.)
+    pc.mergeParcoords = function (callback) {
         // Retina display, etc.
         let devicePixelRatio = window.devicePixelRatio || 1;
 
         // Create a canvas element to store the merged canvases
-        let mergedCanvas = document.createElement("canvas");
-        mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio
-        mergedCanvas.height = (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
-        mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + "px";
-        mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + "px";
+        let mergedCanvas = document.createElement('canvas');
+        mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
+        mergedCanvas.height =
+            (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
+        mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
+        mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
 
         // Give the canvas a white background
-        let context = mergedCanvas.getContext("2d");
-        context.fillStyle = "#ffffff";
+        let context = mergedCanvas.getContext('2d');
+        context.fillStyle = '#ffffff';
         context.fillRect(0, 0, mergedCanvas.width, mergedCanvas.height);
 
         // Merge all the canvases
         for (let key in pc.canvas) {
-            context.drawImage(pc.canvas[key], 0, 24 * devicePixelRatio, mergedCanvas.width, mergedCanvas.height - 30 * devicePixelRatio);
+            context.drawImage(
+                pc.canvas[key],
+                0,
+                24 * devicePixelRatio,
+                mergedCanvas.width,
+                mergedCanvas.height - 30 * devicePixelRatio
+            );
         }
 
         // Add SVG elements to canvas
         let DOMURL = window.URL || window.webkitURL || window;
         let serializer = new XMLSerializer();
-        let svgStr = serializer.serializeToString(pc.selection.select("svg").node());
+        let svgStr = serializer.serializeToString(
+            pc.selection.select('svg').node()
+        );
 
         // Create a Data URI.
         let src = 'data:image/svg+xml;base64,' + window.btoa(svgStr);
         let img = new Image();
         img.onload = function () {
-            context.drawImage(img, 0, 0, img.width * devicePixelRatio, img.height * devicePixelRatio);
-            if (typeof callback === "function") {
+            context.drawImage(
+                img,
+                0,
+                0,
+                img.width * devicePixelRatio,
+                img.height * devicePixelRatio
+            );
+            if (typeof callback === 'function') {
                 callback(mergedCanvas);
             }
         };
         img.src = src;
-    }
+    };
 
     install1DAxes();
     install2DStrums();
     installAngularBrush();
 
-    pc.version = "0.7.0";
+    pc.version = '1.0.3';
     // this descriptive text should live with other introspective methods
-    pc.toString = function() { return "Parallel Coordinates: " + keys(__.dimensions).length + " dimensions (" + keys(__.data[0]).length + " total) , " + __.data.length + " rows"; };
+    pc.toString = function () {
+        return (
+            'Parallel Coordinates: ' +
+            keys(__.dimensions).length +
+            ' dimensions (' +
+            keys(__.data[0]).length +
+            ' total) , ' +
+            __.data.length +
+            ' rows'
+        );
+    };
 
     return pc;
 };
-
-
 
 export default ParCoords;
