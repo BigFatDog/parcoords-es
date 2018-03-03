@@ -41,167 +41,6 @@ var creator = function (name) {
   return (fullname.local ? creatorFixed : creatorInherit)(fullname);
 };
 
-var matcher = function matcher(selector) {
-  return function () {
-    return this.matches(selector);
-  };
-};
-
-if (typeof document !== "undefined") {
-  var element = document.documentElement;
-  if (!element.matches) {
-    var vendorMatches = element.webkitMatchesSelector || element.msMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector;
-    matcher = function matcher(selector) {
-      return function () {
-        return vendorMatches.call(this, selector);
-      };
-    };
-  }
-}
-
-var matcher$1 = matcher;
-
-var filterEvents = {};
-
-var event = null;
-
-if (typeof document !== "undefined") {
-  var element$1 = document.documentElement;
-  if (!("onmouseenter" in element$1)) {
-    filterEvents = { mouseenter: "mouseover", mouseleave: "mouseout" };
-  }
-}
-
-function filterContextListener(listener, index, group) {
-  listener = contextListener(listener, index, group);
-  return function (event) {
-    var related = event.relatedTarget;
-    if (!related || related !== this && !(related.compareDocumentPosition(this) & 8)) {
-      listener.call(this, event);
-    }
-  };
-}
-
-function contextListener(listener, index, group) {
-  return function (event1) {
-    var event0 = event; // Events can be reentrant (e.g., focus).
-    event = event1;
-    try {
-      listener.call(this, this.__data__, index, group);
-    } finally {
-      event = event0;
-    }
-  };
-}
-
-function parseTypenames(typenames) {
-  return typenames.trim().split(/^|\s+/).map(function (t) {
-    var name = "",
-        i = t.indexOf(".");
-    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-    return { type: t, name: name };
-  });
-}
-
-function onRemove(typename) {
-  return function () {
-    var on = this.__on;
-    if (!on) return;
-    for (var j = 0, i = -1, m = on.length, o; j < m; ++j) {
-      if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) {
-        this.removeEventListener(o.type, o.listener, o.capture);
-      } else {
-        on[++i] = o;
-      }
-    }
-    if (++i) on.length = i;else delete this.__on;
-  };
-}
-
-function onAdd(typename, value, capture) {
-  var wrap = filterEvents.hasOwnProperty(typename.type) ? filterContextListener : contextListener;
-  return function (d, i, group) {
-    var on = this.__on,
-        o,
-        listener = wrap(value, i, group);
-    if (on) for (var j = 0, m = on.length; j < m; ++j) {
-      if ((o = on[j]).type === typename.type && o.name === typename.name) {
-        this.removeEventListener(o.type, o.listener, o.capture);
-        this.addEventListener(o.type, o.listener = listener, o.capture = capture);
-        o.value = value;
-        return;
-      }
-    }
-    this.addEventListener(typename.type, listener, capture);
-    o = { type: typename.type, name: typename.name, value: value, listener: listener, capture: capture };
-    if (!on) this.__on = [o];else on.push(o);
-  };
-}
-
-var selection_on = function (typename, value, capture) {
-  var typenames = parseTypenames(typename + ""),
-      i,
-      n = typenames.length,
-      t;
-
-  if (arguments.length < 2) {
-    var on = this.node().__on;
-    if (on) for (var j = 0, m = on.length, o; j < m; ++j) {
-      for (i = 0, o = on[j]; i < n; ++i) {
-        if ((t = typenames[i]).type === o.type && t.name === o.name) {
-          return o.value;
-        }
-      }
-    }
-    return;
-  }
-
-  on = value ? onAdd : onRemove;
-  if (capture == null) capture = false;
-  for (i = 0; i < n; ++i) {
-    this.each(on(typenames[i], value, capture));
-  }return this;
-};
-
-function customEvent(event1, listener, that, args) {
-  var event0 = event;
-  event1.sourceEvent = event;
-  event = event1;
-  try {
-    return listener.apply(that, args);
-  } finally {
-    event = event0;
-  }
-}
-
-var sourceEvent = function () {
-  var current = event,
-      source;
-  while (source = current.sourceEvent) {
-    current = source;
-  }return current;
-};
-
-var point = function (node, event) {
-  var svg = node.ownerSVGElement || node;
-
-  if (svg.createSVGPoint) {
-    var point = svg.createSVGPoint();
-    point.x = event.clientX, point.y = event.clientY;
-    point = point.matrixTransform(node.getScreenCTM().inverse());
-    return [point.x, point.y];
-  }
-
-  var rect = node.getBoundingClientRect();
-  return [event.clientX - rect.left - node.clientLeft, event.clientY - rect.top - node.clientTop];
-};
-
-var mouse = function (node) {
-  var event = sourceEvent();
-  if (event.changedTouches) event = event.changedTouches[0];
-  return point(node, event);
-};
-
 function none() {}
 
 var selector = function (selector) {
@@ -249,6 +88,26 @@ var selection_selectAll = function (select) {
 
   return new Selection(subgroups, parents);
 };
+
+var matcher = function matcher(selector) {
+  return function () {
+    return this.matches(selector);
+  };
+};
+
+if (typeof document !== "undefined") {
+  var element = document.documentElement;
+  if (!element.matches) {
+    var vendorMatches = element.webkitMatchesSelector || element.msMatchesSelector || element.mozMatchesSelector || element.oMatchesSelector;
+    matcher = function matcher(selector) {
+      return function () {
+        return vendorMatches.call(this, selector);
+      };
+    };
+  }
+}
+
+var matcher$1 = matcher;
 
 var selection_filter = function (match) {
   if (typeof match !== "function") match = matcher$1(match);
@@ -803,9 +662,134 @@ var selection_remove = function () {
   return this.each(remove);
 };
 
+function selection_cloneShallow() {
+  return this.parentNode.insertBefore(this.cloneNode(false), this.nextSibling);
+}
+
+function selection_cloneDeep() {
+  return this.parentNode.insertBefore(this.cloneNode(true), this.nextSibling);
+}
+
+var selection_clone = function (deep) {
+  return this.select(deep ? selection_cloneDeep : selection_cloneShallow);
+};
+
 var selection_datum = function (value) {
     return arguments.length ? this.property("__data__", value) : this.node().__data__;
 };
+
+var filterEvents = {};
+
+var event = null;
+
+if (typeof document !== "undefined") {
+  var element$1 = document.documentElement;
+  if (!("onmouseenter" in element$1)) {
+    filterEvents = { mouseenter: "mouseover", mouseleave: "mouseout" };
+  }
+}
+
+function filterContextListener(listener, index, group) {
+  listener = contextListener(listener, index, group);
+  return function (event) {
+    var related = event.relatedTarget;
+    if (!related || related !== this && !(related.compareDocumentPosition(this) & 8)) {
+      listener.call(this, event);
+    }
+  };
+}
+
+function contextListener(listener, index, group) {
+  return function (event1) {
+    var event0 = event; // Events can be reentrant (e.g., focus).
+    event = event1;
+    try {
+      listener.call(this, this.__data__, index, group);
+    } finally {
+      event = event0;
+    }
+  };
+}
+
+function parseTypenames(typenames) {
+  return typenames.trim().split(/^|\s+/).map(function (t) {
+    var name = "",
+        i = t.indexOf(".");
+    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+    return { type: t, name: name };
+  });
+}
+
+function onRemove(typename) {
+  return function () {
+    var on = this.__on;
+    if (!on) return;
+    for (var j = 0, i = -1, m = on.length, o; j < m; ++j) {
+      if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) {
+        this.removeEventListener(o.type, o.listener, o.capture);
+      } else {
+        on[++i] = o;
+      }
+    }
+    if (++i) on.length = i;else delete this.__on;
+  };
+}
+
+function onAdd(typename, value, capture) {
+  var wrap = filterEvents.hasOwnProperty(typename.type) ? filterContextListener : contextListener;
+  return function (d, i, group) {
+    var on = this.__on,
+        o,
+        listener = wrap(value, i, group);
+    if (on) for (var j = 0, m = on.length; j < m; ++j) {
+      if ((o = on[j]).type === typename.type && o.name === typename.name) {
+        this.removeEventListener(o.type, o.listener, o.capture);
+        this.addEventListener(o.type, o.listener = listener, o.capture = capture);
+        o.value = value;
+        return;
+      }
+    }
+    this.addEventListener(typename.type, listener, capture);
+    o = { type: typename.type, name: typename.name, value: value, listener: listener, capture: capture };
+    if (!on) this.__on = [o];else on.push(o);
+  };
+}
+
+var selection_on = function (typename, value, capture) {
+  var typenames = parseTypenames(typename + ""),
+      i,
+      n = typenames.length,
+      t;
+
+  if (arguments.length < 2) {
+    var on = this.node().__on;
+    if (on) for (var j = 0, m = on.length, o; j < m; ++j) {
+      for (i = 0, o = on[j]; i < n; ++i) {
+        if ((t = typenames[i]).type === o.type && t.name === o.name) {
+          return o.value;
+        }
+      }
+    }
+    return;
+  }
+
+  on = value ? onAdd : onRemove;
+  if (capture == null) capture = false;
+  for (i = 0; i < n; ++i) {
+    this.each(on(typenames[i], value, capture));
+  }return this;
+};
+
+function customEvent(event1, listener, that, args) {
+  var event0 = event;
+  event1.sourceEvent = event;
+  event = event1;
+  try {
+    return listener.apply(that, args);
+  } finally {
+    event = event0;
+  }
+}
 
 function dispatchEvent(node, type, params) {
   var window = defaultView(node),
@@ -876,6 +860,7 @@ Selection.prototype = selection.prototype = {
   append: selection_append,
   insert: selection_insert,
   remove: selection_remove,
+  clone: selection_clone,
   datum: selection_datum,
   on: selection_on,
   dispatch: selection_dispatch
@@ -883,6 +868,34 @@ Selection.prototype = selection.prototype = {
 
 var select = function (selector) {
     return typeof selector === "string" ? new Selection([[document.querySelector(selector)]], [document.documentElement]) : new Selection([[selector]], root);
+};
+
+var sourceEvent = function () {
+  var current = event,
+      source;
+  while (source = current.sourceEvent) {
+    current = source;
+  }return current;
+};
+
+var point = function (node, event) {
+  var svg = node.ownerSVGElement || node;
+
+  if (svg.createSVGPoint) {
+    var point = svg.createSVGPoint();
+    point.x = event.clientX, point.y = event.clientY;
+    point = point.matrixTransform(node.getScreenCTM().inverse());
+    return [point.x, point.y];
+  }
+
+  var rect = node.getBoundingClientRect();
+  return [event.clientX - rect.left - node.clientLeft, event.clientY - rect.top - node.clientTop];
+};
+
+var mouse = function (node) {
+  var event = sourceEvent();
+  if (event.changedTouches) event = event.changedTouches[0];
+  return point(node, event);
 };
 
 var selectAll = function (selector) {
@@ -1246,14 +1259,15 @@ var e5 = Math.sqrt(10);
 var e2 = Math.sqrt(2);
 
 var ticks = function (start, stop, count) {
-    var reverse = stop < start,
+    var reverse,
         i = -1,
         n,
         ticks,
         step;
 
-    if (reverse) n = start, start = stop, stop = n;
-
+    stop = +stop, start = +start, count = +count;
+    if (start === stop && count > 0) return [start];
+    if (reverse = stop < start) n = start, start = stop, stop = n;
     if ((step = tickIncrement(start, stop, count)) === 0 || !isFinite(step)) return [];
 
     if (step > 0) {
@@ -2037,7 +2051,7 @@ var interpolateRgb = (function rgbGamma(y) {
 var array$2 = function (a, b) {
   var nb = b ? b.length : 0,
       na = a ? Math.min(nb, a.length) : 0,
-      x = new Array(nb),
+      x = new Array(na),
       c = new Array(nb),
       i;
 
@@ -2673,7 +2687,7 @@ var formatLocale = function (locale) {
 
         // Compute the prefix and suffix.
         valuePrefix = (valueNegative ? sign === "(" ? sign : "-" : sign === "-" || sign === "(" ? "" : sign) + valuePrefix;
-        valueSuffix = valueSuffix + (type === "s" ? prefixes[8 + prefixExponent / 3] : "") + (valueNegative && sign === "(" ? ")" : "");
+        valueSuffix = (type === "s" ? prefixes[8 + prefixExponent / 3] : "") + valueSuffix + (valueNegative && sign === "(" ? ")" : "");
 
         // Break the formatted value into the integer “value” part that can be
         // grouped, and fractional or exponential “suffix” part that is not.
@@ -2940,13 +2954,14 @@ function newInterval(floori, offseti, count, field) {
   };
 
   interval.range = function (start, stop, step) {
-    var range = [];
+    var range = [],
+        previous;
     start = interval.ceil(start);
     step = step == null ? 1 : Math.floor(step);
     if (!(start < stop) || !(step > 0)) return range; // also handles Invalid Date
     do {
-      range.push(new Date(+start));
-    } while ((offseti(start, step), floori(start), start < stop));
+      range.push(previous = new Date(+start)), offseti(start, step), floori(start);
+    } while (previous < start && start < stop);
     return range;
   };
 
@@ -2956,9 +2971,13 @@ function newInterval(floori, offseti, count, field) {
         date.setTime(date - 1);
       }
     }, function (date, step) {
-      if (date >= date) while (--step >= 0) {
-        while (offseti(date, 1), !test(date)) {}
-      } // eslint-disable-line no-empty
+      if (date >= date) {
+        if (step < 0) while (++step <= 0) {
+          while (offseti(date, -1), !test(date)) {} // eslint-disable-line no-empty
+        } else while (--step >= 0) {
+          while (offseti(date, +1), !test(date)) {} // eslint-disable-line no-empty
+        }
+      }
     });
   };
 
@@ -3237,6 +3256,7 @@ function formatLocale$1(locale) {
     "c": null,
     "d": formatDayOfMonth,
     "e": formatDayOfMonth,
+    "f": formatMicroseconds,
     "H": formatHour24,
     "I": formatHour12,
     "j": formatDayOfYear,
@@ -3244,9 +3264,13 @@ function formatLocale$1(locale) {
     "m": formatMonthNumber,
     "M": formatMinutes,
     "p": formatPeriod,
+    "Q": formatUnixTimestamp,
+    "s": formatUnixTimestampSeconds,
     "S": formatSeconds,
+    "u": formatWeekdayNumberMonday,
     "U": formatWeekNumberSunday,
-    "w": formatWeekdayNumber,
+    "V": formatWeekNumberISO,
+    "w": formatWeekdayNumberSunday,
     "W": formatWeekNumberMonday,
     "x": null,
     "X": null,
@@ -3264,6 +3288,7 @@ function formatLocale$1(locale) {
     "c": null,
     "d": formatUTCDayOfMonth,
     "e": formatUTCDayOfMonth,
+    "f": formatUTCMicroseconds,
     "H": formatUTCHour24,
     "I": formatUTCHour12,
     "j": formatUTCDayOfYear,
@@ -3271,9 +3296,13 @@ function formatLocale$1(locale) {
     "m": formatUTCMonthNumber,
     "M": formatUTCMinutes,
     "p": formatUTCPeriod,
+    "Q": formatUnixTimestamp,
+    "s": formatUnixTimestampSeconds,
     "S": formatUTCSeconds,
+    "u": formatUTCWeekdayNumberMonday,
     "U": formatUTCWeekNumberSunday,
-    "w": formatUTCWeekdayNumber,
+    "V": formatUTCWeekNumberISO,
+    "w": formatUTCWeekdayNumberSunday,
     "W": formatUTCWeekNumberMonday,
     "x": null,
     "X": null,
@@ -3291,6 +3320,7 @@ function formatLocale$1(locale) {
     "c": parseLocaleDateTime,
     "d": parseDayOfMonth,
     "e": parseDayOfMonth,
+    "f": parseMicroseconds,
     "H": parseHour24,
     "I": parseHour24,
     "j": parseDayOfYear,
@@ -3298,9 +3328,13 @@ function formatLocale$1(locale) {
     "m": parseMonthNumber,
     "M": parseMinutes,
     "p": parsePeriod,
+    "Q": parseUnixTimestamp,
+    "s": parseUnixTimestampSeconds,
     "S": parseSeconds,
+    "u": parseWeekdayNumberMonday,
     "U": parseWeekNumberSunday,
-    "w": parseWeekdayNumber,
+    "V": parseWeekNumberISO,
+    "w": parseWeekdayNumberSunday,
     "W": parseWeekNumberMonday,
     "x": parseLocaleDate,
     "X": parseLocaleTime,
@@ -3348,16 +3382,39 @@ function formatLocale$1(locale) {
   function newParse(specifier, newDate) {
     return function (string) {
       var d = newYear(1900),
-          i = parseSpecifier(d, specifier, string += "", 0);
+          i = parseSpecifier(d, specifier, string += "", 0),
+          week,
+          day$$1;
       if (i != string.length) return null;
+
+      // If a UNIX timestamp is specified, return it.
+      if ("Q" in d) return new Date(d.Q);
 
       // The am-pm flag is 0 for AM, and 1 for PM.
       if ("p" in d) d.H = d.H % 12 + d.p * 12;
 
       // Convert day-of-week and week-of-year to day-of-year.
-      if ("W" in d || "U" in d) {
-        if (!("w" in d)) d.w = "W" in d ? 1 : 0;
-        var day$$1 = "Z" in d ? utcDate(newYear(d.y)).getUTCDay() : newDate(newYear(d.y)).getDay();
+      if ("V" in d) {
+        if (d.V < 1 || d.V > 53) return null;
+        if (!("w" in d)) d.w = 1;
+        if ("Z" in d) {
+          week = utcDate(newYear(d.y)), day$$1 = week.getUTCDay();
+          week = day$$1 > 4 || day$$1 === 0 ? utcMonday.ceil(week) : utcMonday(week);
+          week = utcDay.offset(week, (d.V - 1) * 7);
+          d.y = week.getUTCFullYear();
+          d.m = week.getUTCMonth();
+          d.d = week.getUTCDate() + (d.w + 6) % 7;
+        } else {
+          week = newDate(newYear(d.y)), day$$1 = week.getDay();
+          week = day$$1 > 4 || day$$1 === 0 ? monday.ceil(week) : monday(week);
+          week = day.offset(week, (d.V - 1) * 7);
+          d.y = week.getFullYear();
+          d.m = week.getMonth();
+          d.d = week.getDate() + (d.w + 6) % 7;
+        }
+      } else if ("W" in d || "U" in d) {
+        if (!("w" in d)) d.w = "u" in d ? d.u % 7 : "W" in d ? 1 : 0;
+        day$$1 = "Z" in d ? utcDate(newYear(d.y)).getUTCDay() : newDate(newYear(d.y)).getDay();
         d.m = 0;
         d.d = "W" in d ? (d.w + 6) % 7 + d.W * 7 - (day$$1 + 5) % 7 : d.w + d.U * 7 - (day$$1 + 6) % 7;
       }
@@ -3509,7 +3566,7 @@ function formatLocale$1(locale) {
 var pads = { "-": "", "_": " ", "0": "0" };
 var numberRe = /^\s*\d+/;
 var percentRe = /^%/;
-var requoteRe = /[\\\^\$\*\+\?\|\[\]\(\)\.\{\}]/g;
+var requoteRe = /[\\^$*+?|[\]().{}]/g;
 
 function pad(value, fill, width) {
   var sign = value < 0 ? "-" : "",
@@ -3535,18 +3592,28 @@ function formatLookup(names) {
   }return map;
 }
 
-function parseWeekdayNumber(d, string, i) {
+function parseWeekdayNumberSunday(d, string, i) {
   var n = numberRe.exec(string.slice(i, i + 1));
   return n ? (d.w = +n[0], i + n[0].length) : -1;
 }
 
+function parseWeekdayNumberMonday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 1));
+  return n ? (d.u = +n[0], i + n[0].length) : -1;
+}
+
 function parseWeekNumberSunday(d, string, i) {
-  var n = numberRe.exec(string.slice(i));
+  var n = numberRe.exec(string.slice(i, i + 2));
   return n ? (d.U = +n[0], i + n[0].length) : -1;
 }
 
+function parseWeekNumberISO(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.V = +n[0], i + n[0].length) : -1;
+}
+
 function parseWeekNumberMonday(d, string, i) {
-  var n = numberRe.exec(string.slice(i));
+  var n = numberRe.exec(string.slice(i, i + 2));
   return n ? (d.W = +n[0], i + n[0].length) : -1;
 }
 
@@ -3561,7 +3628,7 @@ function parseYear(d, string, i) {
 }
 
 function parseZone(d, string, i) {
-  var n = /^(Z)|([+-]\d\d)(?:\:?(\d\d))?/.exec(string.slice(i, i + 6));
+  var n = /^(Z)|([+-]\d\d)(?::?(\d\d))?/.exec(string.slice(i, i + 6));
   return n ? (d.Z = n[1] ? 0 : -(n[2] + (n[3] || "00")), i + n[0].length) : -1;
 }
 
@@ -3600,9 +3667,24 @@ function parseMilliseconds(d, string, i) {
   return n ? (d.L = +n[0], i + n[0].length) : -1;
 }
 
+function parseMicroseconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 6));
+  return n ? (d.L = Math.floor(n[0] / 1000), i + n[0].length) : -1;
+}
+
 function parseLiteralPercent(d, string, i) {
   var n = percentRe.exec(string.slice(i, i + 1));
   return n ? i + n[0].length : -1;
+}
+
+function parseUnixTimestamp(d, string, i) {
+  var n = numberRe.exec(string.slice(i));
+  return n ? (d.Q = +n[0], i + n[0].length) : -1;
+}
+
+function parseUnixTimestampSeconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i));
+  return n ? (d.Q = +n[0] * 1000, i + n[0].length) : -1;
 }
 
 function formatDayOfMonth(d, p) {
@@ -3625,6 +3707,10 @@ function formatMilliseconds(d, p) {
   return pad(d.getMilliseconds(), p, 3);
 }
 
+function formatMicroseconds(d, p) {
+  return formatMilliseconds(d, p) + "000";
+}
+
 function formatMonthNumber(d, p) {
   return pad(d.getMonth() + 1, p, 2);
 }
@@ -3637,11 +3723,22 @@ function formatSeconds(d, p) {
   return pad(d.getSeconds(), p, 2);
 }
 
+function formatWeekdayNumberMonday(d) {
+  var day$$1 = d.getDay();
+  return day$$1 === 0 ? 7 : day$$1;
+}
+
 function formatWeekNumberSunday(d, p) {
   return pad(sunday.count(year(d), d), p, 2);
 }
 
-function formatWeekdayNumber(d) {
+function formatWeekNumberISO(d, p) {
+  var day$$1 = d.getDay();
+  d = day$$1 >= 4 || day$$1 === 0 ? thursday(d) : thursday.ceil(d);
+  return pad(thursday.count(year(d), d) + (year(d).getDay() === 4), p, 2);
+}
+
+function formatWeekdayNumberSunday(d) {
   return d.getDay();
 }
 
@@ -3682,6 +3779,10 @@ function formatUTCMilliseconds(d, p) {
   return pad(d.getUTCMilliseconds(), p, 3);
 }
 
+function formatUTCMicroseconds(d, p) {
+  return formatUTCMilliseconds(d, p) + "000";
+}
+
 function formatUTCMonthNumber(d, p) {
   return pad(d.getUTCMonth() + 1, p, 2);
 }
@@ -3694,11 +3795,22 @@ function formatUTCSeconds(d, p) {
   return pad(d.getUTCSeconds(), p, 2);
 }
 
+function formatUTCWeekdayNumberMonday(d) {
+  var dow = d.getUTCDay();
+  return dow === 0 ? 7 : dow;
+}
+
 function formatUTCWeekNumberSunday(d, p) {
   return pad(utcSunday.count(utcYear(d), d), p, 2);
 }
 
-function formatUTCWeekdayNumber(d) {
+function formatUTCWeekNumberISO(d, p) {
+  var day$$1 = d.getUTCDay();
+  d = day$$1 >= 4 || day$$1 === 0 ? utcThursday(d) : utcThursday.ceil(d);
+  return pad(utcThursday.count(utcYear(d), d) + (utcYear(d).getUTCDay() === 4), p, 2);
+}
+
+function formatUTCWeekdayNumberSunday(d) {
   return d.getUTCDay();
 }
 
@@ -3720,6 +3832,14 @@ function formatUTCZone() {
 
 function formatLiteralPercent() {
   return "%";
+}
+
+function formatUnixTimestamp(d) {
+  return +d;
+}
+
+function formatUnixTimestampSeconds(d) {
+  return Math.floor(+d / 1000);
 }
 
 var locale$2;
@@ -3818,7 +3938,7 @@ function calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1
         step = i[1];
         interval$$1 = i[0];
       } else {
-        step = tickStep(start, stop, interval$$1);
+        step = Math.max(tickStep(start, stop, interval$$1), 1);
         interval$$1 = millisecond$$1;
       }
     }
@@ -3880,13 +4000,489 @@ colors("3182bd6baed69ecae1c6dbefe6550dfd8d3cfdae6bfdd0a231a35474c476a1d99bc7e9c0
 
 colors("1f77b4aec7e8ff7f0effbb782ca02c98df8ad62728ff98969467bdc5b0d58c564bc49c94e377c2f7b6d27f7f7fc7c7c7bcbd22dbdb8d17becf9edae5");
 
-cubehelixLong(cubehelix(300, 0.5, 0.0), cubehelix(-240, 0.5, 1.0));
+var define$2 = function (constructor, factory, prototype) {
+  constructor.prototype = factory.prototype = prototype;
+  prototype.constructor = constructor;
+};
 
-var warm = cubehelixLong(cubehelix(-100, 0.75, 0.35), cubehelix(80, 1.50, 0.8));
+function extend$1(parent, definition) {
+  var prototype = Object.create(parent.prototype);
+  for (var key in definition) {
+    prototype[key] = definition[key];
+  }return prototype;
+}
 
-var cool = cubehelixLong(cubehelix(260, 0.75, 0.35), cubehelix(80, 1.50, 0.8));
+function Color$1() {}
 
-var rainbow = cubehelix();
+var _darker$1 = 0.7;
+var _brighter$1 = 1 / _darker$1;
+
+var reI$1 = "\\s*([+-]?\\d+)\\s*";
+var reN$1 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*";
+var reP$1 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*";
+var reHex3$1 = /^#([0-9a-f]{3})$/;
+var reHex6$1 = /^#([0-9a-f]{6})$/;
+var reRgbInteger$1 = new RegExp("^rgb\\(" + [reI$1, reI$1, reI$1] + "\\)$");
+var reRgbPercent$1 = new RegExp("^rgb\\(" + [reP$1, reP$1, reP$1] + "\\)$");
+var reRgbaInteger$1 = new RegExp("^rgba\\(" + [reI$1, reI$1, reI$1, reN$1] + "\\)$");
+var reRgbaPercent$1 = new RegExp("^rgba\\(" + [reP$1, reP$1, reP$1, reN$1] + "\\)$");
+var reHslPercent$1 = new RegExp("^hsl\\(" + [reN$1, reP$1, reP$1] + "\\)$");
+var reHslaPercent$1 = new RegExp("^hsla\\(" + [reN$1, reP$1, reP$1, reN$1] + "\\)$");
+
+var named$1 = {
+  aliceblue: 0xf0f8ff,
+  antiquewhite: 0xfaebd7,
+  aqua: 0x00ffff,
+  aquamarine: 0x7fffd4,
+  azure: 0xf0ffff,
+  beige: 0xf5f5dc,
+  bisque: 0xffe4c4,
+  black: 0x000000,
+  blanchedalmond: 0xffebcd,
+  blue: 0x0000ff,
+  blueviolet: 0x8a2be2,
+  brown: 0xa52a2a,
+  burlywood: 0xdeb887,
+  cadetblue: 0x5f9ea0,
+  chartreuse: 0x7fff00,
+  chocolate: 0xd2691e,
+  coral: 0xff7f50,
+  cornflowerblue: 0x6495ed,
+  cornsilk: 0xfff8dc,
+  crimson: 0xdc143c,
+  cyan: 0x00ffff,
+  darkblue: 0x00008b,
+  darkcyan: 0x008b8b,
+  darkgoldenrod: 0xb8860b,
+  darkgray: 0xa9a9a9,
+  darkgreen: 0x006400,
+  darkgrey: 0xa9a9a9,
+  darkkhaki: 0xbdb76b,
+  darkmagenta: 0x8b008b,
+  darkolivegreen: 0x556b2f,
+  darkorange: 0xff8c00,
+  darkorchid: 0x9932cc,
+  darkred: 0x8b0000,
+  darksalmon: 0xe9967a,
+  darkseagreen: 0x8fbc8f,
+  darkslateblue: 0x483d8b,
+  darkslategray: 0x2f4f4f,
+  darkslategrey: 0x2f4f4f,
+  darkturquoise: 0x00ced1,
+  darkviolet: 0x9400d3,
+  deeppink: 0xff1493,
+  deepskyblue: 0x00bfff,
+  dimgray: 0x696969,
+  dimgrey: 0x696969,
+  dodgerblue: 0x1e90ff,
+  firebrick: 0xb22222,
+  floralwhite: 0xfffaf0,
+  forestgreen: 0x228b22,
+  fuchsia: 0xff00ff,
+  gainsboro: 0xdcdcdc,
+  ghostwhite: 0xf8f8ff,
+  gold: 0xffd700,
+  goldenrod: 0xdaa520,
+  gray: 0x808080,
+  green: 0x008000,
+  greenyellow: 0xadff2f,
+  grey: 0x808080,
+  honeydew: 0xf0fff0,
+  hotpink: 0xff69b4,
+  indianred: 0xcd5c5c,
+  indigo: 0x4b0082,
+  ivory: 0xfffff0,
+  khaki: 0xf0e68c,
+  lavender: 0xe6e6fa,
+  lavenderblush: 0xfff0f5,
+  lawngreen: 0x7cfc00,
+  lemonchiffon: 0xfffacd,
+  lightblue: 0xadd8e6,
+  lightcoral: 0xf08080,
+  lightcyan: 0xe0ffff,
+  lightgoldenrodyellow: 0xfafad2,
+  lightgray: 0xd3d3d3,
+  lightgreen: 0x90ee90,
+  lightgrey: 0xd3d3d3,
+  lightpink: 0xffb6c1,
+  lightsalmon: 0xffa07a,
+  lightseagreen: 0x20b2aa,
+  lightskyblue: 0x87cefa,
+  lightslategray: 0x778899,
+  lightslategrey: 0x778899,
+  lightsteelblue: 0xb0c4de,
+  lightyellow: 0xffffe0,
+  lime: 0x00ff00,
+  limegreen: 0x32cd32,
+  linen: 0xfaf0e6,
+  magenta: 0xff00ff,
+  maroon: 0x800000,
+  mediumaquamarine: 0x66cdaa,
+  mediumblue: 0x0000cd,
+  mediumorchid: 0xba55d3,
+  mediumpurple: 0x9370db,
+  mediumseagreen: 0x3cb371,
+  mediumslateblue: 0x7b68ee,
+  mediumspringgreen: 0x00fa9a,
+  mediumturquoise: 0x48d1cc,
+  mediumvioletred: 0xc71585,
+  midnightblue: 0x191970,
+  mintcream: 0xf5fffa,
+  mistyrose: 0xffe4e1,
+  moccasin: 0xffe4b5,
+  navajowhite: 0xffdead,
+  navy: 0x000080,
+  oldlace: 0xfdf5e6,
+  olive: 0x808000,
+  olivedrab: 0x6b8e23,
+  orange: 0xffa500,
+  orangered: 0xff4500,
+  orchid: 0xda70d6,
+  palegoldenrod: 0xeee8aa,
+  palegreen: 0x98fb98,
+  paleturquoise: 0xafeeee,
+  palevioletred: 0xdb7093,
+  papayawhip: 0xffefd5,
+  peachpuff: 0xffdab9,
+  peru: 0xcd853f,
+  pink: 0xffc0cb,
+  plum: 0xdda0dd,
+  powderblue: 0xb0e0e6,
+  purple: 0x800080,
+  rebeccapurple: 0x663399,
+  red: 0xff0000,
+  rosybrown: 0xbc8f8f,
+  royalblue: 0x4169e1,
+  saddlebrown: 0x8b4513,
+  salmon: 0xfa8072,
+  sandybrown: 0xf4a460,
+  seagreen: 0x2e8b57,
+  seashell: 0xfff5ee,
+  sienna: 0xa0522d,
+  silver: 0xc0c0c0,
+  skyblue: 0x87ceeb,
+  slateblue: 0x6a5acd,
+  slategray: 0x708090,
+  slategrey: 0x708090,
+  snow: 0xfffafa,
+  springgreen: 0x00ff7f,
+  steelblue: 0x4682b4,
+  tan: 0xd2b48c,
+  teal: 0x008080,
+  thistle: 0xd8bfd8,
+  tomato: 0xff6347,
+  turquoise: 0x40e0d0,
+  violet: 0xee82ee,
+  wheat: 0xf5deb3,
+  white: 0xffffff,
+  whitesmoke: 0xf5f5f5,
+  yellow: 0xffff00,
+  yellowgreen: 0x9acd32
+};
+
+define$2(Color$1, color$1, {
+  displayable: function displayable() {
+    return this.rgb().displayable();
+  },
+  toString: function toString() {
+    return this.rgb() + "";
+  }
+});
+
+function color$1(format) {
+  var m;
+  format = (format + "").trim().toLowerCase();
+  return (m = reHex3$1.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$1(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
+  ) : (m = reHex6$1.exec(format)) ? rgbn$1(parseInt(m[1], 16) // #ff0000
+  ) : (m = reRgbInteger$1.exec(format)) ? new Rgb$1(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
+  : (m = reRgbPercent$1.exec(format)) ? new Rgb$1(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
+  : (m = reRgbaInteger$1.exec(format)) ? rgba$1(m[1], m[2], m[3], m[4] // rgba(255, 0, 0, 1)
+  ) : (m = reRgbaPercent$1.exec(format)) ? rgba$1(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4] // rgb(100%, 0%, 0%, 1)
+  ) : (m = reHslPercent$1.exec(format)) ? hsla$1(m[1], m[2] / 100, m[3] / 100, 1 // hsl(120, 50%, 50%)
+  ) : (m = reHslaPercent$1.exec(format)) ? hsla$1(m[1], m[2] / 100, m[3] / 100, m[4] // hsla(120, 50%, 50%, 1)
+  ) : named$1.hasOwnProperty(format) ? rgbn$1(named$1[format]) : format === "transparent" ? new Rgb$1(NaN, NaN, NaN, 0) : null;
+}
+
+function rgbn$1(n) {
+  return new Rgb$1(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
+}
+
+function rgba$1(r, g, b, a) {
+  if (a <= 0) r = g = b = NaN;
+  return new Rgb$1(r, g, b, a);
+}
+
+function rgbConvert$1(o) {
+  if (!(o instanceof Color$1)) o = color$1(o);
+  if (!o) return new Rgb$1();
+  o = o.rgb();
+  return new Rgb$1(o.r, o.g, o.b, o.opacity);
+}
+
+function rgb$1(r, g, b, opacity) {
+  return arguments.length === 1 ? rgbConvert$1(r) : new Rgb$1(r, g, b, opacity == null ? 1 : opacity);
+}
+
+function Rgb$1(r, g, b, opacity) {
+  this.r = +r;
+  this.g = +g;
+  this.b = +b;
+  this.opacity = +opacity;
+}
+
+define$2(Rgb$1, rgb$1, extend$1(Color$1, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
+    return new Rgb$1(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
+    return new Rgb$1(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  rgb: function rgb() {
+    return this;
+  },
+  displayable: function displayable() {
+    return 0 <= this.r && this.r <= 255 && 0 <= this.g && this.g <= 255 && 0 <= this.b && this.b <= 255 && 0 <= this.opacity && this.opacity <= 1;
+  },
+  toString: function toString() {
+    var a = this.opacity;a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
+    return (a === 1 ? "rgb(" : "rgba(") + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.b) || 0)) + (a === 1 ? ")" : ", " + a + ")");
+  }
+}));
+
+function hsla$1(h, s, l, a) {
+  if (a <= 0) h = s = l = NaN;else if (l <= 0 || l >= 1) h = s = NaN;else if (s <= 0) h = NaN;
+  return new Hsl$1(h, s, l, a);
+}
+
+function hslConvert$1(o) {
+  if (o instanceof Hsl$1) return new Hsl$1(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Color$1)) o = color$1(o);
+  if (!o) return new Hsl$1();
+  if (o instanceof Hsl$1) return o;
+  o = o.rgb();
+  var r = o.r / 255,
+      g = o.g / 255,
+      b = o.b / 255,
+      min = Math.min(r, g, b),
+      max = Math.max(r, g, b),
+      h = NaN,
+      s = max - min,
+      l = (max + min) / 2;
+  if (s) {
+    if (r === max) h = (g - b) / s + (g < b) * 6;else if (g === max) h = (b - r) / s + 2;else h = (r - g) / s + 4;
+    s /= l < 0.5 ? max + min : 2 - max - min;
+    h *= 60;
+  } else {
+    s = l > 0 && l < 1 ? 0 : h;
+  }
+  return new Hsl$1(h, s, l, o.opacity);
+}
+
+function hsl$3(h, s, l, opacity) {
+  return arguments.length === 1 ? hslConvert$1(h) : new Hsl$1(h, s, l, opacity == null ? 1 : opacity);
+}
+
+function Hsl$1(h, s, l, opacity) {
+  this.h = +h;
+  this.s = +s;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$2(Hsl$1, hsl$3, extend$1(Color$1, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
+    return new Hsl$1(this.h, this.s, this.l * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
+    return new Hsl$1(this.h, this.s, this.l * k, this.opacity);
+  },
+  rgb: function rgb() {
+    var h = this.h % 360 + (this.h < 0) * 360,
+        s = isNaN(h) || isNaN(this.s) ? 0 : this.s,
+        l = this.l,
+        m2 = l + (l < 0.5 ? l : 1 - l) * s,
+        m1 = 2 * l - m2;
+    return new Rgb$1(hsl2rgb$1(h >= 240 ? h - 240 : h + 120, m1, m2), hsl2rgb$1(h, m1, m2), hsl2rgb$1(h < 120 ? h + 240 : h - 120, m1, m2), this.opacity);
+  },
+  displayable: function displayable() {
+    return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
+  }
+}));
+
+/* From FvD 13.37, CSS Color Module Level 3 */
+function hsl2rgb$1(h, m1, m2) {
+  return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
+}
+
+var deg2rad$1 = Math.PI / 180;
+var rad2deg$1 = 180 / Math.PI;
+
+var Kn$1 = 18;
+var Xn$1 = 0.950470;
+var Yn$1 = 1;
+var Zn$1 = 1.088830;
+var t0$2 = 4 / 29;
+var t1$2 = 6 / 29;
+var t2$1 = 3 * t1$2 * t1$2;
+var t3$1 = t1$2 * t1$2 * t1$2;
+
+function labConvert$1(o) {
+  if (o instanceof Lab$1) return new Lab$1(o.l, o.a, o.b, o.opacity);
+  if (o instanceof Hcl$1) {
+    var h = o.h * deg2rad$1;
+    return new Lab$1(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
+  }
+  if (!(o instanceof Rgb$1)) o = rgbConvert$1(o);
+  var b = rgb2xyz$1(o.r),
+      a = rgb2xyz$1(o.g),
+      l = rgb2xyz$1(o.b),
+      x = xyz2lab$1((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn$1),
+      y = xyz2lab$1((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn$1),
+      z = xyz2lab$1((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn$1);
+  return new Lab$1(116 * y - 16, 500 * (x - y), 200 * (y - z), o.opacity);
+}
+
+function lab$2(l, a, b, opacity) {
+  return arguments.length === 1 ? labConvert$1(l) : new Lab$1(l, a, b, opacity == null ? 1 : opacity);
+}
+
+function Lab$1(l, a, b, opacity) {
+  this.l = +l;
+  this.a = +a;
+  this.b = +b;
+  this.opacity = +opacity;
+}
+
+define$2(Lab$1, lab$2, extend$1(Color$1, {
+  brighter: function brighter(k) {
+    return new Lab$1(this.l + Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+  },
+  darker: function darker(k) {
+    return new Lab$1(this.l - Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+  },
+  rgb: function rgb() {
+    var y = (this.l + 16) / 116,
+        x = isNaN(this.a) ? y : y + this.a / 500,
+        z = isNaN(this.b) ? y : y - this.b / 200;
+    y = Yn$1 * lab2xyz$1(y);
+    x = Xn$1 * lab2xyz$1(x);
+    z = Zn$1 * lab2xyz$1(z);
+    return new Rgb$1(xyz2rgb$1(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
+    xyz2rgb$1(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb$1(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
+  }
+}));
+
+function xyz2lab$1(t) {
+  return t > t3$1 ? Math.pow(t, 1 / 3) : t / t2$1 + t0$2;
+}
+
+function lab2xyz$1(t) {
+  return t > t1$2 ? t * t * t : t2$1 * (t - t0$2);
+}
+
+function xyz2rgb$1(x) {
+  return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
+}
+
+function rgb2xyz$1(x) {
+  return (x /= 255) <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+function hclConvert$1(o) {
+  if (o instanceof Hcl$1) return new Hcl$1(o.h, o.c, o.l, o.opacity);
+  if (!(o instanceof Lab$1)) o = labConvert$1(o);
+  var h = Math.atan2(o.b, o.a) * rad2deg$1;
+  return new Hcl$1(h < 0 ? h + 360 : h, Math.sqrt(o.a * o.a + o.b * o.b), o.l, o.opacity);
+}
+
+function hcl$3(h, c, l, opacity) {
+  return arguments.length === 1 ? hclConvert$1(h) : new Hcl$1(h, c, l, opacity == null ? 1 : opacity);
+}
+
+function Hcl$1(h, c, l, opacity) {
+  this.h = +h;
+  this.c = +c;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$2(Hcl$1, hcl$3, extend$1(Color$1, {
+  brighter: function brighter(k) {
+    return new Hcl$1(this.h, this.c, this.l + Kn$1 * (k == null ? 1 : k), this.opacity);
+  },
+  darker: function darker(k) {
+    return new Hcl$1(this.h, this.c, this.l - Kn$1 * (k == null ? 1 : k), this.opacity);
+  },
+  rgb: function rgb() {
+    return labConvert$1(this).rgb();
+  }
+}));
+
+var A$1 = -0.14861;
+var B$1 = +1.78277;
+var C$1 = -0.29227;
+var D$1 = -0.90649;
+var E$1 = +1.97294;
+var ED$1 = E$1 * D$1;
+var EB$1 = E$1 * B$1;
+var BC_DA$1 = B$1 * C$1 - D$1 * A$1;
+
+function cubehelixConvert$1(o) {
+  if (o instanceof Cubehelix$1) return new Cubehelix$1(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Rgb$1)) o = rgbConvert$1(o);
+  var r = o.r / 255,
+      g = o.g / 255,
+      b = o.b / 255,
+      l = (BC_DA$1 * b + ED$1 * r - EB$1 * g) / (BC_DA$1 + ED$1 - EB$1),
+      bl = b - l,
+      k = (E$1 * (g - l) - C$1 * bl) / D$1,
+      s = Math.sqrt(k * k + bl * bl) / (E$1 * l * (1 - l)),
+      // NaN if l=0 or l=1
+  h = s ? Math.atan2(k, bl) * rad2deg$1 - 120 : NaN;
+  return new Cubehelix$1(h < 0 ? h + 360 : h, s, l, o.opacity);
+}
+
+function cubehelix$4(h, s, l, opacity) {
+  return arguments.length === 1 ? cubehelixConvert$1(h) : new Cubehelix$1(h, s, l, opacity == null ? 1 : opacity);
+}
+
+function Cubehelix$1(h, s, l, opacity) {
+  this.h = +h;
+  this.s = +s;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$2(Cubehelix$1, cubehelix$4, extend$1(Color$1, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
+    return new Cubehelix$1(this.h, this.s, this.l * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
+    return new Cubehelix$1(this.h, this.s, this.l * k, this.opacity);
+  },
+  rgb: function rgb() {
+    var h = isNaN(this.h) ? 0 : (this.h + 120) * deg2rad$1,
+        l = +this.l,
+        a = isNaN(this.s) ? 0 : this.s * l * (1 - l),
+        cosh = Math.cos(h),
+        sinh = Math.sin(h);
+    return new Rgb$1(255 * (l + a * (A$1 * cosh + B$1 * sinh)), 255 * (l + a * (C$1 * cosh + D$1 * sinh)), 255 * (l + a * (E$1 * cosh)), this.opacity);
+  }
+}));
+
+cubehelixLong(cubehelix$4(300, 0.5, 0.0), cubehelix$4(-240, 0.5, 1.0));
+
+var warm = cubehelixLong(cubehelix$4(-100, 0.75, 0.35), cubehelix$4(80, 1.50, 0.8));
+
+var cool = cubehelixLong(cubehelix$4(260, 0.75, 0.35), cubehelix$4(80, 1.50, 0.8));
+
+var rainbow = cubehelix$4();
 
 var pi = Math.PI;
 var tau = 2 * pi;
@@ -4737,10 +5333,15 @@ function defaultSubject(d) {
   return d == null ? { x: event.x, y: event.y } : d;
 }
 
+function defaultTouchable() {
+  return "ontouchstart" in this;
+}
+
 var drag = function () {
   var filter = defaultFilter$1,
       container = defaultContainer,
       subject = defaultSubject,
+      touchable = defaultTouchable,
       gestures = {},
       listeners = dispatch("start", "drag", "end"),
       active = 0,
@@ -4751,7 +5352,7 @@ var drag = function () {
       clickDistance2 = 0;
 
   function drag(selection$$1) {
-    selection$$1.on("mousedown.drag", mousedowned).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
+    selection$$1.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
 
   function mousedowned() {
@@ -4832,8 +5433,8 @@ var drag = function () {
     }
   }
 
-  function beforestart(id, container, point, that, args) {
-    var p = point(container, id),
+  function beforestart(id, container, point$$1, that, args) {
+    var p = point$$1(container, id),
         s,
         dx,
         dy,
@@ -4855,7 +5456,7 @@ var drag = function () {
         case "end":
           delete gestures[id], --active; // nobreak
         case "drag":
-          p = point(container, id), n = active;break;
+          p = point$$1(container, id), n = active;break;
       }
       customEvent(new DragEvent(drag, type, s, id, n, p[0] + dx, p[1] + dy, p[0] - p0[0], p[1] - p0[1], sublisteners), sublisteners.apply, sublisteners, [type, that, args]);
     };
@@ -4871,6 +5472,10 @@ var drag = function () {
 
   drag.subject = function (_) {
     return arguments.length ? (subject = typeof _ === "function" ? _ : constant$5(_), drag) : subject;
+  };
+
+  drag.touchable = function (_) {
+    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$5(!!_), drag) : touchable;
   };
 
   drag.on = function () {
@@ -4895,7 +5500,7 @@ var clockLast = 0;
 var clockNow = 0;
 var clockSkew = 0;
 var clock = (typeof performance === "undefined" ? "undefined" : _typeof(performance)) === "object" && performance.now ? performance : Date;
-var setFrame = typeof requestAnimationFrame === "function" ? requestAnimationFrame : function (f) {
+var setFrame = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function (f) {
   setTimeout(f, 17);
 };
 
@@ -4990,12 +5595,12 @@ function nap() {
 function sleep(time) {
   if (frame) return; // Soonest alarm already set, or will be.
   if (timeout) timeout = clearTimeout(timeout);
-  var delay = time - clockNow;
+  var delay = time - clockNow; // Strictly less than if we recomputed clockNow.
   if (delay > 24) {
-    if (time < Infinity) timeout = setTimeout(wake, delay);
+    if (time < Infinity) timeout = setTimeout(wake, time - clock.now() - clockSkew);
     if (interval) interval = clearInterval(interval);
   } else {
-    if (!interval) clockLast = clockNow, interval = setInterval(poke, pokeDelay);
+    if (!interval) clockLast = clock.now(), interval = setInterval(poke, pokeDelay);
     frame = 1, setFrame(wake);
   }
 }
@@ -5024,7 +5629,7 @@ var ENDED = 6;
 var schedule = function (node, name, id, index, group, timing) {
   var schedules = node.__transition;
   if (!schedules) node.__transition = {};else if (id in schedules) return;
-  create(node, id, {
+  create$1(node, id, {
     name: name,
     index: index, // For context during callback.
     group: group, // For context during callback.
@@ -5040,24 +5645,24 @@ var schedule = function (node, name, id, index, group, timing) {
 };
 
 function init(node, id) {
-  var schedule = node.__transition;
-  if (!schedule || !(schedule = schedule[id]) || schedule.state > CREATED) throw new Error("too late");
+  var schedule = get$2(node, id);
+  if (schedule.state > CREATED) throw new Error("too late; already scheduled");
   return schedule;
 }
 
 function set$4(node, id) {
-  var schedule = node.__transition;
-  if (!schedule || !(schedule = schedule[id]) || schedule.state > STARTING) throw new Error("too late");
+  var schedule = get$2(node, id);
+  if (schedule.state > STARTING) throw new Error("too late; already started");
   return schedule;
 }
 
 function get$2(node, id) {
   var schedule = node.__transition;
-  if (!schedule || !(schedule = schedule[id])) throw new Error("too late");
+  if (!schedule || !(schedule = schedule[id])) throw new Error("transition not found");
   return schedule;
 }
 
-function create(node, id, self) {
+function create$1(node, id, self) {
   var schedules = node.__transition,
       tween;
 
@@ -5275,9 +5880,485 @@ function tweenValue(transition, name, value) {
   };
 }
 
+var define$3 = function (constructor, factory, prototype) {
+  constructor.prototype = factory.prototype = prototype;
+  prototype.constructor = constructor;
+};
+
+function extend$2(parent, definition) {
+  var prototype = Object.create(parent.prototype);
+  for (var key in definition) {
+    prototype[key] = definition[key];
+  }return prototype;
+}
+
+function Color$2() {}
+
+var _darker$2 = 0.7;
+var _brighter$2 = 1 / _darker$2;
+
+var reI$2 = "\\s*([+-]?\\d+)\\s*";
+var reN$2 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*";
+var reP$2 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*";
+var reHex3$2 = /^#([0-9a-f]{3})$/;
+var reHex6$2 = /^#([0-9a-f]{6})$/;
+var reRgbInteger$2 = new RegExp("^rgb\\(" + [reI$2, reI$2, reI$2] + "\\)$");
+var reRgbPercent$2 = new RegExp("^rgb\\(" + [reP$2, reP$2, reP$2] + "\\)$");
+var reRgbaInteger$2 = new RegExp("^rgba\\(" + [reI$2, reI$2, reI$2, reN$2] + "\\)$");
+var reRgbaPercent$2 = new RegExp("^rgba\\(" + [reP$2, reP$2, reP$2, reN$2] + "\\)$");
+var reHslPercent$2 = new RegExp("^hsl\\(" + [reN$2, reP$2, reP$2] + "\\)$");
+var reHslaPercent$2 = new RegExp("^hsla\\(" + [reN$2, reP$2, reP$2, reN$2] + "\\)$");
+
+var named$2 = {
+  aliceblue: 0xf0f8ff,
+  antiquewhite: 0xfaebd7,
+  aqua: 0x00ffff,
+  aquamarine: 0x7fffd4,
+  azure: 0xf0ffff,
+  beige: 0xf5f5dc,
+  bisque: 0xffe4c4,
+  black: 0x000000,
+  blanchedalmond: 0xffebcd,
+  blue: 0x0000ff,
+  blueviolet: 0x8a2be2,
+  brown: 0xa52a2a,
+  burlywood: 0xdeb887,
+  cadetblue: 0x5f9ea0,
+  chartreuse: 0x7fff00,
+  chocolate: 0xd2691e,
+  coral: 0xff7f50,
+  cornflowerblue: 0x6495ed,
+  cornsilk: 0xfff8dc,
+  crimson: 0xdc143c,
+  cyan: 0x00ffff,
+  darkblue: 0x00008b,
+  darkcyan: 0x008b8b,
+  darkgoldenrod: 0xb8860b,
+  darkgray: 0xa9a9a9,
+  darkgreen: 0x006400,
+  darkgrey: 0xa9a9a9,
+  darkkhaki: 0xbdb76b,
+  darkmagenta: 0x8b008b,
+  darkolivegreen: 0x556b2f,
+  darkorange: 0xff8c00,
+  darkorchid: 0x9932cc,
+  darkred: 0x8b0000,
+  darksalmon: 0xe9967a,
+  darkseagreen: 0x8fbc8f,
+  darkslateblue: 0x483d8b,
+  darkslategray: 0x2f4f4f,
+  darkslategrey: 0x2f4f4f,
+  darkturquoise: 0x00ced1,
+  darkviolet: 0x9400d3,
+  deeppink: 0xff1493,
+  deepskyblue: 0x00bfff,
+  dimgray: 0x696969,
+  dimgrey: 0x696969,
+  dodgerblue: 0x1e90ff,
+  firebrick: 0xb22222,
+  floralwhite: 0xfffaf0,
+  forestgreen: 0x228b22,
+  fuchsia: 0xff00ff,
+  gainsboro: 0xdcdcdc,
+  ghostwhite: 0xf8f8ff,
+  gold: 0xffd700,
+  goldenrod: 0xdaa520,
+  gray: 0x808080,
+  green: 0x008000,
+  greenyellow: 0xadff2f,
+  grey: 0x808080,
+  honeydew: 0xf0fff0,
+  hotpink: 0xff69b4,
+  indianred: 0xcd5c5c,
+  indigo: 0x4b0082,
+  ivory: 0xfffff0,
+  khaki: 0xf0e68c,
+  lavender: 0xe6e6fa,
+  lavenderblush: 0xfff0f5,
+  lawngreen: 0x7cfc00,
+  lemonchiffon: 0xfffacd,
+  lightblue: 0xadd8e6,
+  lightcoral: 0xf08080,
+  lightcyan: 0xe0ffff,
+  lightgoldenrodyellow: 0xfafad2,
+  lightgray: 0xd3d3d3,
+  lightgreen: 0x90ee90,
+  lightgrey: 0xd3d3d3,
+  lightpink: 0xffb6c1,
+  lightsalmon: 0xffa07a,
+  lightseagreen: 0x20b2aa,
+  lightskyblue: 0x87cefa,
+  lightslategray: 0x778899,
+  lightslategrey: 0x778899,
+  lightsteelblue: 0xb0c4de,
+  lightyellow: 0xffffe0,
+  lime: 0x00ff00,
+  limegreen: 0x32cd32,
+  linen: 0xfaf0e6,
+  magenta: 0xff00ff,
+  maroon: 0x800000,
+  mediumaquamarine: 0x66cdaa,
+  mediumblue: 0x0000cd,
+  mediumorchid: 0xba55d3,
+  mediumpurple: 0x9370db,
+  mediumseagreen: 0x3cb371,
+  mediumslateblue: 0x7b68ee,
+  mediumspringgreen: 0x00fa9a,
+  mediumturquoise: 0x48d1cc,
+  mediumvioletred: 0xc71585,
+  midnightblue: 0x191970,
+  mintcream: 0xf5fffa,
+  mistyrose: 0xffe4e1,
+  moccasin: 0xffe4b5,
+  navajowhite: 0xffdead,
+  navy: 0x000080,
+  oldlace: 0xfdf5e6,
+  olive: 0x808000,
+  olivedrab: 0x6b8e23,
+  orange: 0xffa500,
+  orangered: 0xff4500,
+  orchid: 0xda70d6,
+  palegoldenrod: 0xeee8aa,
+  palegreen: 0x98fb98,
+  paleturquoise: 0xafeeee,
+  palevioletred: 0xdb7093,
+  papayawhip: 0xffefd5,
+  peachpuff: 0xffdab9,
+  peru: 0xcd853f,
+  pink: 0xffc0cb,
+  plum: 0xdda0dd,
+  powderblue: 0xb0e0e6,
+  purple: 0x800080,
+  rebeccapurple: 0x663399,
+  red: 0xff0000,
+  rosybrown: 0xbc8f8f,
+  royalblue: 0x4169e1,
+  saddlebrown: 0x8b4513,
+  salmon: 0xfa8072,
+  sandybrown: 0xf4a460,
+  seagreen: 0x2e8b57,
+  seashell: 0xfff5ee,
+  sienna: 0xa0522d,
+  silver: 0xc0c0c0,
+  skyblue: 0x87ceeb,
+  slateblue: 0x6a5acd,
+  slategray: 0x708090,
+  slategrey: 0x708090,
+  snow: 0xfffafa,
+  springgreen: 0x00ff7f,
+  steelblue: 0x4682b4,
+  tan: 0xd2b48c,
+  teal: 0x008080,
+  thistle: 0xd8bfd8,
+  tomato: 0xff6347,
+  turquoise: 0x40e0d0,
+  violet: 0xee82ee,
+  wheat: 0xf5deb3,
+  white: 0xffffff,
+  whitesmoke: 0xf5f5f5,
+  yellow: 0xffff00,
+  yellowgreen: 0x9acd32
+};
+
+define$3(Color$2, color$2, {
+  displayable: function displayable() {
+    return this.rgb().displayable();
+  },
+  toString: function toString() {
+    return this.rgb() + "";
+  }
+});
+
+function color$2(format) {
+  var m;
+  format = (format + "").trim().toLowerCase();
+  return (m = reHex3$2.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$2(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
+  ) : (m = reHex6$2.exec(format)) ? rgbn$2(parseInt(m[1], 16) // #ff0000
+  ) : (m = reRgbInteger$2.exec(format)) ? new Rgb$2(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
+  : (m = reRgbPercent$2.exec(format)) ? new Rgb$2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
+  : (m = reRgbaInteger$2.exec(format)) ? rgba$2(m[1], m[2], m[3], m[4] // rgba(255, 0, 0, 1)
+  ) : (m = reRgbaPercent$2.exec(format)) ? rgba$2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4] // rgb(100%, 0%, 0%, 1)
+  ) : (m = reHslPercent$2.exec(format)) ? hsla$2(m[1], m[2] / 100, m[3] / 100, 1 // hsl(120, 50%, 50%)
+  ) : (m = reHslaPercent$2.exec(format)) ? hsla$2(m[1], m[2] / 100, m[3] / 100, m[4] // hsla(120, 50%, 50%, 1)
+  ) : named$2.hasOwnProperty(format) ? rgbn$2(named$2[format]) : format === "transparent" ? new Rgb$2(NaN, NaN, NaN, 0) : null;
+}
+
+function rgbn$2(n) {
+  return new Rgb$2(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
+}
+
+function rgba$2(r, g, b, a) {
+  if (a <= 0) r = g = b = NaN;
+  return new Rgb$2(r, g, b, a);
+}
+
+function rgbConvert$2(o) {
+  if (!(o instanceof Color$2)) o = color$2(o);
+  if (!o) return new Rgb$2();
+  o = o.rgb();
+  return new Rgb$2(o.r, o.g, o.b, o.opacity);
+}
+
+function rgb$2(r, g, b, opacity) {
+  return arguments.length === 1 ? rgbConvert$2(r) : new Rgb$2(r, g, b, opacity == null ? 1 : opacity);
+}
+
+function Rgb$2(r, g, b, opacity) {
+  this.r = +r;
+  this.g = +g;
+  this.b = +b;
+  this.opacity = +opacity;
+}
+
+define$3(Rgb$2, rgb$2, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
+    return new Rgb$2(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
+    return new Rgb$2(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  rgb: function rgb() {
+    return this;
+  },
+  displayable: function displayable() {
+    return 0 <= this.r && this.r <= 255 && 0 <= this.g && this.g <= 255 && 0 <= this.b && this.b <= 255 && 0 <= this.opacity && this.opacity <= 1;
+  },
+  toString: function toString() {
+    var a = this.opacity;a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
+    return (a === 1 ? "rgb(" : "rgba(") + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.b) || 0)) + (a === 1 ? ")" : ", " + a + ")");
+  }
+}));
+
+function hsla$2(h, s, l, a) {
+  if (a <= 0) h = s = l = NaN;else if (l <= 0 || l >= 1) h = s = NaN;else if (s <= 0) h = NaN;
+  return new Hsl$2(h, s, l, a);
+}
+
+function hslConvert$2(o) {
+  if (o instanceof Hsl$2) return new Hsl$2(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Color$2)) o = color$2(o);
+  if (!o) return new Hsl$2();
+  if (o instanceof Hsl$2) return o;
+  o = o.rgb();
+  var r = o.r / 255,
+      g = o.g / 255,
+      b = o.b / 255,
+      min = Math.min(r, g, b),
+      max = Math.max(r, g, b),
+      h = NaN,
+      s = max - min,
+      l = (max + min) / 2;
+  if (s) {
+    if (r === max) h = (g - b) / s + (g < b) * 6;else if (g === max) h = (b - r) / s + 2;else h = (r - g) / s + 4;
+    s /= l < 0.5 ? max + min : 2 - max - min;
+    h *= 60;
+  } else {
+    s = l > 0 && l < 1 ? 0 : h;
+  }
+  return new Hsl$2(h, s, l, o.opacity);
+}
+
+function hsl$4(h, s, l, opacity) {
+  return arguments.length === 1 ? hslConvert$2(h) : new Hsl$2(h, s, l, opacity == null ? 1 : opacity);
+}
+
+function Hsl$2(h, s, l, opacity) {
+  this.h = +h;
+  this.s = +s;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$3(Hsl$2, hsl$4, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
+    return new Hsl$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
+    return new Hsl$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  rgb: function rgb() {
+    var h = this.h % 360 + (this.h < 0) * 360,
+        s = isNaN(h) || isNaN(this.s) ? 0 : this.s,
+        l = this.l,
+        m2 = l + (l < 0.5 ? l : 1 - l) * s,
+        m1 = 2 * l - m2;
+    return new Rgb$2(hsl2rgb$2(h >= 240 ? h - 240 : h + 120, m1, m2), hsl2rgb$2(h, m1, m2), hsl2rgb$2(h < 120 ? h + 240 : h - 120, m1, m2), this.opacity);
+  },
+  displayable: function displayable() {
+    return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
+  }
+}));
+
+/* From FvD 13.37, CSS Color Module Level 3 */
+function hsl2rgb$2(h, m1, m2) {
+  return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
+}
+
+var deg2rad$2 = Math.PI / 180;
+var rad2deg$2 = 180 / Math.PI;
+
+var Kn$2 = 18;
+var Xn$2 = 0.950470;
+var Yn$2 = 1;
+var Zn$2 = 1.088830;
+var t0$3 = 4 / 29;
+var t1$3 = 6 / 29;
+var t2$2 = 3 * t1$3 * t1$3;
+var t3$2 = t1$3 * t1$3 * t1$3;
+
+function labConvert$2(o) {
+  if (o instanceof Lab$2) return new Lab$2(o.l, o.a, o.b, o.opacity);
+  if (o instanceof Hcl$2) {
+    var h = o.h * deg2rad$2;
+    return new Lab$2(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
+  }
+  if (!(o instanceof Rgb$2)) o = rgbConvert$2(o);
+  var b = rgb2xyz$2(o.r),
+      a = rgb2xyz$2(o.g),
+      l = rgb2xyz$2(o.b),
+      x = xyz2lab$2((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn$2),
+      y = xyz2lab$2((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn$2),
+      z = xyz2lab$2((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn$2);
+  return new Lab$2(116 * y - 16, 500 * (x - y), 200 * (y - z), o.opacity);
+}
+
+function lab$3(l, a, b, opacity) {
+  return arguments.length === 1 ? labConvert$2(l) : new Lab$2(l, a, b, opacity == null ? 1 : opacity);
+}
+
+function Lab$2(l, a, b, opacity) {
+  this.l = +l;
+  this.a = +a;
+  this.b = +b;
+  this.opacity = +opacity;
+}
+
+define$3(Lab$2, lab$3, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    return new Lab$2(this.l + Kn$2 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+  },
+  darker: function darker(k) {
+    return new Lab$2(this.l - Kn$2 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+  },
+  rgb: function rgb() {
+    var y = (this.l + 16) / 116,
+        x = isNaN(this.a) ? y : y + this.a / 500,
+        z = isNaN(this.b) ? y : y - this.b / 200;
+    y = Yn$2 * lab2xyz$2(y);
+    x = Xn$2 * lab2xyz$2(x);
+    z = Zn$2 * lab2xyz$2(z);
+    return new Rgb$2(xyz2rgb$2(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
+    xyz2rgb$2(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb$2(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
+  }
+}));
+
+function xyz2lab$2(t) {
+  return t > t3$2 ? Math.pow(t, 1 / 3) : t / t2$2 + t0$3;
+}
+
+function lab2xyz$2(t) {
+  return t > t1$3 ? t * t * t : t2$2 * (t - t0$3);
+}
+
+function xyz2rgb$2(x) {
+  return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
+}
+
+function rgb2xyz$2(x) {
+  return (x /= 255) <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+function hclConvert$2(o) {
+  if (o instanceof Hcl$2) return new Hcl$2(o.h, o.c, o.l, o.opacity);
+  if (!(o instanceof Lab$2)) o = labConvert$2(o);
+  var h = Math.atan2(o.b, o.a) * rad2deg$2;
+  return new Hcl$2(h < 0 ? h + 360 : h, Math.sqrt(o.a * o.a + o.b * o.b), o.l, o.opacity);
+}
+
+function hcl$4(h, c, l, opacity) {
+  return arguments.length === 1 ? hclConvert$2(h) : new Hcl$2(h, c, l, opacity == null ? 1 : opacity);
+}
+
+function Hcl$2(h, c, l, opacity) {
+  this.h = +h;
+  this.c = +c;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$3(Hcl$2, hcl$4, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    return new Hcl$2(this.h, this.c, this.l + Kn$2 * (k == null ? 1 : k), this.opacity);
+  },
+  darker: function darker(k) {
+    return new Hcl$2(this.h, this.c, this.l - Kn$2 * (k == null ? 1 : k), this.opacity);
+  },
+  rgb: function rgb() {
+    return labConvert$2(this).rgb();
+  }
+}));
+
+var A$2 = -0.14861;
+var B$2 = +1.78277;
+var C$2 = -0.29227;
+var D$2 = -0.90649;
+var E$2 = +1.97294;
+var ED$2 = E$2 * D$2;
+var EB$2 = E$2 * B$2;
+var BC_DA$2 = B$2 * C$2 - D$2 * A$2;
+
+function cubehelixConvert$2(o) {
+  if (o instanceof Cubehelix$2) return new Cubehelix$2(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Rgb$2)) o = rgbConvert$2(o);
+  var r = o.r / 255,
+      g = o.g / 255,
+      b = o.b / 255,
+      l = (BC_DA$2 * b + ED$2 * r - EB$2 * g) / (BC_DA$2 + ED$2 - EB$2),
+      bl = b - l,
+      k = (E$2 * (g - l) - C$2 * bl) / D$2,
+      s = Math.sqrt(k * k + bl * bl) / (E$2 * l * (1 - l)),
+      // NaN if l=0 or l=1
+  h = s ? Math.atan2(k, bl) * rad2deg$2 - 120 : NaN;
+  return new Cubehelix$2(h < 0 ? h + 360 : h, s, l, o.opacity);
+}
+
+function cubehelix$5(h, s, l, opacity) {
+  return arguments.length === 1 ? cubehelixConvert$2(h) : new Cubehelix$2(h, s, l, opacity == null ? 1 : opacity);
+}
+
+function Cubehelix$2(h, s, l, opacity) {
+  this.h = +h;
+  this.s = +s;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$3(Cubehelix$2, cubehelix$5, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
+    return new Cubehelix$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
+    return new Cubehelix$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  rgb: function rgb() {
+    var h = isNaN(this.h) ? 0 : (this.h + 120) * deg2rad$2,
+        l = +this.l,
+        a = isNaN(this.s) ? 0 : this.s * l * (1 - l),
+        cosh = Math.cos(h),
+        sinh = Math.sin(h);
+    return new Rgb$2(255 * (l + a * (A$2 * cosh + B$2 * sinh)), 255 * (l + a * (C$2 * cosh + D$2 * sinh)), 255 * (l + a * (E$2 * cosh)), this.opacity);
+  }
+}));
+
 var interpolate$1 = function (a, b) {
     var c;
-    return (typeof b === "number" ? interpolateNumber : b instanceof color ? interpolateRgb : (c = color(b)) ? (b = c, interpolateRgb) : interpolateString)(a, b);
+    return (typeof b === "number" ? interpolateNumber : b instanceof color$2 ? interpolateRgb : (c = color$2(b)) ? (b = c, interpolateRgb) : interpolateString)(a, b);
 };
 
 function attrRemove$1(name) {
@@ -6169,7 +7250,7 @@ function brush$1(dim) {
         lockX,
         lockY,
         point0 = mouse(that),
-        point = point0,
+        point$$1 = point0,
         emit = emitter(that, arguments).beforestart();
 
     if (type === "overlay") {
@@ -6206,9 +7287,9 @@ function brush$1(dim) {
     function moved() {
       var point1 = mouse(that);
       if (shifting && !lockX && !lockY) {
-        if (Math.abs(point1[0] - point[0]) > Math.abs(point1[1] - point[1])) lockY = true;else lockX = true;
+        if (Math.abs(point1[0] - point$$1[0]) > Math.abs(point1[1] - point$$1[1])) lockY = true;else lockX = true;
       }
-      point = point1;
+      point$$1 = point1;
       moving = true;
       noevent$1();
       move();
@@ -6217,8 +7298,8 @@ function brush$1(dim) {
     function move() {
       var t;
 
-      dx = point[0] - point0[0];
-      dy = point[1] - point0[1];
+      dx = point$$1[0] - point0[0];
+      dy = point$$1[1] - point0[1];
 
       switch (mode) {
         case MODE_SPACE:
@@ -6463,102 +7544,102 @@ function brush$1(dim) {
 })(window);
 
 var renderQueue = function renderQueue(func) {
-    var _queue = [],
-        // data to be rendered
-    _rate = 1000,
-        // number of calls per frame
-    _invalidate = function _invalidate() {},
-        // invalidate last render queue
-    _clear = function _clear() {}; // clearing function
+  var _queue = [],
+      // data to be rendered
+  _rate = 1000,
+      // number of calls per frame
+  _invalidate = function _invalidate() {},
+      // invalidate last render queue
+  _clear = function _clear() {}; // clearing function
 
-    var rq = function rq(data) {
-        if (data) rq.data(data);
-        _invalidate();
-        _clear();
-        rq.render();
+  var rq = function rq(data) {
+    if (data) rq.data(data);
+    _invalidate();
+    _clear();
+    rq.render();
+  };
+
+  rq.render = function () {
+    var valid = true;
+    _invalidate = rq.invalidate = function () {
+      valid = false;
     };
 
-    rq.render = function () {
-        var valid = true;
-        _invalidate = rq.invalidate = function () {
-            valid = false;
-        };
+    function doFrame() {
+      if (!valid) return true;
+      var chunk = _queue.splice(0, _rate);
+      chunk.map(func);
+      requestAnimationFrame(doFrame);
+    }
 
-        function doFrame() {
-            if (!valid) return true;
-            var chunk = _queue.splice(0, _rate);
-            chunk.map(func);
-            requestAnimationFrame(doFrame);
-        }
+    doFrame();
+  };
 
-        doFrame();
-    };
-
-    rq.data = function (data) {
-        _invalidate();
-        _queue = data.slice(0); // creates a copy of the data
-        return rq;
-    };
-
-    rq.add = function (data) {
-        _queue = _queue.concat(data);
-    };
-
-    rq.rate = function (value) {
-        if (!arguments.length) return _rate;
-        _rate = value;
-        return rq;
-    };
-
-    rq.remaining = function () {
-        return _queue.length;
-    };
-
-    // clear the canvas
-    rq.clear = function (func) {
-        if (!arguments.length) {
-            _clear();
-            return rq;
-        }
-        _clear = func;
-        return rq;
-    };
-
-    rq.invalidate = _invalidate;
-
+  rq.data = function (data) {
+    _invalidate();
+    _queue = data.slice(0); // creates a copy of the data
     return rq;
+  };
+
+  rq.add = function (data) {
+    _queue = _queue.concat(data);
+  };
+
+  rq.rate = function (value) {
+    if (!arguments.length) return _rate;
+    _rate = value;
+    return rq;
+  };
+
+  rq.remaining = function () {
+    return _queue.length;
+  };
+
+  // clear the canvas
+  rq.clear = function (func) {
+    if (!arguments.length) {
+      _clear();
+      return rq;
+    }
+    _clear = func;
+    return rq;
+  };
+
+  rq.invalidate = _invalidate;
+
+  return rq;
 };
 
-var extend$1 = function extend(target, source) {
-    for (var key in source) {
-        target[key] = source[key];
-    }
-    return target;
+var extend$3 = function extend(target, source) {
+  for (var key in source) {
+    target[key] = source[key];
+  }
+  return target;
 };
 
 var without = function without(arr, items) {
-    items.forEach(function (el) {
-        delete arr[el];
-    });
-    return arr;
+  items.forEach(function (el) {
+    delete arr[el];
+  });
+  return arr;
 };
 
 var d3_rebind = function d3_rebind(target, source, method) {
-    return function () {
-        var value = method.apply(source, arguments);
-        return value === source ? target : value;
-    };
+  return function () {
+    var value = method.apply(source, arguments);
+    return value === source ? target : value;
+  };
 };
 
 var _rebind = function _rebind(target, source, method) {
-    target[method] = d3_rebind(target, source, source[method]);
-    return target;
+  target[method] = d3_rebind(target, source, source[method]);
+  return target;
 };
 
 var _functor = function _functor(v) {
-    return typeof v === "function" ? v : function () {
-        return v;
-    };
+  return typeof v === 'function' ? v : function () {
+    return v;
+  };
 };
 
 var _this = undefined;
@@ -6575,15 +7656,15 @@ var ParCoords = function ParCoords(config) {
         brushed: false,
         brushedColor: null,
         alphaOnBrushed: 0.0,
-        mode: "default",
+        mode: 'default',
         rate: 20,
         width: 600,
         height: 300,
         margin: { top: 24, right: 20, bottom: 12, left: 20 },
-        nullValueSeparator: "undefined", // set to "top" or "bottom"
+        nullValueSeparator: 'undefined', // set to "top" or "bottom"
         nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
-        color: "#069",
-        composite: "source-over",
+        color: '#069',
+        composite: 'source-over',
         alpha: 0.7,
         bundlingStrength: 0.5,
         bundleDimension: null,
@@ -6595,10 +7676,10 @@ var ParCoords = function ParCoords(config) {
         rotateLabels: false
     };
 
-    extend$1(__, config);
+    extend$3(__, config);
 
     if (config && config.dimensionTitles) {
-        console.warn("dimensionTitles passed in config is deprecated. Add title to dimension object.");
+        console.warn('dimensionTitles passed in config is deprecated. Add title to dimension object.');
         entries(config.dimensionTitles).forEach(function (d) {
             if (__.dimensions[d.key]) {
                 __.dimensions[d.key].title = __.dimensions[d.key].title ? __.dimensions[d.key].title : d.value;
@@ -6615,18 +7696,18 @@ var ParCoords = function ParCoords(config) {
         __.width = selection.node().clientWidth;
         __.height = selection.node().clientHeight;
         // canvas data layers
-        ["marks", "foreground", "brushed", "highlight"].forEach(function (layer) {
-            canvas[layer] = selection.append("canvas").attr("class", layer).node();
-            ctx[layer] = canvas[layer].getContext("2d");
+        ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
+            canvas[layer] = selection.append('canvas').attr('class', layer).node();
+            ctx[layer] = canvas[layer].getContext('2d');
         });
 
         // svg tick and brush layers
-        pc.svg = selection.append("svg").attr("width", __.width).attr("height", __.height).style("font", "14px sans-serif").style("position", "absolute").append("svg:g").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+        pc.svg = selection.append('svg').attr('width', __.width).attr('height', __.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
         return pc;
     };
 
-    var eventTypes = ["render", "resize", "highlight", "brush", "brushend", "brushstart", "axesreorder"].concat(keys(__));
+    var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(__));
     var events = dispatch.apply(_this, eventTypes),
         w = function w() {
         return __.width - __.margin.right - __.margin.left;
@@ -6652,34 +7733,34 @@ var ParCoords = function ParCoords(config) {
         clusterCentroids = [];
 
     // side effects for setters
-    var side_effects = dispatch.apply(_this, keys(__)).on("composite", function (d) {
+    var side_effects = dispatch.apply(_this, keys(__)).on('composite', function (d) {
         ctx.foreground.globalCompositeOperation = d.value;
         ctx.brushed.globalCompositeOperation = d.value;
-    }).on("alpha", function (d) {
+    }).on('alpha', function (d) {
         ctx.foreground.globalAlpha = d.value;
         ctx.brushed.globalAlpha = d.value;
-    }).on("brushedColor", function (d) {
+    }).on('brushedColor', function (d) {
         ctx.brushed.strokeStyle = d.value;
-    }).on("width", function (d) {
+    }).on('width', function (d) {
         pc.resize();
-    }).on("height", function (d) {
+    }).on('height', function (d) {
         pc.resize();
-    }).on("margin", function (d) {
+    }).on('margin', function (d) {
         pc.resize();
-    }).on("rate", function (d) {
+    }).on('rate', function (d) {
         brushedQueue.rate(d.value);
         foregroundQueue.rate(d.value);
-    }).on("dimensions", function (d) {
+    }).on('dimensions', function (d) {
         __.dimensions = pc.applyDimensionDefaults(keys(d.value));
         xscale.domain(pc.getOrderedDimensionKeys());
         pc.sortDimensions();
         if (flags.interactive) {
             pc.render().updateAxes();
         }
-    }).on("bundleDimension", function (d) {
+    }).on('bundleDimension', function (d) {
         if (!keys(__.dimensions).length) pc.detectDimensions();
         pc.autoscale();
-        if (typeof d.value === "number") {
+        if (typeof d.value === 'number') {
             if (d.value < keys(__.dimensions).length) {
                 __.bundleDimension = __.dimensions[d.value];
             } else if (d.value < __.hideAxis.length) {
@@ -6693,10 +7774,10 @@ var ParCoords = function ParCoords(config) {
         if (flags.interactive) {
             pc.render();
         }
-    }).on("hideAxis", function (d) {
+    }).on('hideAxis', function (d) {
         pc.dimensions(pc.applyDimensionDefaults());
         pc.dimensions(without(__.dimensions, d.value));
-    }).on("flipAxes", function (d) {
+    }).on('flipAxes', function (d) {
         if (d.value && d.value.length) {
             d.value.forEach(function (axis) {
                 flipAxisAndUpdatePCP(axis);
@@ -6713,7 +7794,8 @@ var ParCoords = function ParCoords(config) {
     getset(pc, __, events);
 
     // expose events
-    _rebind(pc, events, "on");
+    _rebind(pc, events, 'on');
+
     // getter/setter with event firing
     function getset(obj, state, events) {
         keys(state).forEach(function (key) {
@@ -6722,13 +7804,13 @@ var ParCoords = function ParCoords(config) {
                     return state[key];
                 }
                 if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-                    console.warn("pc.dimensions([]) is deprecated, use pc.dimensions({})");
+                    console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
                     x = pc.applyDimensionDefaults(x);
                 }
                 var old = state[key];
                 state[key] = x;
-                side_effects.call(key, pc, { "value": x, "previous": old });
-                events.call(key, pc, { "value": x, "previous": old });
+                side_effects.call(key, pc, { value: x, previous: old });
+                events.call(key, pc, { value: x, previous: old });
                 return obj;
             };
         });
@@ -6736,9 +7818,9 @@ var ParCoords = function ParCoords(config) {
 
     /** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
     function getRange() {
-        if (__.nullValueSeparator == "bottom") {
+        if (__.nullValueSeparator == 'bottom') {
             return [h() + 1 - __.nullValueSeparatorPadding.bottom - __.nullValueSeparatorPadding.top, 1];
-        } else if (__.nullValueSeparator == "top") {
+        } else if (__.nullValueSeparator == 'top') {
             return [h() + 1, 1 + __.nullValueSeparatorPadding.bottom + __.nullValueSeparatorPadding.top];
         }
         return [h() + 1, 1];
@@ -6747,7 +7829,7 @@ var ParCoords = function ParCoords(config) {
     pc.autoscale = function () {
         // yscale
         var defaultScales = {
-            "date": function date(k) {
+            date: function date(k) {
                 var _extent = extent(__.data, function (d) {
                     return d[k] ? d[k].getTime() : null;
                 });
@@ -6764,7 +7846,7 @@ var ParCoords = function ParCoords(config) {
                 }
                 return scaleTime().domain(_extent).range(getRange());
             },
-            "number": function number(k) {
+            number: function number(k) {
                 var _extent = extent(__.data, function (d) {
                     return +d[k];
                 });
@@ -6781,13 +7863,13 @@ var ParCoords = function ParCoords(config) {
                 }
                 return linear().domain(_extent).range(getRange());
             },
-            "string": function string(k) {
+            string: function string(k) {
                 var counts = {},
                     domain = [];
                 // Let's get the count for each value so that we can sort the domain based
                 // on the number of items for each value.
                 __.data.map(function (p) {
-                    if (p[k] === undefined && __.nullValueSeparator !== "undefined") {
+                    if (p[k] === undefined && __.nullValueSeparator !== 'undefined') {
                         return; // null values will be drawn beyond the horizontal null value separator!
                     }
                     if (counts[p[k]] === undefined) {
@@ -6809,7 +7891,7 @@ var ParCoords = function ParCoords(config) {
                 var categoricalRange = [];
                 if (domain.length === 1) {
                     //edge case
-                    domain = [" ", domain[0], " "];
+                    domain = [' ', domain[0], ' '];
                 }
                 var addBy = getRange()[0] / (domain.length - 1);
                 for (var j = 0; j < domain.length; j++) {
@@ -6832,7 +7914,7 @@ var ParCoords = function ParCoords(config) {
         var devicePixelRatio = window.devicePixelRatio || 1;
 
         // canvas sizes
-        pc.selection.selectAll("canvas").style("margin-top", __.margin.top + "px").style("margin-left", __.margin.left + "px").style("width", w() + 2 + "px").style("height", h() + 2 + "px").attr("width", (w() + 2) * devicePixelRatio).attr("height", (h() + 2) * devicePixelRatio);
+        pc.selection.selectAll('canvas').style('margin-top', __.margin.top + 'px').style('margin-left', __.margin.left + 'px').style('width', w() + 2 + 'px').style('height', h() + 2 + 'px').attr('width', (w() + 2) * devicePixelRatio).attr('height', (h() + 2) * devicePixelRatio);
         // default styles, needs to be set when canvas width changes
         ctx.foreground.strokeStyle = __.color;
         ctx.foreground.lineWidth = 1.4;
@@ -6864,7 +7946,7 @@ var ParCoords = function ParCoords(config) {
     };
 
     pc.commonScale = function (global, type) {
-        var t = type || "number";
+        var t = type || 'number';
         if (typeof global === 'undefined') {
             global = true;
         }
@@ -6945,7 +8027,7 @@ var ParCoords = function ParCoords(config) {
     // try to coerce to number before returning type
     pc.toTypeCoerceNumbers = function (v) {
         if (parseFloat(v) == v && v != null) {
-            return "number";
+            return 'number';
         }
         return pc.toType(v);
     };
@@ -7032,8 +8114,8 @@ var ParCoords = function ParCoords(config) {
             brushedQueue([]); // This is needed to clear the currently brushed items
         }
     };
-    function compute_cluster_centroids(d) {
 
+    function compute_cluster_centroids(d) {
         var clusterCentroids = map();
         var clusterCounts = map();
         // determine clusterCounts
@@ -7111,7 +8193,6 @@ var ParCoords = function ParCoords(config) {
     };
 
     function compute_control_points(centroids) {
-
         var cols = centroids.length;
         var a = __.smoothness;
         var cps = [];
@@ -7161,7 +8242,6 @@ var ParCoords = function ParCoords(config) {
 
     // draw single cubic bezier curve
     function single_curve(d, ctx) {
-
         var centroids = compute_centroids(d);
         var cps = compute_control_points(centroids);
 
@@ -7188,13 +8268,10 @@ var ParCoords = function ParCoords(config) {
     }
 
     // draw many polylines of the same color
-    
-
-    // returns the y-position just beyond the separating null value line
     function getNullPosition() {
-        if (__.nullValueSeparator == "bottom") {
+        if (__.nullValueSeparator == 'bottom') {
             return h() + 1;
-        } else if (__.nullValueSeparator == "top") {
+        } else if (__.nullValueSeparator == 'top') {
             return 1;
         } else {
             console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
@@ -7231,24 +8308,25 @@ var ParCoords = function ParCoords(config) {
         ctx.highlight.strokeStyle = _functor(__.color)(d, i);
         return color_path(d, ctx.highlight);
     }
+
     pc.clear = function (layer) {
         ctx[layer].clearRect(0, 0, w() + 2, h() + 2);
 
         // This will make sure that the foreground items are transparent
         // without the need for changing the opacity style of the foreground canvas
         // as this would stop the css styling from working
-        if (layer === "brushed" && isBrushed()) {
-            ctx.brushed.fillStyle = pc.selection.style("background-color");
+        if (layer === 'brushed' && isBrushed()) {
+            ctx.brushed.fillStyle = pc.selection.style('background-color');
             ctx.brushed.globalAlpha = 1 - __.alphaOnBrushed;
             ctx.brushed.fillRect(0, 0, w() + 2, h() + 2);
             ctx.brushed.globalAlpha = __.alpha;
         }
         return this;
     };
-    _rebind(pc, axis, "ticks", "orient", "tickValues", "tickSubdivide", "tickSize", "tickPadding", "tickFormat");
+    _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
 
     function flipAxisAndUpdatePCP(dimension) {
-        var g = pc.svg.selectAll(".dimension");
+        var g = pc.svg.selectAll('.dimension');
         pc.flip(dimension);
         pc.brushReset(dimension);
         select(this.parentElement).transition().duration(__.animationTime).call(axis.scale(__.dimensions[dimension].yscale));
@@ -7263,7 +8341,7 @@ var ParCoords = function ParCoords(config) {
         delta = delta > 0 ? 5 : delta;
 
         __.dimensionTitleRotation += delta;
-        pc.svg.selectAll("text.label").attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")");
+        pc.svg.selectAll('text.label').attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')');
         event.preventDefault();
     }
 
@@ -7274,24 +8352,24 @@ var ParCoords = function ParCoords(config) {
     pc.createAxes = function () {
         if (g) pc.removeAxes();
         // Add a group element for each dimension.
-        g = pc.svg.selectAll(".dimension").data(pc.getOrderedDimensionKeys(), function (d) {
+        g = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys(), function (d) {
             return d;
-        }).enter().append("svg:g").attr("class", "dimension").attr("transform", function (d) {
-            return "translate(" + xscale(d) + ")";
+        }).enter().append('svg:g').attr('class', 'dimension').attr('transform', function (d) {
+            return 'translate(' + xscale(d) + ')';
         });
         // Add an axis and title.
-        g.append("svg:g").attr("class", "axis").attr("transform", "translate(0,0)").each(function (d) {
+        g.append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
             var axisElement = select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
 
-            axisElement.selectAll("path").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
+            axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
-            axisElement.selectAll("line").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
-        }).append("svg:text").attr("text-anchor", "middle").attr("y", 0).attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")").attr("x", 0).attr("class", "label").text(dimensionLabels).on("dblclick", flipAxisAndUpdatePCP).on("wheel", rotateLabels);
+            axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+        }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
 
-        if (__.nullValueSeparator == "top") {
-            pc.svg.append("line").attr("x1", 0).attr("y1", 1 + __.nullValueSeparatorPadding.top).attr("x2", w()).attr("y2", 1 + __.nullValueSeparatorPadding.top).attr("stroke-width", 1).attr("stroke", "#777").attr("fill", "none").attr("shape-rendering", "crispEdges");
-        } else if (__.nullValueSeparator == "bottom") {
-            pc.svg.append("line").attr("x1", 0).attr("y1", h() + 1 - __.nullValueSeparatorPadding.bottom).attr("x2", w()).attr("y2", h() + 1 - __.nullValueSeparatorPadding.bottom).attr("stroke-width", 1).attr("stroke", "#777").attr("fill", "none").attr("shape-rendering", "crispEdges");
+        if (__.nullValueSeparator == 'top') {
+            pc.svg.append('line').attr('x1', 0).attr('y1', 1 + __.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + __.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
+        } else if (__.nullValueSeparator == 'bottom') {
+            pc.svg.append('line').attr('x1', 0).attr('y1', h() + 1 - __.nullValueSeparatorPadding.bottom).attr('x2', w()).attr('y2', h() + 1 - __.nullValueSeparatorPadding.bottom).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
         }
 
         flags.axes = true;
@@ -7308,48 +8386,48 @@ var ParCoords = function ParCoords(config) {
         if (typeof animationTime === 'undefined') {
             animationTime = __.animationTime;
         }
-        var g_data = pc.svg.selectAll(".dimension").data(pc.getOrderedDimensionKeys());
+        var g_data = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys());
         // Enter
-        g_data.enter().append("svg:g").attr("class", "dimension").attr("transform", function (p) {
-            return "translate(" + position(p) + ")";
-        }).style("opacity", 0).append("svg:g").attr("class", "axis").attr("transform", "translate(0,0)").each(function (d) {
+        g_data.enter().append('svg:g').attr('class', 'dimension').attr('transform', function (p) {
+            return 'translate(' + position(p) + ')';
+        }).style('opacity', 0).append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
             var axisElement = select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
 
-            axisElement.selectAll("path").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
+            axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
-            axisElement.selectAll("line").style("fill", "none").style("stroke", "#222").style("shape-rendering", "crispEdges");
-        }).append("svg:text").attr({
-            "text-anchor": "middle",
-            "y": 0,
-            "transform": "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")",
-            "x": 0,
-            "class": "label"
-        }).text(dimensionLabels).on("dblclick", flipAxisAndUpdatePCP).on("wheel", rotateLabels);
+            axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+        }).append('svg:text').attr({
+            'text-anchor': 'middle',
+            y: 0,
+            transform: 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')',
+            x: 0,
+            class: 'label'
+        }).text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
 
         // Update
-        g_data.attr("opacity", 0);
-        g_data.select(".axis").transition().duration(animationTime).each(function (d) {
+        g_data.attr('opacity', 0);
+        g_data.select('.axis').transition().duration(animationTime).each(function (d) {
             select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
         });
-        g_data.select(".label").transition().duration(animationTime).text(dimensionLabels).attr("transform", "translate(0,-5) rotate(" + __.dimensionTitleRotation + ")");
+        g_data.select('.label').transition().duration(animationTime).text(dimensionLabels).attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')');
 
         // Exit
         g_data.exit().remove();
 
-        g = pc.svg.selectAll(".dimension");
-        g.transition().duration(animationTime).attr("transform", function (p) {
-            return "translate(" + position(p) + ")";
-        }).style("opacity", 1);
+        g = pc.svg.selectAll('.dimension');
+        g.transition().duration(animationTime).attr('transform', function (p) {
+            return 'translate(' + position(p) + ')';
+        }).style('opacity', 1);
 
-        pc.svg.selectAll(".axis").transition().duration(animationTime).each(function (d) {
+        pc.svg.selectAll('.axis').transition().duration(animationTime).each(function (d) {
             select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
         });
 
         if (flags.brushable) pc.brushable();
         if (flags.reorderable) pc.reorderable();
-        if (pc.brushMode() !== "None") {
+        if (pc.brushMode() !== 'None') {
             var mode = pc.brushMode();
-            pc.brushMode("None");
+            pc.brushMode('None');
             pc.brushMode(mode);
         }
         return this;
@@ -7389,18 +8467,18 @@ var ParCoords = function ParCoords(config) {
         if (!g) pc.createAxes();
 
         // Add and store a brush for each axis.
-        g.append("svg:g").attr("class", "brush").each(function (d) {
+        g.append('svg:g').attr('class', 'brush').each(function (d) {
             if (__.dimensions[d] !== undefined) {
-                __.dimensions[d]["brush"] = brushY(select(this)).extent([[-15, 0], [15, __.dimensions[d].yscale.range()[0]]]);
-                select(this).call(__.dimensions[d]["brush"].on("start", function () {
+                __.dimensions[d]['brush'] = brushY(select(this)).extent([[-15, 0], [15, __.dimensions[d].yscale.range()[0]]]);
+                select(this).call(__.dimensions[d]['brush'].on('start', function () {
                     if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
                         pc.brushReset();
                     }
-                }).on("brush", function () {
+                }).on('brush', function () {
                     if (!event.sourceEvent.ctrlKey) {
                         pc.brush();
                     }
-                }).on("end", function () {
+                }).on('end', function () {
                     // save brush selection is ctrl key is held
                     // store important brush information and
                     // the html element of the selection,
@@ -7419,13 +8497,13 @@ var ParCoords = function ParCoords(config) {
                         select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
                         pc.brush();
                         __.dimensions[d].brush.move(select(this, null));
-                        select(this).select(".selection").attr("style", "display:none");
+                        select(this).select('.selection').attr('style', 'display:none');
                         pc.brushable();
                     } else {
                         pc.brush();
                     }
                 }));
-                select(this).on("dblclick", function () {
+                select(this).on('dblclick', function () {
                     pc.brushReset(d);
                 });
             }
@@ -7437,7 +8515,7 @@ var ParCoords = function ParCoords(config) {
 
     pc.brush = function () {
         __.brushed = pc.selected();
-        render.call("render");
+        render.call('render');
     };
 
     pc.brushReset = function (dimension) {
@@ -7452,11 +8530,11 @@ var ParCoords = function ParCoords(config) {
         __.brushed = false;
 
         if (g) {
-            var nodes = selectAll(".brush").nodes();
+            var nodes = selectAll('.brush').nodes();
             for (var i = 0; i < nodes.length; i++) {
                 if (nodes[i].__data__ === dimension) {
                     // remove all dummy brushes for this axis or the real brush
-                    select(select(nodes[i]).nodes()[0].parentNode).selectAll(".dummy").remove();
+                    select(select(nodes[i]).nodes()[0].parentNode).selectAll('.dummy').remove();
                     __.dimensions[dimension].brush.move(select(nodes[i], null));
                 }
             }
@@ -7472,13 +8550,13 @@ var ParCoords = function ParCoords(config) {
         //get brush selections from each node, convert to actual values
         //invert order of values in array to comply with the parcoords architecture
         if (__.brushes.length === 0) {
-            var nodes = selectAll(".brush").nodes();
+            var nodes = selectAll('.brush').nodes();
             for (var _k = 0; _k < nodes.length; _k++) {
                 if (brushSelection(nodes[_k]) !== null) {
                     actives.push(nodes[_k].__data__);
                     var values$$1 = [];
                     var ranger = brushSelection(nodes[_k]);
-                    if (typeof __.dimensions[nodes[_k].__data__].yscale.domain()[0] === "number") {
+                    if (typeof __.dimensions[nodes[_k].__data__].yscale.domain()[0] === 'number') {
                         for (var i = 0; i < ranger.length; i++) {
                             if (actives.includes(nodes[_k].__data__) && __.flipAxes.includes(nodes[_k].__data__)) {
                                 values$$1.push(__.dimensions[nodes[_k].__data__].yscale.invert(ranger[i]));
@@ -7514,16 +8592,16 @@ var ParCoords = function ParCoords(config) {
             }
             // test if within range
             var within = {
-                "date": function date(d, p, dimension) {
+                date: function date(d, p, dimension) {
                     var category = d[p];
                     var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                     var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
                     return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
                 },
-                "number": function number(d, p, dimension) {
+                number: function number(d, p, dimension) {
                     return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
                 },
-                "string": function string(d, p, dimension) {
+                string: function string(d, p, dimension) {
                     var category = d[p];
                     var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                     var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
@@ -7546,7 +8624,7 @@ var ParCoords = function ParCoords(config) {
                 var values$$1 = [];
                 var ranger = brush$$1.extent;
                 var actives = [brush$$1.data];
-                if (typeof __.dimensions[brush$$1.data].yscale.domain()[0] === "number") {
+                if (typeof __.dimensions[brush$$1.data].yscale.domain()[0] === 'number') {
                     for (var _i = 0; _i < ranger.length; _i++) {
                         if (actives.includes(brush$$1.data) && __.flipAxes.includes(brush$$1.data)) {
                             values$$1.push(__.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
@@ -7579,16 +8657,16 @@ var ParCoords = function ParCoords(config) {
                     }
                 }
                 var within = {
-                    "date": function date(d, p, dimension) {
+                    date: function date(d, p, dimension) {
                         var category = d[p];
                         var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                         var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
                         return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
                     },
-                    "number": function number(d, p, dimension) {
+                    number: function number(d, p, dimension) {
                         return extents[idx][0] <= d[p] && d[p] <= extents[idx][1];
                     },
-                    "string": function string(d, p, dimension) {
+                    string: function string(d, p, dimension) {
                         var category = d[p];
                         var categoryIndex = __.dimensions[p].yscale.domain().indexOf(category);
                         var categoryRangeValue = __.dimensions[p].yscale.range()[categoryIndex];
@@ -7621,20 +8699,20 @@ var ParCoords = function ParCoords(config) {
     // Jason Davies, http://bl.ocks.org/1341281
     pc.reorderable = function () {
         if (!g) pc.createAxes();
-        g.style("cursor", "move").call(drag().on("start", function (d) {
+        g.style('cursor', 'move').call(drag().on('start', function (d) {
             dragging[d] = this.__origin__ = xscale(d);
-        }).on("drag", function (d) {
+        }).on('drag', function (d) {
             dragging[d] = Math.min(w(), Math.max(0, this.__origin__ += event.dx));
             pc.sortDimensions();
             xscale.domain(pc.getOrderedDimensionKeys());
             pc.render();
-            g.attr("transform", function (d) {
-                return "translate(" + position(d) + ")";
+            g.attr('transform', function (d) {
+                return 'translate(' + position(d) + ')';
             });
-        }).on("end", function (d) {
+        }).on('end', function (d) {
             delete this.__origin__;
             delete dragging[d];
-            select(this).transition().attr("transform", "translate(" + xscale(d) + ")");
+            select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
             pc.render();
         }));
         flags.reorderable = true;
@@ -7659,8 +8737,8 @@ var ParCoords = function ParCoords(config) {
             var highlighted = __.highlighted.slice(0);
             pc.unhighlight();
 
-            g.transition().duration(1500).attr("transform", function (d) {
-                return "translate(" + xscale(d) + ")";
+            g.transition().duration(1500).attr('transform', function (d) {
+                return 'translate(' + xscale(d) + ')';
             });
             pc.render();
 
@@ -7718,7 +8796,7 @@ var ParCoords = function ParCoords(config) {
 
     var brush$$1 = {
         modes: {
-            "None": {
+            None: {
                 install: function install(pc) {}, // Nothing to be done.
                 uninstall: function uninstall(pc) {}, // Nothing to be done.
                 selected: function selected() {
@@ -7729,8 +8807,8 @@ var ParCoords = function ParCoords(config) {
                 }
             }
         },
-        mode: "None",
-        predicate: "AND",
+        mode: 'None',
+        predicate: 'AND',
         currentMode: function currentMode() {
             return this.modes[this.mode];
         }
@@ -7753,8 +8831,8 @@ var ParCoords = function ParCoords(config) {
         }
 
         predicate = String(predicate).toUpperCase();
-        if (predicate !== "AND" && predicate !== "OR") {
-            throw new Error("Invalid predicate " + predicate);
+        if (predicate !== 'AND' && predicate !== 'OR') {
+            throw new Error('Invalid predicate ' + predicate);
         }
 
         brush$$1.predicate = predicate;
@@ -7773,7 +8851,7 @@ var ParCoords = function ParCoords(config) {
         }
 
         if (pc.brushModes().indexOf(mode) === -1) {
-            throw new Error("pc.brushmode: Unsupported brush mode: " + mode);
+            throw new Error('pc.brushmode: Unsupported brush mode: ' + mode);
         }
 
         // Make sure that we don't trigger unnecessary events by checking if the mode
@@ -7781,7 +8859,7 @@ var ParCoords = function ParCoords(config) {
         if (mode !== brush$$1.mode) {
             // When changing brush modes, the first thing we need to do is clearing any
             // brushes from the current mode, if any.
-            if (brush$$1.mode !== "None") {
+            if (brush$$1.mode !== 'None') {
                 pc.brushReset();
             }
 
@@ -7790,7 +8868,7 @@ var ParCoords = function ParCoords(config) {
             // Finally, we can install the requested one.
             brush$$1.mode = mode;
             brush$$1.modes[brush$$1.mode].install();
-            if (mode === "None") {
+            if (mode === 'None') {
                 delete pc.brushPredicate;
             } else {
                 pc.brushPredicate = brushPredicate;
@@ -7832,39 +8910,39 @@ var ParCoords = function ParCoords(config) {
 
             // test if within range
             var within = {
-                "date": function date(d, p, dimension) {
-                    if (typeof __.dimensions[p].yscale.bandwidth === "function") {
+                date: function date(d, p, dimension) {
+                    if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
                         // if it is ordinal
                         return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
                     } else {
                         return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
                     }
                 },
-                "number": function number(d, p, dimension) {
-                    if (typeof __.dimensions[p].yscale.bandwidth === "function") {
+                number: function number(d, p, dimension) {
+                    if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
                         // if it is ordinal
                         return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
                     } else {
                         return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
                     }
                 },
-                "string": function string(d, p, dimension) {
+                string: function string(d, p, dimension) {
                     return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
                 }
             };
 
             return __.data.filter(function (d) {
                 switch (brush$$1.predicate) {
-                    case "AND":
+                    case 'AND':
                         return actives.every(function (p, dimension) {
                             return within[__.dimensions[p].type](d, p, dimension);
                         });
-                    case "OR":
+                    case 'OR':
                         return actives.some(function (p, dimension) {
                             return within[__.dimensions[p].type](d, p, dimension);
                         });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
@@ -7919,14 +8997,14 @@ var ParCoords = function ParCoords(config) {
 
             var _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
-            _brush.on("start", function () {
+            _brush.on('start', function () {
                 if (event.sourceEvent !== null) {
                     events.call('brushstart', pc, __.brushed);
                     event.sourceEvent.stopPropagation();
                 }
-            }).on("brush", function () {
+            }).on('brush', function () {
                 brushUpdated(selected());
-            }).on("end", function () {
+            }).on('end', function () {
                 events.call('brushend', pc, __.brushed);
             });
 
@@ -7940,7 +9018,8 @@ var ParCoords = function ParCoords(config) {
                 __.brushed = false;
                 if (g) {
                     g.selectAll('.brush').each(function (d) {
-                        select(this).call(brushes[d].move, null);
+                        console.log('=-------');
+                        select(this).transition().duration(0).call(brushes[d].clear());
                     });
                     pc.renderBrushed();
                 }
@@ -7948,7 +9027,8 @@ var ParCoords = function ParCoords(config) {
                 if (g) {
                     g.selectAll('.brush').each(function (d) {
                         if (d != dimension) return;
-                        select(this).call(brushes[d].move, null);
+                        console.log('=-------');
+                        select(this).transition().duration(0).call(brushes[d].clear());
                         brushes[d].event(select(this));
                     });
                     pc.renderBrushed();
@@ -7960,26 +9040,26 @@ var ParCoords = function ParCoords(config) {
         function install() {
             if (!g) pc.createAxes();
             // Add and store a brush for each axis.
-            var brush$$1 = g.append("svg:g").attr("class", "brush").each(function (d) {
+            var brush$$1 = g.append('svg:g').attr('class', 'brush').each(function (d) {
                 select(this).call(brushFor(d, select(this)));
             });
-            brush$$1.selectAll("rect").style("visibility", null).attr("x", -15).attr("width", 30);
+            brush$$1.selectAll('rect').style('visibility', null).attr('x', -15).attr('width', 30);
 
-            brush$$1.selectAll("rect.background").style("fill", "transparent");
+            brush$$1.selectAll('rect.background').style('fill', 'transparent');
 
-            brush$$1.selectAll("rect.extent").style("fill", "rgba(255,255,255,0.25)").style("stroke", "rgba(0,0,0,0.6)");
+            brush$$1.selectAll('rect.extent').style('fill', 'rgba(255,255,255,0.25)').style('stroke', 'rgba(0,0,0,0.6)');
 
-            brush$$1.selectAll(".resize rect").style("fill", "rgba(0,0,0,0.1)");
+            brush$$1.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
 
             pc.brushExtents = brushExtents;
             pc.brushReset = brushReset;
             return pc;
         }
 
-        brush$$1.modes["1D-axes"] = {
+        brush$$1.modes['1D-axes'] = {
             install: install,
             uninstall: function uninstall() {
-                g.selectAll(".brush").remove();
+                g.selectAll('.brush').remove();
                 brushes = {};
                 delete pc.brushExtents;
                 delete pc.brushReset;
@@ -7996,45 +9076,45 @@ var ParCoords = function ParCoords(config) {
             strumRect = void 0;
 
         function drawStrum(strum, activePoint) {
-            var _svg = pc.selection.select("svg").select("g#strums"),
+            var _svg = pc.selection.select('svg').select('g#strums'),
                 id = strum.dims.i,
                 points = [strum.p1, strum.p2],
-                _line = _svg.selectAll("line#strum-" + id).data([strum]),
-                circles = _svg.selectAll("circle#strum-" + id).data(points),
+                _line = _svg.selectAll('line#strum-' + id).data([strum]),
+                circles = _svg.selectAll('circle#strum-' + id).data(points),
                 _drag = drag();
 
-            _line.enter().append("line").attr("id", "strum-" + id).attr("class", "strum");
+            _line.enter().append('line').attr('id', 'strum-' + id).attr('class', 'strum');
 
-            _line.attr("x1", function (d) {
+            _line.attr('x1', function (d) {
                 return d.p1[0];
-            }).attr("y1", function (d) {
+            }).attr('y1', function (d) {
                 return d.p1[1];
-            }).attr("x2", function (d) {
+            }).attr('x2', function (d) {
                 return d.p2[0];
-            }).attr("y2", function (d) {
+            }).attr('y2', function (d) {
                 return d.p2[1];
-            }).attr("stroke", "black").attr("stroke-width", 2);
+            }).attr('stroke', 'black').attr('stroke-width', 2);
 
-            _drag.on("drag", function (d, i) {
+            _drag.on('drag', function (d, i) {
                 var ev = event;
                 i = i + 1;
-                strum["p" + i][0] = Math.min(Math.max(strum.minX + 1, ev.x), strum.maxX);
-                strum["p" + i][1] = Math.min(Math.max(strum.minY, ev.y), strum.maxY);
+                strum['p' + i][0] = Math.min(Math.max(strum.minX + 1, ev.x), strum.maxX);
+                strum['p' + i][1] = Math.min(Math.max(strum.minY, ev.y), strum.maxY);
                 drawStrum(strum, i - 1);
-            }).on("end", onDragEnd());
+            }).on('end', onDragEnd());
 
-            circles.enter().append("circle").attr("id", "strum-" + id).attr("class", "strum");
+            circles.enter().append('circle').attr('id', 'strum-' + id).attr('class', 'strum');
 
-            circles.attr("cx", function (d) {
+            circles.attr('cx', function (d) {
                 return d[0];
-            }).attr("cy", function (d) {
+            }).attr('cy', function (d) {
                 return d[1];
-            }).attr("r", 5).style("opacity", function (d, i) {
+            }).attr('r', 5).style('opacity', function (d, i) {
                 return activePoint !== undefined && i === activePoint ? 0.8 : 0;
-            }).on("mouseover", function () {
-                select(this).style("opacity", 0.8);
-            }).on("mouseout", function () {
-                select(this).style("opacity", 0);
+            }).on('mouseover', function () {
+                select(this).style('opacity', 0.8);
+            }).on('mouseout', function () {
+                select(this).style('opacity', 0);
             }).call(_drag);
         }
 
@@ -8148,8 +9228,8 @@ var ParCoords = function ParCoords(config) {
                     d2 = strum.dims.right,
                     y1 = __.dimensions[d1].yscale,
                     y2 = __.dimensions[d2].yscale,
-                    point = [y1(d[d1]) - strum.minX, y2(d[d2]) - strum.minX];
-                return test(point);
+                    point$$1 = [y1(d[d1]) - strum.minX, y2(d[d2]) - strum.minX];
+                return test(point$$1);
             }
 
             if (ids.length === 0) {
@@ -8158,28 +9238,28 @@ var ParCoords = function ParCoords(config) {
 
             return brushed.filter(function (d) {
                 switch (brush$$1.predicate) {
-                    case "AND":
+                    case 'AND':
                         return ids.every(function (id) {
                             return crossesStrum(d, id);
                         });
-                    case "OR":
+                    case 'OR':
                         return ids.some(function (id) {
                             return crossesStrum(d, id);
                         });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
 
         function removeStrum() {
             var strum = strums[strums.active],
-                svg = pc.selection.select("svg").select("g#strums");
+                svg = pc.selection.select('svg').select('g#strums');
 
             delete strums[strums.active];
             strums.active = undefined;
-            svg.selectAll("line#strum-" + strum.dims.i).remove();
-            svg.selectAll("circle#strum-" + strum.dims.i).remove();
+            svg.selectAll('line#strum-' + strum.dims.i).remove();
+            svg.selectAll('circle#strum-' + strum.dims.i).remove();
         }
 
         function onDragEnd() {
@@ -8237,7 +9317,7 @@ var ParCoords = function ParCoords(config) {
                 return strum.maxX - strum.minX;
             };
 
-            pc.on("axesreorder.strums", function () {
+            pc.on('axesreorder.strums', function () {
                 var ids = Object.getOwnPropertyNames(strums).filter(function (d) {
                     return !isNaN(d);
                 });
@@ -8266,25 +9346,25 @@ var ParCoords = function ParCoords(config) {
             });
 
             // Add a new svg group in which we draw the strums.
-            pc.selection.select("svg").append("g").attr("id", "strums").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+            pc.selection.select('svg').append('g').attr('id', 'strums').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
             // Install the required brushReset function
             pc.brushReset = brushReset(strums);
 
-            _drag.on("start", onDragStart(strums)).on("drag", onDrag(strums)).on("end", onDragEnd(strums));
+            _drag.on('start', onDragStart(strums)).on('drag', onDrag(strums)).on('end', onDragEnd(strums));
 
             // NOTE: The styling needs to be done here and not in the css. This is because
             //       for 1D brushing, the canvas layers should not listen to
             //       pointer-events._.
-            strumRect = pc.selection.select("svg").insert("rect", "g#strums").attr("id", "strum-events").attr("x", __.margin.left).attr("y", __.margin.top).attr("width", w()).attr("height", h() + 2).style("opacity", 0).call(_drag);
+            strumRect = pc.selection.select('svg').insert('rect', 'g#strums').attr('id', 'strum-events').attr('x', __.margin.left).attr('y', __.margin.top).attr('width', w()).attr('height', h() + 2).style('opacity', 0).call(_drag);
         }
 
-        brush$$1.modes["2D-strums"] = {
+        brush$$1.modes['2D-strums'] = {
             install: install,
             uninstall: function uninstall() {
-                pc.selection.select("svg").select("g#strums").remove();
-                pc.selection.select("svg").select("rect#strum-events").remove();
-                pc.on("axesreorder.strums", undefined);
+                pc.selection.select('svg').select('g#strums').remove();
+                pc.selection.select('svg').select('rect#strum-events').remove();
+                pc.on('axesreorder.strums', undefined);
                 delete pc.brushReset;
 
                 strumRect = undefined;
@@ -8304,43 +9384,42 @@ var ParCoords = function ParCoords(config) {
             strumRect = void 0;
 
         function drawStrum(arc, activePoint) {
-            var svg = pc.selection.select("svg").select("g#arcs"),
+            var svg = pc.selection.select('svg').select('g#arcs'),
                 id = arc.dims.i,
                 points = [arc.p2, arc.p3],
-                _line = svg.selectAll("line#arc-" + id).data([{ p1: arc.p1, p2: arc.p2 }, { p1: arc.p1, p2: arc.p3 }]),
-                circles = svg.selectAll("circle#arc-" + id).data(points),
+                _line = svg.selectAll('line#arc-' + id).data([{ p1: arc.p1, p2: arc.p2 }, { p1: arc.p1, p2: arc.p3 }]),
+                circles = svg.selectAll('circle#arc-' + id).data(points),
                 _drag = drag(),
-                _path = svg.selectAll("path#arc-" + id).data([arc]);
+                _path = svg.selectAll('path#arc-' + id).data([arc]);
 
-            _path.enter().append("path").attr("id", "arc-" + id).attr("class", "arc").style("fill", "orange").style("opacity", 0.5);
+            _path.enter().append('path').attr('id', 'arc-' + id).attr('class', 'arc').style('fill', 'orange').style('opacity', 0.5);
 
-            _path.attr("d", arc.arc).attr("transform", "translate(" + arc.p1[0] + "," + arc.p1[1] + ")");
+            _path.attr('d', arc.arc).attr('transform', 'translate(' + arc.p1[0] + ',' + arc.p1[1] + ')');
 
-            _line.enter().append("line").attr("id", "arc-" + id).attr("class", "arc");
+            _line.enter().append('line').attr('id', 'arc-' + id).attr('class', 'arc');
 
-            _line.attr("x1", function (d) {
+            _line.attr('x1', function (d) {
                 return d.p1[0];
-            }).attr("y1", function (d) {
+            }).attr('y1', function (d) {
                 return d.p1[1];
-            }).attr("x2", function (d) {
+            }).attr('x2', function (d) {
                 return d.p2[0];
-            }).attr("y2", function (d) {
+            }).attr('y2', function (d) {
                 return d.p2[1];
-            }).attr("stroke", "black").attr("stroke-width", 2);
+            }).attr('stroke', 'black').attr('stroke-width', 2);
 
-            _drag.on("drag", function (d, i) {
+            _drag.on('drag', function (d, i) {
                 var ev = event,
                     angle = 0;
 
                 i = i + 2;
 
-                arc["p" + i][0] = Math.min(Math.max(arc.minX + 1, ev.x), arc.maxX);
-                arc["p" + i][1] = Math.min(Math.max(arc.minY, ev.y), arc.maxY);
+                arc['p' + i][0] = Math.min(Math.max(arc.minX + 1, ev.x), arc.maxX);
+                arc['p' + i][1] = Math.min(Math.max(arc.minY, ev.y), arc.maxY);
 
                 angle = i === 3 ? arcs.startAngle(id) : arcs.endAngle(id);
 
                 if (arc.startAngle < Math.PI && arc.endAngle < Math.PI && angle < Math.PI || arc.startAngle >= Math.PI && arc.endAngle >= Math.PI && angle >= Math.PI) {
-
                     if (i === 2) {
                         arc.endAngle = angle;
                         arc.arc.endAngle(angle);
@@ -8351,20 +9430,20 @@ var ParCoords = function ParCoords(config) {
                 }
 
                 drawStrum(arc, i - 2);
-            }).on("end", onDragEnd());
+            }).on('end', onDragEnd());
 
-            circles.enter().append("circle").attr("id", "arc-" + id).attr("class", "arc");
+            circles.enter().append('circle').attr('id', 'arc-' + id).attr('class', 'arc');
 
-            circles.attr("cx", function (d) {
+            circles.attr('cx', function (d) {
                 return d[0];
-            }).attr("cy", function (d) {
+            }).attr('cy', function (d) {
                 return d[1];
-            }).attr("r", 5).style("opacity", function (d, i) {
+            }).attr('r', 5).style('opacity', function (d, i) {
                 return activePoint !== undefined && i === activePoint ? 0.8 : 0;
-            }).on("mouseover", function () {
-                select(this).style("opacity", 0.8);
-            }).on("mouseout", function () {
-                select(this).style("opacity", 0);
+            }).on('mouseover', function () {
+                select(this).style('opacity', 0.8);
+            }).on('mouseout', function () {
+                select(this).style('opacity', 0);
             }).call(_drag);
         }
 
@@ -8496,7 +9575,6 @@ var ParCoords = function ParCoords(config) {
 
             // test if segment angle is contained in angle interval
             return function (a) {
-
                 if (a >= startAngle && a <= endAngle) {
                     return true;
                 }
@@ -8534,29 +9612,29 @@ var ParCoords = function ParCoords(config) {
 
             return brushed.filter(function (d) {
                 switch (brush$$1.predicate) {
-                    case "AND":
+                    case 'AND':
                         return ids.every(function (id) {
                             return crossesStrum(d, id);
                         });
-                    case "OR":
+                    case 'OR':
                         return ids.some(function (id) {
                             return crossesStrum(d, id);
                         });
                     default:
-                        throw new Error("Unknown brush predicate " + __.brushPredicate);
+                        throw new Error('Unknown brush predicate ' + __.brushPredicate);
                 }
             });
         }
 
         function removeStrum() {
             var arc = arcs[arcs.active],
-                svg = pc.selection.select("svg").select("g#arcs");
+                svg = pc.selection.select('svg').select('g#arcs');
 
             delete arcs[arcs.active];
             arcs.active = undefined;
-            svg.selectAll("line#arc-" + arc.dims.i).remove();
-            svg.selectAll("circle#arc-" + arc.dims.i).remove();
-            svg.selectAll("path#arc-" + arc.dims.i).remove();
+            svg.selectAll('line#arc-' + arc.dims.i).remove();
+            svg.selectAll('circle#arc-' + arc.dims.i).remove();
+            svg.selectAll('path#arc-' + arc.dims.i).remove();
         }
 
         function onDragEnd() {
@@ -8677,7 +9755,7 @@ var ParCoords = function ParCoords(config) {
                 return c;
             };
 
-            pc.on("axesreorder.arcs", function () {
+            pc.on('axesreorder.arcs', function () {
                 var ids = Object.getOwnPropertyNames(arcs).filter(function (d) {
                     return !isNaN(d);
                 });
@@ -8706,25 +9784,25 @@ var ParCoords = function ParCoords(config) {
             });
 
             // Add a new svg group in which we draw the arcs.
-            pc.selection.select("svg").append("g").attr("id", "arcs").attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+            pc.selection.select('svg').append('g').attr('id', 'arcs').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
             // Install the required brushReset function
             pc.brushReset = brushReset(arcs);
 
-            _drag.on("start", onDragStart(arcs)).on("drag", onDrag(arcs)).on("end", onDragEnd(arcs));
+            _drag.on('start', onDragStart(arcs)).on('drag', onDrag(arcs)).on('end', onDragEnd(arcs));
 
             // NOTE: The styling needs to be done here and not in the css. This is because
             //       for 1D brushing, the canvas layers should not listen to
             //       pointer-events._.
-            strumRect = pc.selection.select("svg").insert("rect", "g#arcs").attr("id", "arc-events").attr("x", __.margin.left).attr("y", __.margin.top).attr("width", w()).attr("height", h() + 2).style("opacity", 0).call(_drag);
+            strumRect = pc.selection.select('svg').insert('rect', 'g#arcs').attr('id', 'arc-events').attr('x', __.margin.left).attr('y', __.margin.top).attr('width', w()).attr('height', h() + 2).style('opacity', 0).call(_drag);
         }
 
-        brush$$1.modes["angular"] = {
+        brush$$1.modes['angular'] = {
             install: install,
             uninstall: function uninstall() {
-                pc.selection.select("svg").select("g#arcs").remove();
-                pc.selection.select("svg").select("rect#arc-events").remove();
-                pc.on("axesreorder.arcs", undefined);
+                pc.selection.select('svg').select('g#arcs').remove();
+                pc.selection.select('svg').select('rect#arc-events').remove();
+                pc.on('axesreorder.arcs', undefined);
                 delete pc.brushReset;
 
                 strumRect = undefined;
@@ -8753,8 +9831,8 @@ var ParCoords = function ParCoords(config) {
     // TODO currently assumes chart is brushable, and destroys old brushes
     pc.resize = function () {
         // selection size
-        pc.selection.select("svg").attr("width", __.width).attr("height", __.height);
-        pc.svg.attr("transform", "translate(" + __.margin.left + "," + __.margin.top + ")");
+        pc.selection.select('svg').attr('width', __.width).attr('height', __.height);
+        pc.svg.attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
         // FIXME: the current brush state should pass through
         if (flags.brushable) pc.brushReset();
@@ -8767,7 +9845,11 @@ var ParCoords = function ParCoords(config) {
         if (flags.brushable) pc.brushable();
         if (flags.reorderable) pc.reorderable();
 
-        events.call('resize', this, { width: __.width, height: __.height, margin: __.margin });
+        events.call('resize', this, {
+            width: __.width,
+            height: __.height,
+            margin: __.margin
+        });
         return this;
     };
 
@@ -8778,8 +9860,8 @@ var ParCoords = function ParCoords(config) {
         }
 
         __.highlighted = data;
-        pc.clear("highlight");
-        selectAll([canvas.foreground, canvas.brushed]).classed("faded", true);
+        pc.clear('highlight');
+        selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
         data.forEach(path_highlight);
         events.call('highlight', this, data);
         return this;
@@ -8788,8 +9870,8 @@ var ParCoords = function ParCoords(config) {
     // clear highlighting
     pc.unhighlight = function () {
         __.highlighted = [];
-        pc.clear("highlight");
-        selectAll([canvas.foreground, canvas.brushed]).classed("faded", false);
+        pc.clear('highlight');
+        selectAll([canvas.foreground, canvas.brushed]).classed('faded', false);
         return this;
     };
 
@@ -8817,15 +9899,15 @@ var ParCoords = function ParCoords(config) {
         var devicePixelRatio = window.devicePixelRatio || 1;
 
         // Create a canvas element to store the merged canvases
-        var mergedCanvas = document.createElement("canvas");
+        var mergedCanvas = document.createElement('canvas');
         mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
         mergedCanvas.height = (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
-        mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + "px";
-        mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + "px";
+        mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
+        mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
 
         // Give the canvas a white background
-        var context = mergedCanvas.getContext("2d");
-        context.fillStyle = "#ffffff";
+        var context = mergedCanvas.getContext('2d');
+        context.fillStyle = '#ffffff';
         context.fillRect(0, 0, mergedCanvas.width, mergedCanvas.height);
 
         // Merge all the canvases
@@ -8836,14 +9918,14 @@ var ParCoords = function ParCoords(config) {
         // Add SVG elements to canvas
         var DOMURL = window.URL || window.webkitURL || window;
         var serializer = new XMLSerializer();
-        var svgStr = serializer.serializeToString(pc.selection.select("svg").node());
+        var svgStr = serializer.serializeToString(pc.selection.select('svg').node());
 
         // Create a Data URI.
         var src = 'data:image/svg+xml;base64,' + window.btoa(svgStr);
         var img = new Image();
         img.onload = function () {
             context.drawImage(img, 0, 0, img.width * devicePixelRatio, img.height * devicePixelRatio);
-            if (typeof callback === "function") {
+            if (typeof callback === 'function') {
                 callback(mergedCanvas);
             }
         };
@@ -8854,10 +9936,10 @@ var ParCoords = function ParCoords(config) {
     install2DStrums();
     installAngularBrush();
 
-    pc.version = "0.7.0";
+    pc.version = '0.7.0';
     // this descriptive text should live with other introspective methods
     pc.toString = function () {
-        return "Parallel Coordinates: " + keys(__.dimensions).length + " dimensions (" + keys(__.data[0]).length + " total) , " + __.data.length + " rows";
+        return 'Parallel Coordinates: ' + keys(__.dimensions).length + ' dimensions (' + keys(__.data[0]).length + ' total) , ' + __.data.length + ' rows';
     };
 
     return pc;
