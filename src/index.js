@@ -17,6 +17,7 @@ import InitialState from './initialState';
 import install1DAxes from './brush/install1DAxes';
 import install2DStrums from './brush/install2DStrums';
 import installAngularBrush from './brush/installAngularBrush';
+import intersection from "./api/intersection";
 
 //============================================================================================
 
@@ -711,22 +712,6 @@ const ParCoords = config => {
     ctx.stroke();
   }
 
-  // draw many polylines of the same color
-  function paths(data, ctx) {
-    ctx.clearRect(-1, -1, w() + 2, h() + 2);
-    ctx.beginPath();
-    data.forEach(function(d) {
-      if (
-        (__.bundleDimension !== null && __.bundlingStrength > 0) ||
-        __.smoothness > 0
-      ) {
-        single_curve(d, ctx);
-      } else {
-        single_path(d, ctx);
-      }
-    });
-    ctx.stroke();
-  }
 
   // returns the y-position just beyond the separating null value line
   function getNullPosition() {
@@ -1630,18 +1615,7 @@ const ParCoords = config => {
 
   // calculate 2d intersection of line a->b with line c->d
   // points are objects with x and y properties
-  pc.intersection = function(a, b, c, d) {
-    return {
-      x:
-        ((a.x * b.y - a.y * b.x) * (c.x - d.x) -
-          (a.x - b.x) * (c.x * d.y - c.y * d.x)) /
-        ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
-      y:
-        ((a.x * b.y - a.y * b.x) * (c.y - d.y) -
-          (a.y - b.y) * (c.x * d.y - c.y * d.x)) /
-        ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
-    };
-  };
+  pc.intersection = intersection;
 
   function position(d) {
     if (xscale.range().length === 0) {

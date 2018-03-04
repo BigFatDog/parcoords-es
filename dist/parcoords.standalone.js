@@ -8573,7 +8573,16 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
   };
 };
 
+var intersection = function intersection(a, b, c, d) {
+    return {
+        x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
+        y: ((a.x * b.y - a.y * b.x) * (c.y - d.y) - (a.y - b.y) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x))
+    };
+};
+
 var _this = undefined;
+
+//============================================================================================
 
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
@@ -9157,7 +9166,7 @@ var ParCoords = function ParCoords(config) {
     ctx.stroke();
   }
 
-  // draw many polylines of the same color
+  // returns the y-position just beyond the separating null value line
   function getNullPosition() {
     if (__.nullValueSeparator == 'bottom') {
       return h() + 1;
@@ -9832,12 +9841,7 @@ var ParCoords = function ParCoords(config) {
 
   // calculate 2d intersection of line a->b with line c->d
   // points are objects with x and y properties
-  pc.intersection = function (a, b, c, d) {
-    return {
-      x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
-      y: ((a.x * b.y - a.y * b.x) * (c.y - d.y) - (a.y - b.y) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x))
-    };
-  };
+  pc.intersection = intersection;
 
   function position(d) {
     if (xscale.range().length === 0) {
