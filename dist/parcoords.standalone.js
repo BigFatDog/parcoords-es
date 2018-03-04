@@ -9449,29 +9449,6 @@ var ParCoords = function ParCoords(config) {
     return realCentroids;
   };
 
-  function compute_control_points(centroids) {
-    var cols = centroids.length;
-    var a = __.smoothness;
-    var cps = [];
-
-    cps.push(centroids[0]);
-    cps.push($V([centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)), centroids[0].e(2)]));
-    for (var col = 1; col < cols - 1; ++col) {
-      var mid = centroids[col];
-      var left = centroids[col - 1];
-      var right = centroids[col + 1];
-
-      var diff = left.subtract(right);
-      cps.push(mid.add(diff.x(a)));
-      cps.push(mid);
-      cps.push(mid.subtract(diff.x(a)));
-    }
-    cps.push($V([centroids[cols - 1].e(1) + a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)), centroids[cols - 1].e(2)]));
-    cps.push(centroids[cols - 1]);
-
-    return cps;
-  }
-
   pc.shadows = function () {
     flags.shadows = true;
     pc.alphaOnBrushed(0.1);
@@ -9500,7 +9477,7 @@ var ParCoords = function ParCoords(config) {
   // draw single cubic bezier curve
   function single_curve(d, ctx) {
     var centroids = compute_centroids(d);
-    var cps = compute_control_points(centroids);
+    var cps = computeControlPoints(__.smoothness, centroids);
 
     ctx.moveTo(cps[0].e(1), cps[0].e(2));
     for (var i = 1; i < cps.length; i += 3) {
