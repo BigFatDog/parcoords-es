@@ -1,9 +1,8 @@
-import { select, selectAll, event, mouse } from 'd3-selection';
+import { select, selectAll, event } from 'd3-selection';
 import { keys, entries, map } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
 import { extent, ascending, min } from 'd3-array';
 import { scalePoint, scaleOrdinal, scaleTime, scaleLinear } from 'd3-scale';
-import { line } from 'd3-shape';
 import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
 import { brushSelection, brushY } from 'd3-brush';
 import { drag } from 'd3-drag';
