@@ -9,7 +9,7 @@ import { brushSelection, brushY } from 'd3-brush';
 import { drag } from 'd3-drag';
 
 import './parallel-coordinates.css';
-import renderQueue from './RenderQueue';
+import renderQueue from './renderQueue';
 
 import { _functor, _rebind, without } from './helper';
 import getRange from './util/getRange';
