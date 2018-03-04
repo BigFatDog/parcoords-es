@@ -9457,6 +9457,38 @@ var resize = function resize(config, pc, flags, events) {
   };
 };
 
+// Reorder dimensions, such that the highest value (visually) is on the left and
+// the lowest on the right. Visual values are determined by the data values in
+// the given row.
+var reorder = function reorder(config, pc, xscale) {
+    return function (rowdata) {
+        var firstDim = pc.getOrderedDimensionKeys()[0];
+
+        pc.sortDimensionsByRowData(rowdata);
+        // NOTE: this is relatively cheap given that:
+        // number of dimensions < number of data items
+        // Thus we check equality of order to prevent rerendering when this is the case.
+        var reordered = firstDim !== pc.getOrderedDimensionKeys()[0];
+
+        if (reordered) {
+            xscale.domain(pc.getOrderedDimensionKeys());
+            var highlighted = config.highlighted.slice(0);
+            pc.unhighlight();
+
+            var g = pc.g();
+            g.transition().duration(1500).attr('transform', function (d) {
+                return 'translate(' + xscale(d) + ')';
+            });
+            pc.render();
+
+            // pc.highlight() does not check whether highlighted is length zero, so we do that here.
+            if (highlighted.length !== 0) {
+                pc.highlight(highlighted);
+            }
+        }
+    };
+};
+
 var sortDimensions = function sortDimensions(config, position) {
   return function () {
     var copy = Object.assign({}, config.dimensions);

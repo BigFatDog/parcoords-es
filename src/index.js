@@ -34,6 +34,7 @@ import reorderable from './api/reorderable';
 import w from './util/width';
 import h from './util/height';
 import resize from './api/resize';
+import reorder from './api/reorder';
 import sortDimensions from './api/sortDimensions';
 import sortDimensionsByRowData from './api/sortDimensionsByRowData';
 //============================================================================================
