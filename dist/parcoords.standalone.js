@@ -9539,6 +9539,19 @@ var clear = function clear(config, ctx, brushGroup) {
     };
 };
 
+var isBrushed$1 = function isBrushed(config, brushGroup) {
+    if (config.brushed && config.brushed.length !== config.data.length) return true;
+
+    var object = brushGroup.currentMode().brushState();
+
+    for (var key in object) {
+        if (object.hasOwnProperty(key)) {
+            return true;
+        }
+    }
+    return false;
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9730,19 +9743,6 @@ var ParCoords = function ParCoords(config) {
     return this;
   };
 
-  function isBrushed() {
-    if (__.brushed && __.brushed.length !== __.data.length) return true;
-
-    var object = brush.currentMode().brushState();
-
-    for (var key in object) {
-      if (object.hasOwnProperty(key)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   pc.render.default = function () {
     pc.clear('foreground');
     pc.clear('highlight');
@@ -9766,7 +9766,7 @@ var ParCoords = function ParCoords(config) {
   pc.renderBrushed.default = function () {
     pc.clear('brushed');
 
-    if (isBrushed()) {
+    if (isBrushed$1(__, brush)) {
       __.brushed.forEach(path_brushed);
     }
   };
@@ -9776,7 +9776,7 @@ var ParCoords = function ParCoords(config) {
   });
 
   pc.renderBrushed.queue = function () {
-    if (isBrushed()) {
+    if (isBrushed$1(__, brush)) {
       brushedQueue(__.brushed);
     } else {
       brushedQueue([]); // This is needed to clear the currently brushed items

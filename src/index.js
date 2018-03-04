@@ -37,6 +37,7 @@ import reorder from './api/reorder';
 import sortDimensions from './api/sortDimensions';
 import sortDimensionsByRowData from './api/sortDimensionsByRowData';
 import clear from './api/clear';
+import isBrushed from './util/isBrushed';
 //============================================================================================
 
 const ParCoords = config => {
@@ -269,19 +270,6 @@ const ParCoords = config => {
     return this;
   };
 
-  function isBrushed() {
-    if (__.brushed && __.brushed.length !== __.data.length) return true;
-
-    let object = brush.currentMode().brushState();
-
-    for (let key in object) {
-      if (object.hasOwnProperty(key)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   pc.render.default = function() {
     pc.clear('foreground');
     pc.clear('highlight');
@@ -307,7 +295,7 @@ const ParCoords = config => {
   pc.renderBrushed.default = function() {
     pc.clear('brushed');
 
-    if (isBrushed()) {
+    if (isBrushed(__, brush)) {
       __.brushed.forEach(path_brushed);
     }
   };
@@ -319,7 +307,7 @@ const ParCoords = config => {
     });
 
   pc.renderBrushed.queue = function() {
-    if (isBrushed()) {
+    if (isBrushed(__, brush)) {
       brushedQueue(__.brushed);
     } else {
       brushedQueue([]); // This is needed to clear the currently brushed items
