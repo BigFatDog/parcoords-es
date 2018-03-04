@@ -51,4 +51,4 @@ const mergeParcoords = pc => callback => {
   img.src = src;
 };
 
-export default mergeParcoords
+export default mergeParcoords;

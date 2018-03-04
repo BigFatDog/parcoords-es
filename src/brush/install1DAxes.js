@@ -8,10 +8,10 @@ import { event, select } from 'd3-selection';
 //
 // @param newSelection - The new set of data items that is currently contained
 //                       by the brushes
-const brushUpdated = (config, pc, events)=> newSelection=> {
-    config.brushed = newSelection;
-    events.call('brush', pc, config.brushed);
-    pc.renderBrushed();
+const brushUpdated = (config, pc, events) => newSelection => {
+  config.brushed = newSelection;
+  events.call('brush', pc, config.brushed);
+  pc.renderBrushed();
 };
 
 const install1DAxes = (brushGroup, config, pc, events) => {

@@ -2,7 +2,7 @@ import { select, selectAll, event } from 'd3-selection';
 import { keys, entries, map } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
 import { extent, ascending, min } from 'd3-array';
-import { scalePoint, scaleOrdinal, scaleTime, scaleLinear } from 'd3-scale';
+import { scalePoint } from 'd3-scale';
 import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
 import { brushSelection, brushY } from 'd3-brush';
 import { drag } from 'd3-drag';
@@ -11,7 +11,6 @@ import './parallel-coordinates.css';
 import renderQueue from './renderQueue';
 
 import { _functor, _rebind, without } from './helper';
-import getRange from './util/getRange';
 import InitialState from './initialState';
 import install1DAxes from './brush/install1DAxes';
 import install2DStrums from './brush/install2DStrums';
@@ -21,6 +20,7 @@ import mergeParcoords from './api/mergeParcoords';
 import selected from './api/selected';
 import brushMode from './api/brushMode';
 import updateAxes from './api/updateAxes';
+import autoscale from './api/autoscale';
 //============================================================================================
 
 const ParCoords = config => {
@@ -202,128 +202,7 @@ const ParCoords = config => {
     });
   }
 
-  pc.autoscale = function() {
-    // yscale
-    let defaultScales = {
-      date: function(k) {
-        let _extent = extent(__.data, function(d) {
-          return d[k] ? d[k].getTime() : null;
-        });
-        // special case if single value
-        if (_extent[0] === _extent[1]) {
-          return scalePoint()
-            .domain(_extent)
-            .range(getRange(__));
-        }
-        if (__.flipAxes.includes(k)) {
-          let tempDate = [];
-          _extent.forEach(function(val) {
-            tempDate.unshift(val);
-          });
-          _extent = tempDate;
-        }
-        return scaleTime()
-          .domain(_extent)
-          .range(getRange(__));
-      },
-      number: function(k) {
-        let _extent = extent(__.data, function(d) {
-          return +d[k];
-        });
-        // special case if single value
-        if (_extent[0] === _extent[1]) {
-          return scalePoint()
-            .domain(_extent)
-            .range(getRange(__));
-        }
-        if (__.flipAxes.includes(k)) {
-          let temp = [];
-          _extent.forEach(function(val) {
-            temp.unshift(val);
-          });
-          _extent = temp;
-        }
-        return scaleLinear()
-          .domain(_extent)
-          .range(getRange(__));
-      },
-      string: function(k) {
-        let counts = {},
-          domain = [];
-        // Let's get the count for each value so that we can sort the domain based
-        // on the number of items for each value.
-        __.data.map(function(p) {
-          if (p[k] === undefined && __.nullValueSeparator !== 'undefined') {
-            return; // null values will be drawn beyond the horizontal null value separator!
-          }
-          if (counts[p[k]] === undefined) {
-            counts[p[k]] = 1;
-          } else {
-            counts[p[k]] = counts[p[k]] + 1;
-          }
-        });
-        if (__.flipAxes.includes(k)) {
-          domain = Object.getOwnPropertyNames(counts).sort();
-        } else {
-          let tempArr = Object.getOwnPropertyNames(counts).sort();
-          for (let i = 0; i < Object.getOwnPropertyNames(counts).length; i++) {
-            domain.push(tempArr.pop());
-          }
-        }
-
-        //need to create an ordinal scale for categorical data
-        let categoricalRange = [];
-        if (domain.length === 1) {
-          //edge case
-          domain = [' ', domain[0], ' '];
-        }
-        let addBy = getRange(__)[0] / (domain.length - 1);
-        for (let j = 0; j < domain.length; j++) {
-          if (categoricalRange.length === 0) {
-            categoricalRange.push(0);
-            continue;
-          }
-          categoricalRange.push(categoricalRange[j - 1] + addBy);
-        }
-        return scaleOrdinal()
-          .domain(domain)
-          .range(categoricalRange);
-      },
-    };
-    keys(__.dimensions).forEach(function(k) {
-      __.dimensions[k].yscale = defaultScales[__.dimensions[k].type](k);
-    });
-
-    // xscale
-    xscale.range([0, w()], 1);
-    // Retina display, etc.
-    let devicePixelRatio = window.devicePixelRatio || 1;
-
-    // canvas sizes
-    pc.selection
-      .selectAll('canvas')
-      .style('margin-top', __.margin.top + 'px')
-      .style('margin-left', __.margin.left + 'px')
-      .style('width', w() + 2 + 'px')
-      .style('height', h() + 2 + 'px')
-      .attr('width', (w() + 2) * devicePixelRatio)
-      .attr('height', (h() + 2) * devicePixelRatio);
-    // default styles, needs to be set when canvas width changes
-    ctx.foreground.strokeStyle = __.color;
-    ctx.foreground.lineWidth = 1.4;
-    ctx.foreground.globalCompositeOperation = __.composite;
-    ctx.foreground.globalAlpha = __.alpha;
-    ctx.foreground.scale(devicePixelRatio, devicePixelRatio);
-    ctx.brushed.strokeStyle = __.brushedColor;
-    ctx.brushed.lineWidth = 1.4;
-    ctx.brushed.globalCompositeOperation = __.composite;
-    ctx.brushed.globalAlpha = __.alpha;
-    ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
-    ctx.highlight.lineWidth = 3;
-    ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
-
-    return this;
-  };
+  pc.autoscale = autoscale(__, pc, xscale, ctx);
 
   pc.scale = function(d, domain) {
     __.dimensions[d].yscale.domain(domain);
@@ -1187,7 +1066,6 @@ const ParCoords = config => {
       return this.modes[this.mode];
     },
   };
-
 
   pc.brushModes = function() {
     return Object.getOwnPropertyNames(brush.modes);

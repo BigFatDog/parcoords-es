@@ -2576,7 +2576,6 @@ var formatTypes = {
   }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4708,7 +4707,6 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7023,18 +7021,6 @@ var _functor = function _functor(v) {
   };
 };
 
-/** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
-var getRange = function getRange(config) {
-  var h = config.height - config.margin.top - config.margin.bottom;
-
-  if (config.nullValueSeparator == 'bottom') {
-    return [h + 1 - config.nullValueSeparatorPadding.bottom - config.nullValueSeparatorPadding.top, 1];
-  } else if (config.nullValueSeparator == 'top') {
-    return [h + 1, 1 + config.nullValueSeparatorPadding.bottom + config.nullValueSeparatorPadding.top];
-  }
-  return [h + 1, 1];
-};
-
 var InitialState = {
   data: [],
   highlighted: [],
@@ -7065,11 +7051,6 @@ var InitialState = {
 };
 
 // brush mode: 1D-Axes
-// This function can be used for 'live' updates of brushes. That is, during the
-// specification of a brush, this method can be called to update the view.
-//
-// @param newSelection - The new set of data items that is currently contained
-//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -8636,213 +8617,213 @@ var mergeParcoords = function mergeParcoords(pc) {
 };
 
 var selected = function selected(config) {
-    var actives = [];
-    var extents = [];
-    var ranges = {};
-    //get brush selections from each node, convert to actual values
-    //invert order of values in array to comply with the parcoords architecture
-    if (config.brushes.length === 0) {
-        var nodes = selectAll('.brush').nodes();
-        for (var k = 0; k < nodes.length; k++) {
-            if (brushSelection(nodes[k]) !== null) {
-                actives.push(nodes[k].__data__);
-                var values = [];
-                var ranger = brushSelection(nodes[k]);
-                if (typeof config.dimensions[nodes[k].__data__].yscale.domain()[0] === 'number') {
-                    for (var i = 0; i < ranger.length; i++) {
-                        if (actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
-                            values.push(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
-                        } else if (config.dimensions[nodes[k].__data__].yscale() !== 1) {
-                            values.unshift(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
-                        }
-                    }
-                    extents.push(values);
-                    for (var ii = 0; ii < extents.length; ii++) {
-                        if (extents[ii].length === 0) {
-                            extents[ii] = [1, 1];
-                        }
-                    }
-                } else {
-                    ranges[nodes[k].__data__] = brushSelection(nodes[k]);
-                    var dimRange = config.dimensions[nodes[k].__data__].yscale.range();
-                    var dimDomain = config.dimensions[nodes[k].__data__].yscale.domain();
-                    for (var j = 0; j < dimRange.length; j++) {
-                        if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1] && actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
-                            values.push(dimRange[j]);
-                        } else if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) {
-                            values.unshift(dimRange[j]);
-                        }
-                    }
-                    extents.push(values);
-                    for (var _ii = 0; _ii < extents.length; _ii++) {
-                        if (extents[_ii].length === 0) {
-                            extents[_ii] = [1, 1];
-                        }
-                    }
-                }
+  var actives = [];
+  var extents = [];
+  var ranges = {};
+  //get brush selections from each node, convert to actual values
+  //invert order of values in array to comply with the parcoords architecture
+  if (config.brushes.length === 0) {
+    var nodes = selectAll('.brush').nodes();
+    for (var k = 0; k < nodes.length; k++) {
+      if (brushSelection(nodes[k]) !== null) {
+        actives.push(nodes[k].__data__);
+        var values = [];
+        var ranger = brushSelection(nodes[k]);
+        if (typeof config.dimensions[nodes[k].__data__].yscale.domain()[0] === 'number') {
+          for (var i = 0; i < ranger.length; i++) {
+            if (actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
+              values.push(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
+            } else if (config.dimensions[nodes[k].__data__].yscale() !== 1) {
+              values.unshift(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
             }
+          }
+          extents.push(values);
+          for (var ii = 0; ii < extents.length; ii++) {
+            if (extents[ii].length === 0) {
+              extents[ii] = [1, 1];
+            }
+          }
+        } else {
+          ranges[nodes[k].__data__] = brushSelection(nodes[k]);
+          var dimRange = config.dimensions[nodes[k].__data__].yscale.range();
+          var dimDomain = config.dimensions[nodes[k].__data__].yscale.domain();
+          for (var j = 0; j < dimRange.length; j++) {
+            if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1] && actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
+              values.push(dimRange[j]);
+            } else if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) {
+              values.unshift(dimRange[j]);
+            }
+          }
+          extents.push(values);
+          for (var _ii = 0; _ii < extents.length; _ii++) {
+            if (extents[_ii].length === 0) {
+              extents[_ii] = [1, 1];
+            }
+          }
         }
-        // test if within range
-        var within = {
-            date: function date(d, p, dimension) {
-                var category = d[p];
-                var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
-                var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
-                return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-            },
-            number: function number(d, p, dimension) {
-                return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-            },
-            string: function string(d, p, dimension) {
-                var category = d[p];
-                var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
-                var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
-                return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-            }
-        };
-        return config.data.filter(function (d) {
-            return actives.every(function (p, dimension) {
-                return within[config.dimensions[p].type](d, p, dimension);
-            });
-        });
-    } else {
-        // need to get data from each brush instead of each axis
-        // first must find active axes by iterating through all brushes
-        // then go through similiar process as above.
-        var multiBrushData = [];
-
-        var _loop = function _loop(idx) {
-            var brush$$1 = config.brushes[idx];
-            var values = [];
-            var ranger = brush$$1.extent;
-            var actives = [brush$$1.data];
-            if (typeof config.dimensions[brush$$1.data].yscale.domain()[0] === 'number') {
-                for (var _i = 0; _i < ranger.length; _i++) {
-                    if (actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
-                        values.push(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
-                    } else if (config.dimensions[brush$$1.data].yscale() !== 1) {
-                        values.unshift(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
-                    }
-                }
-                extents.push(values);
-                for (var _ii2 = 0; _ii2 < extents.length; _ii2++) {
-                    if (extents[_ii2].length === 0) {
-                        extents[_ii2] = [1, 1];
-                    }
-                }
-            } else {
-                ranges[brush$$1.data] = brush$$1.extent;
-                var _dimRange = config.dimensions[brush$$1.data].yscale.range();
-                var _dimDomain = config.dimensions[brush$$1.data].yscale.domain();
-                for (var _j = 0; _j < _dimRange.length; _j++) {
-                    if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1] && actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
-                        values.push(_dimRange[_j]);
-                    } else if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1]) {
-                        values.unshift(_dimRange[_j]);
-                    }
-                }
-                extents.push(values);
-                for (var _ii3 = 0; _ii3 < extents.length; _ii3++) {
-                    if (extents[_ii3].length === 0) {
-                        extents[_ii3] = [1, 1];
-                    }
-                }
-            }
-            var within = {
-                date: function date(d, p, dimension) {
-                    var category = d[p];
-                    var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
-                    var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
-                    return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-                },
-                number: function number(d, p, dimension) {
-                    return extents[idx][0] <= d[p] && d[p] <= extents[idx][1];
-                },
-                string: function string(d, p, dimension) {
-                    var category = d[p];
-                    var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
-                    var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
-                    return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-                }
-            };
-
-            // filter data, but instead of returning it now,
-            // put it into multiBrush data which is returned after
-            // all brushes are iterated through.
-            var filtered = config.data.filter(function (d) {
-                return actives.every(function (p, dimension) {
-                    return within[config.dimensions[p].type](d, p, dimension);
-                });
-            });
-            for (var z = 0; z < filtered.length; z++) {
-                multiBrushData.push(filtered[z]);
-            }
-            actives = [];
-            ranges = {};
-        };
-
-        for (var idx = 0; idx < config.brushes.length; idx++) {
-            _loop(idx);
-        }
-        return multiBrushData;
+      }
     }
+    // test if within range
+    var within = {
+      date: function date(d, p, dimension) {
+        var category = d[p];
+        var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
+        var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
+        return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+      },
+      number: function number(d, p, dimension) {
+        return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
+      },
+      string: function string(d, p, dimension) {
+        var category = d[p];
+        var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
+        var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
+        return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+      }
+    };
+    return config.data.filter(function (d) {
+      return actives.every(function (p, dimension) {
+        return within[config.dimensions[p].type](d, p, dimension);
+      });
+    });
+  } else {
+    // need to get data from each brush instead of each axis
+    // first must find active axes by iterating through all brushes
+    // then go through similiar process as above.
+    var multiBrushData = [];
+
+    var _loop = function _loop(idx) {
+      var brush$$1 = config.brushes[idx];
+      var values = [];
+      var ranger = brush$$1.extent;
+      var actives = [brush$$1.data];
+      if (typeof config.dimensions[brush$$1.data].yscale.domain()[0] === 'number') {
+        for (var _i = 0; _i < ranger.length; _i++) {
+          if (actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
+            values.push(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
+          } else if (config.dimensions[brush$$1.data].yscale() !== 1) {
+            values.unshift(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
+          }
+        }
+        extents.push(values);
+        for (var _ii2 = 0; _ii2 < extents.length; _ii2++) {
+          if (extents[_ii2].length === 0) {
+            extents[_ii2] = [1, 1];
+          }
+        }
+      } else {
+        ranges[brush$$1.data] = brush$$1.extent;
+        var _dimRange = config.dimensions[brush$$1.data].yscale.range();
+        var _dimDomain = config.dimensions[brush$$1.data].yscale.domain();
+        for (var _j = 0; _j < _dimRange.length; _j++) {
+          if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1] && actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
+            values.push(_dimRange[_j]);
+          } else if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1]) {
+            values.unshift(_dimRange[_j]);
+          }
+        }
+        extents.push(values);
+        for (var _ii3 = 0; _ii3 < extents.length; _ii3++) {
+          if (extents[_ii3].length === 0) {
+            extents[_ii3] = [1, 1];
+          }
+        }
+      }
+      var within = {
+        date: function date(d, p, dimension) {
+          var category = d[p];
+          var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
+          var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
+          return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+        },
+        number: function number(d, p, dimension) {
+          return extents[idx][0] <= d[p] && d[p] <= extents[idx][1];
+        },
+        string: function string(d, p, dimension) {
+          var category = d[p];
+          var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
+          var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
+          return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+        }
+      };
+
+      // filter data, but instead of returning it now,
+      // put it into multiBrush data which is returned after
+      // all brushes are iterated through.
+      var filtered = config.data.filter(function (d) {
+        return actives.every(function (p, dimension) {
+          return within[config.dimensions[p].type](d, p, dimension);
+        });
+      });
+      for (var z = 0; z < filtered.length; z++) {
+        multiBrushData.push(filtered[z]);
+      }
+      actives = [];
+      ranges = {};
+    };
+
+    for (var idx = 0; idx < config.brushes.length; idx++) {
+      _loop(idx);
+    }
+    return multiBrushData;
+  }
 };
 
 var brushPredicate = function brushPredicate(brushGroup, config, pc) {
-    return function () {
-        var predicate = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+  return function () {
+    var predicate = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-        if (predicate === null) {
-            return brushGroup.predicate;
-        }
+    if (predicate === null) {
+      return brushGroup.predicate;
+    }
 
-        predicate = String(predicate).toUpperCase();
-        if (predicate !== 'AND' && predicate !== 'OR') {
-            throw new Error('Invalid predicate ' + predicate);
-        }
+    predicate = String(predicate).toUpperCase();
+    if (predicate !== 'AND' && predicate !== 'OR') {
+      throw new Error('Invalid predicate ' + predicate);
+    }
 
-        brushGroup.predicate = predicate;
-        config.brushed = brushGroup.currentMode().selected();
-        pc.renderBrushed();
-        return pc;
-    };
+    brushGroup.predicate = predicate;
+    config.brushed = brushGroup.currentMode().selected();
+    pc.renderBrushed();
+    return pc;
+  };
 };
 
 var brushMode = function brushMode(brushGroup, config, pc) {
-    return function () {
-        var mode = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+  return function () {
+    var mode = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-        if (mode === null) {
-            return brushGroup.mode;
-        }
+    if (mode === null) {
+      return brushGroup.mode;
+    }
 
-        if (pc.brushModes().indexOf(mode) === -1) {
-            throw new Error('pc.brushmode: Unsupported brush mode: ' + mode);
-        }
+    if (pc.brushModes().indexOf(mode) === -1) {
+      throw new Error('pc.brushmode: Unsupported brush mode: ' + mode);
+    }
 
-        // Make sure that we don't trigger unnecessary events by checking if the mode
-        // actually changes.
-        if (mode !== brushGroup.mode) {
-            // When changing brush modes, the first thing we need to do is clearing any
-            // brushes from the current mode, if any.
-            if (brushGroup.mode !== 'None') {
-                pc.brushReset();
-            }
+    // Make sure that we don't trigger unnecessary events by checking if the mode
+    // actually changes.
+    if (mode !== brushGroup.mode) {
+      // When changing brush modes, the first thing we need to do is clearing any
+      // brushes from the current mode, if any.
+      if (brushGroup.mode !== 'None') {
+        pc.brushReset();
+      }
 
-            // Next, we need to 'uninstall' the current brushMode.
-            brushGroup.modes[brushGroup.mode].uninstall(pc);
-            // Finally, we can install the requested one.
-            brushGroup.mode = mode;
-            brushGroup.modes[brushGroup.mode].install();
-            if (mode === 'None') {
-                delete pc.brushPredicate;
-            } else {
-                pc.brushPredicate = brushPredicate(brushGroup, config, pc);
-            }
-        }
+      // Next, we need to 'uninstall' the current brushMode.
+      brushGroup.modes[brushGroup.mode].uninstall(pc);
+      // Finally, we can install the requested one.
+      brushGroup.mode = mode;
+      brushGroup.modes[brushGroup.mode].install();
+      if (mode === 'None') {
+        delete pc.brushPredicate;
+      } else {
+        pc.brushPredicate = brushPredicate(brushGroup, config, pc);
+      }
+    }
 
-        return pc;
-    };
+    return pc;
+  };
 };
 
 /**
@@ -8859,87 +8840,205 @@ var dimensionLabels = function dimensionLabels(config) {
 };
 
 var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
-    return function (dimension) {
-        pc.flip(dimension);
-        pc.brushReset(dimension);
-        select(this.parentElement).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
-        pc.render();
-    };
+  return function (dimension) {
+    pc.flip(dimension);
+    pc.brushReset(dimension);
+    select(this.parentElement).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
+    pc.render();
+  };
 };
 
 var rotateLabels = function rotateLabels(config, pc) {
-    if (!config.rotateLabels) return;
+  if (!config.rotateLabels) return;
 
-    var delta = event.deltaY;
-    delta = delta < 0 ? -5 : delta;
-    delta = delta > 0 ? 5 : delta;
+  var delta = event.deltaY;
+  delta = delta < 0 ? -5 : delta;
+  delta = delta > 0 ? 5 : delta;
 
-    config.dimensionTitleRotation += delta;
-    pc.svg.selectAll('text.label').attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
-    event.preventDefault();
+  config.dimensionTitleRotation += delta;
+  pc.svg.selectAll('text.label').attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
+  event.preventDefault();
 };
 
 var _this$1 = undefined;
 
 var updateAxes = function updateAxes(config, pc, position, axis, flags) {
-    return function () {
-        var animationTime = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+  return function () {
+    var animationTime = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-        if (animationTime === null) {
-            animationTime = config.animationTime;
+    if (animationTime === null) {
+      animationTime = config.animationTime;
+    }
+
+    var g_data = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys());
+    // Enter
+    g_data.enter().append('svg:g').attr('class', 'dimension').attr('transform', function (p) {
+      return 'translate(' + position(p) + ')';
+    }).style('opacity', 0).append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
+      var axisElement = select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+
+      axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+
+      axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+    }).append('svg:text').attr({
+      'text-anchor': 'middle',
+      y: 0,
+      transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
+      x: 0,
+      class: 'label'
+    }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+
+    // Update
+    g_data.attr('opacity', 0);
+    g_data.select('.axis').transition().duration(animationTime).each(function (d) {
+      select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+    });
+    g_data.select('.label').transition().duration(animationTime).text(dimensionLabels(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
+
+    // Exit
+    g_data.exit().remove();
+
+    g = pc.svg.selectAll('.dimension');
+    g.transition().duration(animationTime).attr('transform', function (p) {
+      return 'translate(' + position(p) + ')';
+    }).style('opacity', 1);
+
+    pc.svg.selectAll('.axis').transition().duration(animationTime).each(function (d) {
+      select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+    });
+
+    if (flags.brushable) pc.brushable();
+    if (flags.reorderable) pc.reorderable();
+    if (pc.brushMode() !== 'None') {
+      var mode = pc.brushMode();
+      pc.brushMode('None');
+      pc.brushMode(mode);
+    }
+    return _this$1;
+  };
+};
+
+/** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
+var getRange = function getRange(config) {
+  var h = config.height - config.margin.top - config.margin.bottom;
+
+  if (config.nullValueSeparator == 'bottom') {
+    return [h + 1 - config.nullValueSeparatorPadding.bottom - config.nullValueSeparatorPadding.top, 1];
+  } else if (config.nullValueSeparator == 'top') {
+    return [h + 1, 1 + config.nullValueSeparatorPadding.bottom + config.nullValueSeparatorPadding.top];
+  }
+  return [h + 1, 1];
+};
+
+var autoscale = function autoscale(config, pc, xscale, ctx) {
+  return function () {
+    // yscale
+    var defaultScales = {
+      date: function date(k) {
+        var _extent = extent(config.data, function (d) {
+          return d[k] ? d[k].getTime() : null;
+        });
+        // special case if single value
+        if (_extent[0] === _extent[1]) {
+          return point$1().domain(_extent).range(getRange(config));
+        }
+        if (config.flipAxes.includes(k)) {
+          var tempDate = [];
+          _extent.forEach(function (val) {
+            tempDate.unshift(val);
+          });
+          _extent = tempDate;
+        }
+        return scaleTime().domain(_extent).range(getRange(config));
+      },
+      number: function number(k) {
+        var _extent = extent(config.data, function (d) {
+          return +d[k];
+        });
+        // special case if single value
+        if (_extent[0] === _extent[1]) {
+          return point$1().domain(_extent).range(getRange(config));
+        }
+        if (config.flipAxes.includes(k)) {
+          var temp = [];
+          _extent.forEach(function (val) {
+            temp.unshift(val);
+          });
+          _extent = temp;
+        }
+        return linear().domain(_extent).range(getRange(config));
+      },
+      string: function string(k) {
+        var counts = {},
+            domain = [];
+        // Let's get the count for each value so that we can sort the domain based
+        // on the number of items for each value.
+        config.data.map(function (p) {
+          if (p[k] === undefined && config.nullValueSeparator !== 'undefined') {
+            return; // null values will be drawn beyond the horizontal null value separator!
+          }
+          if (counts[p[k]] === undefined) {
+            counts[p[k]] = 1;
+          } else {
+            counts[p[k]] = counts[p[k]] + 1;
+          }
+        });
+        if (config.flipAxes.includes(k)) {
+          domain = Object.getOwnPropertyNames(counts).sort();
+        } else {
+          var tempArr = Object.getOwnPropertyNames(counts).sort();
+          for (var i = 0; i < Object.getOwnPropertyNames(counts).length; i++) {
+            domain.push(tempArr.pop());
+          }
         }
 
-        var g_data = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys());
-        // Enter
-        g_data.enter().append('svg:g').attr('class', 'dimension').attr('transform', function (p) {
-            return 'translate(' + position(p) + ')';
-        }).style('opacity', 0).append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
-            var axisElement = select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
-
-            axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-
-            axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-        }).append('svg:text').attr({
-            'text-anchor': 'middle',
-            y: 0,
-            transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
-            x: 0,
-            class: 'label'
-        }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
-
-        // Update
-        g_data.attr('opacity', 0);
-        g_data.select('.axis').transition().duration(animationTime).each(function (d) {
-            select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
-        });
-        g_data.select('.label').transition().duration(animationTime).text(dimensionLabels(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
-
-        // Exit
-        g_data.exit().remove();
-
-        g = pc.svg.selectAll('.dimension');
-        g.transition().duration(animationTime).attr('transform', function (p) {
-            return 'translate(' + position(p) + ')';
-        }).style('opacity', 1);
-
-        pc.svg.selectAll('.axis').transition().duration(animationTime).each(function (d) {
-            select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
-        });
-
-        if (flags.brushable) pc.brushable();
-        if (flags.reorderable) pc.reorderable();
-        if (pc.brushMode() !== 'None') {
-            var mode = pc.brushMode();
-            pc.brushMode('None');
-            pc.brushMode(mode);
+        //need to create an ordinal scale for categorical data
+        var categoricalRange = [];
+        if (domain.length === 1) {
+          //edge case
+          domain = [' ', domain[0], ' '];
         }
-        return _this$1;
+        var addBy = getRange(config)[0] / (domain.length - 1);
+        for (var j = 0; j < domain.length; j++) {
+          if (categoricalRange.length === 0) {
+            categoricalRange.push(0);
+            continue;
+          }
+          categoricalRange.push(categoricalRange[j - 1] + addBy);
+        }
+        return ordinal().domain(domain).range(categoricalRange);
+      }
     };
+    keys(config.dimensions).forEach(function (k) {
+      config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
+    });
+
+    // xscale
+    xscale.range([0, w(config)], 1);
+    // Retina display, etc.
+    var devicePixelRatio = window.devicePixelRatio || 1;
+
+    // canvas sizes
+    pc.selection.selectAll('canvas').style('margin-top', config.margin.top + 'px').style('margin-left', config.margin.left + 'px').style('width', w(config) + 2 + 'px').style('height', h(config) + 2 + 'px').attr('width', (w(config) + 2) * devicePixelRatio).attr('height', (h(config) + 2) * devicePixelRatio);
+    // default styles, needs to be set when canvas width changes
+    ctx.foreground.strokeStyle = config.color;
+    ctx.foreground.lineWidth = 1.4;
+    ctx.foreground.globalCompositeOperation = config.composite;
+    ctx.foreground.globalAlpha = config.alpha;
+    ctx.foreground.scale(devicePixelRatio, devicePixelRatio);
+    ctx.brushed.strokeStyle = config.brushedColor;
+    ctx.brushed.lineWidth = 1.4;
+    ctx.brushed.globalCompositeOperation = config.composite;
+    ctx.brushed.globalAlpha = config.alpha;
+    ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
+    ctx.highlight.lineWidth = 3;
+    ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
+
+    return this;
+  };
 };
 
 var _this = undefined;
-
-//============================================================================================
 
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
@@ -9082,111 +9181,7 @@ var ParCoords = function ParCoords(config) {
     });
   }
 
-  pc.autoscale = function () {
-    // yscale
-    var defaultScales = {
-      date: function date(k) {
-        var _extent = extent(__.data, function (d) {
-          return d[k] ? d[k].getTime() : null;
-        });
-        // special case if single value
-        if (_extent[0] === _extent[1]) {
-          return point$1().domain(_extent).range(getRange(__));
-        }
-        if (__.flipAxes.includes(k)) {
-          var tempDate = [];
-          _extent.forEach(function (val) {
-            tempDate.unshift(val);
-          });
-          _extent = tempDate;
-        }
-        return scaleTime().domain(_extent).range(getRange(__));
-      },
-      number: function number(k) {
-        var _extent = extent(__.data, function (d) {
-          return +d[k];
-        });
-        // special case if single value
-        if (_extent[0] === _extent[1]) {
-          return point$1().domain(_extent).range(getRange(__));
-        }
-        if (__.flipAxes.includes(k)) {
-          var temp = [];
-          _extent.forEach(function (val) {
-            temp.unshift(val);
-          });
-          _extent = temp;
-        }
-        return linear().domain(_extent).range(getRange(__));
-      },
-      string: function string(k) {
-        var counts = {},
-            domain = [];
-        // Let's get the count for each value so that we can sort the domain based
-        // on the number of items for each value.
-        __.data.map(function (p) {
-          if (p[k] === undefined && __.nullValueSeparator !== 'undefined') {
-            return; // null values will be drawn beyond the horizontal null value separator!
-          }
-          if (counts[p[k]] === undefined) {
-            counts[p[k]] = 1;
-          } else {
-            counts[p[k]] = counts[p[k]] + 1;
-          }
-        });
-        if (__.flipAxes.includes(k)) {
-          domain = Object.getOwnPropertyNames(counts).sort();
-        } else {
-          var tempArr = Object.getOwnPropertyNames(counts).sort();
-          for (var i = 0; i < Object.getOwnPropertyNames(counts).length; i++) {
-            domain.push(tempArr.pop());
-          }
-        }
-
-        //need to create an ordinal scale for categorical data
-        var categoricalRange = [];
-        if (domain.length === 1) {
-          //edge case
-          domain = [' ', domain[0], ' '];
-        }
-        var addBy = getRange(__)[0] / (domain.length - 1);
-        for (var j = 0; j < domain.length; j++) {
-          if (categoricalRange.length === 0) {
-            categoricalRange.push(0);
-            continue;
-          }
-          categoricalRange.push(categoricalRange[j - 1] + addBy);
-        }
-        return ordinal().domain(domain).range(categoricalRange);
-      }
-    };
-    keys(__.dimensions).forEach(function (k) {
-      __.dimensions[k].yscale = defaultScales[__.dimensions[k].type](k);
-    });
-
-    // xscale
-    xscale.range([0, w()], 1);
-    // Retina display, etc.
-    var devicePixelRatio = window.devicePixelRatio || 1;
-
-    // canvas sizes
-    pc.selection.selectAll('canvas').style('margin-top', __.margin.top + 'px').style('margin-left', __.margin.left + 'px').style('width', w() + 2 + 'px').style('height', h() + 2 + 'px').attr('width', (w() + 2) * devicePixelRatio).attr('height', (h() + 2) * devicePixelRatio);
-    // default styles, needs to be set when canvas width changes
-    ctx.foreground.strokeStyle = __.color;
-    ctx.foreground.lineWidth = 1.4;
-    ctx.foreground.globalCompositeOperation = __.composite;
-    ctx.foreground.globalAlpha = __.alpha;
-    ctx.foreground.scale(devicePixelRatio, devicePixelRatio);
-    ctx.brushed.strokeStyle = __.brushedColor;
-    ctx.brushed.lineWidth = 1.4;
-    ctx.brushed.globalCompositeOperation = __.composite;
-    ctx.brushed.globalAlpha = __.alpha;
-    ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
-    ctx.highlight.lineWidth = 3;
-    ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
-
-    return this;
-  };
+  pc.autoscale = autoscale(__, pc, xscale, ctx);
 
   pc.scale = function (d, domain) {
     __.dimensions[d].yscale.domain(domain);
