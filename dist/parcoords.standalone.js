@@ -4522,7 +4522,7 @@ function entering() {
   return !this.__axis;
 }
 
-function axis$1(orient, scale) {
+function axis(orient, scale) {
   var tickArguments = [],
       tickValues = null,
       tickFormat = null,
@@ -4631,19 +4631,19 @@ function axis$1(orient, scale) {
 }
 
 function axisTop(scale) {
-  return axis$1(top, scale);
+  return axis(top, scale);
 }
 
 function axisRight(scale) {
-  return axis$1(right, scale);
+  return axis(right, scale);
 }
 
 function axisBottom(scale) {
-  return axis$1(bottom, scale);
+  return axis(bottom, scale);
 }
 
 function axisLeft(scale) {
-  return axis$1(left, scale);
+  return axis(left, scale);
 }
 
 function nopropagation() {
@@ -7217,7 +7217,12 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
   }
 
   function install() {
-    if (!g) g = pc.createAxes().g();
+    g = pc.g();
+    if (!g) {
+      pc.createAxes();
+      g = pc.g();
+    }
+
     // Add and store a brush for each axis.
     var brush$$1 = g.append('svg:g').attr('class', 'brush').each(function (d) {
       select(this).call(brushFor(d, select(this)));
@@ -7485,7 +7490,11 @@ var install2DStrums = function install2DStrums(brushGroup, config, pc, events, x
   }
 
   function install() {
-    if (!g) g = pc.createAxes().g();
+    g = pc.g();
+    if (!g) {
+      pc.createAxes();
+      g = pc.g();
+    }
 
     var _drag = drag();
 
@@ -8434,7 +8443,11 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
   }
 
   function install() {
-    if (!g) pc.createAxes();
+    g = pc.g();
+    if (!g) {
+      pc.createAxes();
+      g = pc.g();
+    }
 
     var _drag = drag();
 
@@ -8833,13 +8846,13 @@ var brushMode = function brushMode(brushGroup, config, pc) {
  * @param d
  * @returns {*}
  */
-var dimensionLabels$1 = function dimensionLabels(config) {
+var dimensionLabels = function dimensionLabels(config) {
   return function (d) {
     return config.dimensions[d].title ? config.dimensions[d].title : d;
   };
 };
 
-var flipAxisAndUpdatePCP$1 = function flipAxisAndUpdatePCP(config, pc, axis) {
+var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
   return function (dimension) {
     pc.flip(dimension);
     pc.brushReset(dimension);
@@ -8848,7 +8861,7 @@ var flipAxisAndUpdatePCP$1 = function flipAxisAndUpdatePCP(config, pc, axis) {
   };
 };
 
-var rotateLabels$1 = function rotateLabels(config, pc) {
+var rotateLabels = function rotateLabels(config, pc) {
   if (!config.rotateLabels) return;
 
   var delta = event.deltaY;
@@ -8886,14 +8899,14 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
       transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
       x: 0,
       class: 'label'
-    }).text(dimensionLabels$1(config)).on('dblclick', flipAxisAndUpdatePCP$1(config, pc, axis)).on('wheel', rotateLabels$1(config, pc));
+    }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
     // Update
     g_data.attr('opacity', 0);
     g_data.select('.axis').transition().duration(animationTime).each(function (d) {
       select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
     });
-    g_data.select('.label').transition().duration(animationTime).text(dimensionLabels$1(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
+    g_data.select('.label').transition().duration(animationTime).text(dimensionLabels(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
 
     // Exit
     g_data.exit().remove();
@@ -9230,8 +9243,8 @@ var getset = function getset(obj, state, events, side_effects) {
       }
       var old = state[key];
       state[key] = x;
-      side_effects.call(key, pc, { value: x, previous: old });
-      events.call(key, pc, { value: x, previous: old });
+      side_effects.call(key, obj, { value: x, previous: old });
+      events.call(key, obj, { value: x, previous: old });
       return obj;
     };
   });
@@ -9260,28 +9273,25 @@ var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
   };
 };
 
-var createAxes = function createAxes(config, pc, xscale, flags) {
+var createAxes = function createAxes(config, pc, xscale, flags, axis) {
     return function () {
-        var g = pc.g();
-
-        if (g) {
+        if (pc.g() !== undefined) {
             pc.removeAxes();
-            g = pc.g();
         }
         // Add a group element for each dimension.
-        g = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys(), function (d) {
+        pc._g = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys(), function (d) {
             return d;
         }).enter().append('svg:g').attr('class', 'dimension').attr('transform', function (d) {
             return 'translate(' + xscale(d) + ')';
         });
         // Add an axis and title.
-        g.append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
+        pc._g.append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
             var axisElement = select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
 
             axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
             axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-        }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
+        }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
         if (config.nullValueSeparator == 'top') {
             pc.svg.append('line').attr('x1', 0).attr('y1', 1 + config.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + config.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
@@ -9333,9 +9343,7 @@ var ParCoords = function ParCoords(config) {
       xscale = point$1(),
       dragging = {},
       axis = axisLeft().ticks(5),
-      g = void 0,
-      // groups for axes, brushes
-  ctx = {},
+      ctx = {},
       canvas = {};
 
   var pc = function pc(selection) {
@@ -9659,18 +9667,18 @@ var ParCoords = function ParCoords(config) {
   _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
 
   function flipAxisAndUpdatePCP(dimension) {
-    var g = pc.svg.selectAll('.dimension');
     pc.flip(dimension);
     pc.brushReset(dimension);
     select(this.parentElement).transition().duration(__.animationTime).call(axis.scale(__.dimensions[dimension].yscale));
     pc.render();
   }
 
-  pc.createAxes = createAxes(__, pc, xscale, flags);
+  pc.createAxes = createAxes(__, pc, xscale, flags, axis);
 
   pc.removeAxes = function () {
-    g.remove();
-    g = undefined;
+    pc._g.remove();
+
+    delete pc._g;
     return this;
   };
 
@@ -9724,7 +9732,7 @@ var ParCoords = function ParCoords(config) {
     __.brushes = brushesToKeep;
     __.brushed = false;
 
-    if (g) {
+    if (pc.g() !== undefined) {
       var nodes = selectAll('.brush').nodes();
       for (var i = 0; i < nodes.length; i++) {
         if (nodes[i].__data__ === dimension) {
@@ -9742,7 +9750,9 @@ var ParCoords = function ParCoords(config) {
 
   // Jason Davies, http://bl.ocks.org/1341281
   pc.reorderable = function () {
-    if (!g) pc.createAxes();
+    if (pc.g() === undefined) pc.createAxes();
+    var g = pc.g();
+
     g.style('cursor', 'move').call(drag().on('start', function (d) {
       dragging[d] = this.__origin__ = xscale(d);
     }).on('drag', function (d) {
@@ -9768,6 +9778,7 @@ var ParCoords = function ParCoords(config) {
   // the given row.
   pc.reorder = function (rowdata) {
     var firstDim = pc.getOrderedDimensionKeys()[0];
+    var g = pc.g();
 
     pc.sortDimensionsByRowData(rowdata);
     // NOTE: this is relatively cheap given that:
@@ -9874,7 +9885,7 @@ var ParCoords = function ParCoords(config) {
   pc.ctx = ctx;
   pc.canvas = canvas;
   pc.g = function () {
-    return g;
+    return pc._g;
   };
 
   // rescale for height, width and margins

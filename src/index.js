@@ -73,7 +73,6 @@ const ParCoords = config => {
     xscale = scalePoint(),
     dragging = {},
     axis = axisLeft().ticks(5),
-    g, // groups for axes, brushes
     ctx = {},
     canvas = {};
 
@@ -471,7 +470,6 @@ const ParCoords = config => {
   );
 
   function flipAxisAndUpdatePCP(dimension) {
-    let g = pc.svg.selectAll('.dimension');
     pc.flip(dimension);
     pc.brushReset(dimension);
     select(this.parentElement)
@@ -498,15 +496,12 @@ const ParCoords = config => {
     event.preventDefault();
   }
 
-  function dimensionLabels(d) {
-    return __.dimensions[d].title ? __.dimensions[d].title : d; // dimension display names
-  }
-
-  pc.createAxes = createAxes(__, pc, xscale, flags);
+  pc.createAxes = createAxes(__, pc, xscale, flags, axis);
 
   pc.removeAxes = function() {
-    g.remove();
-    g = undefined;
+    pc._g.remove();
+
+    delete pc._g;
     return this;
   };
 
@@ -566,7 +561,7 @@ const ParCoords = config => {
     __.brushes = brushesToKeep;
     __.brushed = false;
 
-    if (g) {
+    if (pc.g() !== undefined) {
       let nodes = selectAll('.brush').nodes();
       for (let i = 0; i < nodes.length; i++) {
         if (nodes[i].__data__ === dimension) {
@@ -586,7 +581,9 @@ const ParCoords = config => {
 
   // Jason Davies, http://bl.ocks.org/1341281
   pc.reorderable = function() {
-    if (!g) pc.createAxes();
+    if (pc.g() === undefined) pc.createAxes();
+    const g = pc.g();
+
     g.style('cursor', 'move').call(
       drag()
         .on('start', function(d) {
@@ -622,6 +619,7 @@ const ParCoords = config => {
   // the given row.
   pc.reorder = function(rowdata) {
     let firstDim = pc.getOrderedDimensionKeys()[0];
+    const g = pc.g();
 
     pc.sortDimensionsByRowData(rowdata);
     // NOTE: this is relatively cheap given that:
@@ -732,9 +730,7 @@ const ParCoords = config => {
   pc.xscale = xscale;
   pc.ctx = ctx;
   pc.canvas = canvas;
-  pc.g = function() {
-    return g;
-  };
+  pc.g = ()=> pc._g;
 
   // rescale for height, width and margins
   // TODO currently assumes chart is brushable, and destroys old brushes

@@ -1,14 +1,14 @@
 import {select} from "d3-selection";
+import dimensionLabels from '../util/dimensionLabels';
+import flipAxisAndUpdatePCP from '../util/flipAxisAndUpdatePCP';
+import rotateLabels from '../util/rotateLabels';
 
-const createAxes = (config, pc, xscale, flags)=> function() {
-    let g = pc.g();
-
-    if (g) {
+const createAxes = (config, pc, xscale, flags, axis)=> function() {
+    if (pc.g() !== undefined) {
         pc.removeAxes();
-        g = pc.g();
     }
     // Add a group element for each dimension.
-    g = pc.svg
+    pc._g = pc.svg
         .selectAll('.dimension')
         .data(pc.getOrderedDimensionKeys(), function(d) {
             return d;
@@ -20,7 +20,7 @@ const createAxes = (config, pc, xscale, flags)=> function() {
             return 'translate(' + xscale(d) + ')';
         });
     // Add an axis and title.
-    g
+    pc._g
         .append('svg:g')
         .attr('class', 'axis')
         .attr('transform', 'translate(0,0)')
@@ -51,9 +51,10 @@ const createAxes = (config, pc, xscale, flags)=> function() {
         )
         .attr('x', 0)
         .attr('class', 'label')
-        .text(dimensionLabels)
-        .on('dblclick', flipAxisAndUpdatePCP)
-        .on('wheel', rotateLabels);
+        .text(dimensionLabels(config))
+        .on('dblclick', flipAxisAndUpdatePCP(config, pc, axis))
+        .on('wheel', rotateLabels(config, pc));
+
 
     if (config.nullValueSeparator == 'top') {
         pc.svg

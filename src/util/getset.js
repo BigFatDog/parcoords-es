@@ -15,8 +15,8 @@ const getset = (obj, state, events, side_effects) => {
       }
       let old = state[key];
       state[key] = x;
-      side_effects.call(key, pc, { value: x, previous: old });
-      events.call(key, pc, { value: x, previous: old });
+      side_effects.call(key, obj, { value: x, previous: old });
+      events.call(key, obj, { value: x, previous: old });
       return obj;
     };
   });
