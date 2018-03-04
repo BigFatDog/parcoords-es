@@ -9218,6 +9218,25 @@ var computeRealCentroids = function computeRealCentroids(dimensions, position) {
     };
 };
 
+var getset = function getset(obj, state, events, side_effects) {
+    keys(state).forEach(function (key) {
+        obj[key] = function (x) {
+            if (!arguments.length) {
+                return state[key];
+            }
+            if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
+                console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
+                x = pc.applyDimensionDefaults(x);
+            }
+            var old = state[key];
+            state[key] = x;
+            side_effects.call(key, pc, { value: x, previous: old });
+            events.call(key, pc, { value: x, previous: old });
+            return obj;
+        };
+    });
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9338,30 +9357,13 @@ var ParCoords = function ParCoords(config) {
   pc.flags = flags;
 
   // create getter/setters
-  getset(pc, __, events);
+  getset(pc, __, events, side_effects);
 
   // expose events
   _rebind(pc, events, 'on');
 
   // getter/setter with event firing
-  function getset(obj, state, events) {
-    keys(state).forEach(function (key) {
-      obj[key] = function (x) {
-        if (!arguments.length) {
-          return state[key];
-        }
-        if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-          console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
-          x = pc.applyDimensionDefaults(x);
-        }
-        var old = state[key];
-        state[key] = x;
-        side_effects.call(key, pc, { value: x, previous: old });
-        events.call(key, pc, { value: x, previous: old });
-        return obj;
-      };
-    });
-  }
+
 
   pc.autoscale = autoscale(__, pc, xscale, ctx);
 

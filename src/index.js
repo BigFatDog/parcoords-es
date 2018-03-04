@@ -25,6 +25,7 @@ import commonScale from './api/commonScale';
 import computeClusterCentroids from './util/computeClusterCentroids';
 import computeCentroids from './util/computeCentroids';
 import computeRealCentroids from './api/computeRealCentroids';
+import getset from './util/getset';
 //============================================================================================
 
 const ParCoords = config => {
@@ -176,35 +177,13 @@ const ParCoords = config => {
   pc.flags = flags;
 
   // create getter/setters
-  getset(pc, __, events);
+  getset(pc, __, events, side_effects);
 
   // expose events
   _rebind(pc, events, 'on');
 
   // getter/setter with event firing
-  function getset(obj, state, events) {
-    keys(state).forEach(function(key) {
-      obj[key] = function(x) {
-        if (!arguments.length) {
-          return state[key];
-        }
-        if (
-          key === 'dimensions' &&
-          Object.prototype.toString.call(x) === '[object Array]'
-        ) {
-          console.warn(
-            'pc.dimensions([]) is deprecated, use pc.dimensions({})'
-          );
-          x = pc.applyDimensionDefaults(x);
-        }
-        let old = state[key];
-        state[key] = x;
-        side_effects.call(key, pc, { value: x, previous: old });
-        events.call(key, pc, { value: x, previous: old });
-        return obj;
-      };
-    });
-  }
+
 
   pc.autoscale = autoscale(__, pc, xscale, ctx);
 
