@@ -9615,6 +9615,12 @@ var toType = function toType(v) {
     return {}.toString.call(v).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
 };
 
+var toString = function toString(config) {
+    return function () {
+        return 'Parallel Coordinates: ' + keys(config.dimensions).length + ' dimensions (' + keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9974,9 +9980,7 @@ var ParCoords = function ParCoords(config) {
 
   pc.version = '1.0.3';
   // this descriptive text should live with other introspective methods
-  pc.toString = function () {
-    return 'Parallel Coordinates: ' + keys(__.dimensions).length + ' dimensions (' + keys(__.data[0]).length + ' total) , ' + __.data.length + ' rows';
-  };
+  pc.toString = toString(__);
 
   return pc;
 };

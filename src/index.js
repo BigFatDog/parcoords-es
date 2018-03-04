@@ -44,6 +44,7 @@ import {
 } from './api/renderBrushed';
 import brushReset from './api/brushReset';
 import toType from './api/toType';
+import toString from './api/toString';
 //============================================================================================
 
 const ParCoords = config => {
@@ -451,17 +452,7 @@ const ParCoords = config => {
 
   pc.version = '1.0.3';
   // this descriptive text should live with other introspective methods
-  pc.toString = function() {
-    return (
-      'Parallel Coordinates: ' +
-      keys(__.dimensions).length +
-      ' dimensions (' +
-      keys(__.data[0]).length +
-      ' total) , ' +
-      __.data.length +
-      ' rows'
-    );
-  };
+  pc.toString = toString(__);
 
   return pc;
 };
