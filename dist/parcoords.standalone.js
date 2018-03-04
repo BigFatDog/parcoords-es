@@ -9278,22 +9278,22 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
 var _this$2 = undefined;
 
 var axisDots = function axisDots(config, pc, position) {
-    return function (_r) {
-        var r = _r || 0.1;
-        var ctx = pc.ctx.marks;
-        var startAngle = 0;
-        var endAngle = 2 * Math.PI;
-        ctx.globalAlpha = min([1 / Math.pow(config.data.length, 1 / 2), 1]);
-        config.data.forEach(function (d) {
-            entries(config.dimensions).forEach(function (p, i) {
-                ctx.beginPath();
-                ctx.arc(position(p), config.dimensions[p.key].yscale(d[p]), r, startAngle, endAngle);
-                ctx.stroke();
-                ctx.fill();
-            });
-        });
-        return _this$2;
-    };
+  return function (_r) {
+    var r = _r || 0.1;
+    var ctx = pc.ctx.marks;
+    var startAngle = 0;
+    var endAngle = 2 * Math.PI;
+    ctx.globalAlpha = min([1 / Math.pow(config.data.length, 1 / 2), 1]);
+    config.data.forEach(function (d) {
+      entries(config.dimensions).forEach(function (p, i) {
+        ctx.beginPath();
+        ctx.arc(position(p), config.dimensions[p.key].yscale(d[p]), r, startAngle, endAngle);
+        ctx.stroke();
+        ctx.fill();
+      });
+    });
+    return _this$2;
+  };
 };
 
 var computeCentroids = function computeCentroids(config, position, row) {
@@ -9327,53 +9327,79 @@ var computeCentroids = function computeCentroids(config, position, row) {
 
 // draw single cubic bezier curve
 var singleCurve = function singleCurve(config, position, d, ctx) {
-    var centroids = computeCentroids(config, position, d);
-    var cps = computeControlPoints(config.smoothness, centroids);
+  var centroids = computeCentroids(config, position, d);
+  var cps = computeControlPoints(config.smoothness, centroids);
 
-    ctx.moveTo(cps[0].e(1), cps[0].e(2));
+  ctx.moveTo(cps[0].e(1), cps[0].e(2));
 
-    for (var i = 1; i < cps.length; i += 3) {
-        if (config.showControlPoints) {
-            for (var j = 0; j < 3; j++) {
-                ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
-            }
-        }
-        ctx.bezierCurveTo(cps[i].e(1), cps[i].e(2), cps[i + 1].e(1), cps[i + 1].e(2), cps[i + 2].e(1), cps[i + 2].e(2));
+  for (var i = 1; i < cps.length; i += 3) {
+    if (config.showControlPoints) {
+      for (var j = 0; j < 3; j++) {
+        ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
+      }
     }
+    ctx.bezierCurveTo(cps[i].e(1), cps[i].e(2), cps[i + 1].e(1), cps[i + 1].e(2), cps[i + 2].e(1), cps[i + 2].e(2));
+  }
 };
 
 // returns the y-position just beyond the separating null value line
 var getNullPosition = function getNullPosition(config) {
-    if (config.nullValueSeparator == 'bottom') {
-        return h$1(config) + 1;
-    } else if (config.nullValueSeparator == 'top') {
-        return 1;
-    } else {
-        console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
-    }
+  if (config.nullValueSeparator == 'bottom') {
     return h$1(config) + 1;
+  } else if (config.nullValueSeparator == 'top') {
+    return 1;
+  } else {
+    console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
+  }
+  return h$1(config) + 1;
 };
 
 var singlePath = function singlePath(config, position, d, ctx) {
-    entries(config.dimensions).forEach(function (p, i) {
-        //p isn't really p
-        if (i == 0) {
-            ctx.moveTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-        } else {
-            ctx.lineTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-        }
-    });
+  entries(config.dimensions).forEach(function (p, i) {
+    //p isn't really p
+    if (i == 0) {
+      ctx.moveTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
+    } else {
+      ctx.lineTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
+    }
+  });
 };
 
 // draw single polyline
 var colorPath = function colorPath(config, position, d, ctx) {
-    ctx.beginPath();
-    if (config.bundleDimension !== null && config.bundlingStrength > 0 || config.smoothness > 0) {
-        singleCurve(config, position, d, ctx);
-    } else {
-        singlePath(config, position, d, ctx);
-    }
-    ctx.stroke();
+  ctx.beginPath();
+  if (config.bundleDimension !== null && config.bundlingStrength > 0 || config.smoothness > 0) {
+    singleCurve(config, position, d, ctx);
+  } else {
+    singlePath(config, position, d, ctx);
+  }
+  ctx.stroke();
+};
+
+var applyAxisConfig = function applyAxisConfig(axis, dimension) {
+  var axisCfg = void 0;
+
+  switch (dimension.orient) {
+    case 'left':
+      axisCfg = axisLeft(dimension.yscale);
+      break;
+    case 'right':
+      axisCfg = axisRight(dimension.yscale);
+      break;
+    case 'top':
+      axisCfg = axisTop(dimension.yscale);
+      break;
+    case 'bottom':
+      axisCfg = axisBottom(dimension.yscale);
+      break;
+    default:
+      axisCfg = axisLeft(dimension.yscale);
+      break;
+  }
+
+  axisCfg.ticks(dimension.ticks).tickValues(dimension.tickValues).tickSizeInner(dimension.innerTickSize).tickSizeOuter(dimension.outerTickSize).tickPadding(dimension.tickPadding).tickFormat(dimension.tickFormat);
+
+  return axisCfg;
 };
 
 var _this = undefined;
@@ -9678,35 +9704,7 @@ var ParCoords = function ParCoords(config) {
 
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
 
-  pc.applyAxisConfig = function (axis, dimension) {
-    var axisCfg = void 0;
-
-    switch (dimension.orient) {
-      case 'left':
-        axisCfg = axisLeft(dimension.yscale);
-        break;
-      case 'right':
-        axisCfg = axisRight(dimension.yscale);
-
-        break;
-      case 'top':
-        axisCfg = axisTop(dimension.yscale);
-
-        break;
-      case 'bottom':
-        axisCfg = axisBottom(dimension.yscale);
-
-        break;
-      default:
-        axisCfg = axisLeft(dimension.yscale);
-
-        break;
-    }
-
-    axisCfg.ticks(dimension.ticks).tickValues(dimension.tickValues).tickSizeInner(dimension.innerTickSize).tickSizeOuter(dimension.outerTickSize).tickPadding(dimension.tickPadding).tickFormat(dimension.tickFormat);
-
-    return axisCfg;
-  };
+  pc.applyAxisConfig = applyAxisConfig;
 
   pc.brushable = brushable(__, pc, flags);
 

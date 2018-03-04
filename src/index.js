@@ -29,9 +29,10 @@ import applyDimensionDefaults from './api/applyDimensionDefaults';
 import createAxes from './api/createAxes';
 import axisDots from './api/axisDots';
 import colorPath from './util/colorPath';
+import applyAxisConfig from './api/applyAxisConfig';
 
 import w from './util/width';
-import h  from './util/height';
+import h from './util/height';
 //============================================================================================
 
 const ParCoords = config => {
@@ -333,7 +334,6 @@ const ParCoords = config => {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-
   function path_brushed(d, i) {
     if (__.brushedColor !== null) {
       ctx.brushed.strokeStyle = _functor(__.brushedColor)(d, i);
@@ -390,41 +390,7 @@ const ParCoords = config => {
 
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
 
-  pc.applyAxisConfig = function(axis, dimension) {
-    let axisCfg;
-
-    switch (dimension.orient) {
-      case 'left':
-        axisCfg = axisLeft(dimension.yscale);
-        break;
-      case 'right':
-        axisCfg = axisRight(dimension.yscale);
-
-        break;
-      case 'top':
-        axisCfg = axisTop(dimension.yscale);
-
-        break;
-      case 'bottom':
-        axisCfg = axisBottom(dimension.yscale);
-
-        break;
-      default:
-        axisCfg = axisLeft(dimension.yscale);
-
-        break;
-    }
-
-    axisCfg
-      .ticks(dimension.ticks)
-      .tickValues(dimension.tickValues)
-      .tickSizeInner(dimension.innerTickSize)
-      .tickSizeOuter(dimension.outerTickSize)
-      .tickPadding(dimension.tickPadding)
-      .tickFormat(dimension.tickFormat);
-
-    return axisCfg;
-  };
+  pc.applyAxisConfig = applyAxisConfig;
 
   pc.brushable = brushable(__, pc, flags);
 
