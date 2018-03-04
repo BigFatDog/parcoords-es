@@ -1,10 +1,9 @@
-import { select, selectAll, event } from 'd3-selection';
+import { select, selectAll } from 'd3-selection';
 import { keys, entries } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
-import { ascending, min } from 'd3-array';
+import { ascending } from 'd3-array';
 import { scalePoint } from 'd3-scale';
-import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
-import { drag } from 'd3-drag';
+import { axisLeft } from 'd3-axis';
 
 import './parallel-coordinates.css';
 import renderQueue from './renderQueue';
@@ -34,6 +33,7 @@ import reorderable from './api/reorderable';
 
 import w from './util/width';
 import h from './util/height';
+import resize from './api/resize';
 //============================================================================================
 
 const ParCoords = config => {
@@ -549,37 +549,7 @@ const ParCoords = config => {
   pc.canvas = canvas;
   pc.g = () => pc._g;
 
-  // rescale for height, width and margins
-  // TODO currently assumes chart is brushable, and destroys old brushes
-  pc.resize = function() {
-    // selection size
-    pc.selection
-      .select('svg')
-      .attr('width', __.width)
-      .attr('height', __.height);
-    pc.svg.attr(
-      'transform',
-      'translate(' + __.margin.left + ',' + __.margin.top + ')'
-    );
-
-    // FIXME: the current brush state should pass through
-    if (flags.brushable) pc.brushReset();
-
-    // scales
-    pc.autoscale();
-
-    // axes, destroys old brushes.
-    if (g) pc.createAxes();
-    if (flags.brushable) pc.brushable();
-    if (flags.reorderable) pc.reorderable();
-
-    events.call('resize', this, {
-      width: __.width,
-      height: __.height,
-      margin: __.margin,
-    });
-    return this;
-  };
+  pc.resize = resize(__, pc, flags, events);
 
   // highlight an array of data
   pc.highlight = function(data) {

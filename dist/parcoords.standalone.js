@@ -4646,236 +4646,6 @@ function axisLeft(scale) {
   return axis(left, scale);
 }
 
-function nopropagation() {
-  event.stopImmediatePropagation();
-}
-
-var noevent = function () {
-  event.preventDefault();
-  event.stopImmediatePropagation();
-};
-
-var dragDisable = function (view) {
-  var root = view.document.documentElement,
-      selection$$1 = select(view).on("dragstart.drag", noevent, true);
-  if ("onselectstart" in root) {
-    selection$$1.on("selectstart.drag", noevent, true);
-  } else {
-    root.__noselect = root.style.MozUserSelect;
-    root.style.MozUserSelect = "none";
-  }
-};
-
-function yesdrag(view, noclick) {
-  var root = view.document.documentElement,
-      selection$$1 = select(view).on("dragstart.drag", null);
-  if (noclick) {
-    selection$$1.on("click.drag", noevent, true);
-    setTimeout(function () {
-      selection$$1.on("click.drag", null);
-    }, 0);
-  }
-  if ("onselectstart" in root) {
-    selection$$1.on("selectstart.drag", null);
-  } else {
-    root.style.MozUserSelect = root.__noselect;
-    delete root.__noselect;
-  }
-}
-
-var constant$4 = function (x) {
-  return function () {
-    return x;
-  };
-};
-
-function DragEvent(target, type, subject, id, active, x, y, dx, dy, dispatch) {
-  this.target = target;
-  this.type = type;
-  this.subject = subject;
-  this.identifier = id;
-  this.active = active;
-  this.x = x;
-  this.y = y;
-  this.dx = dx;
-  this.dy = dy;
-  this._ = dispatch;
-}
-
-DragEvent.prototype.on = function () {
-  var value = this._.on.apply(this._, arguments);
-  return value === this._ ? this : value;
-};
-
-function defaultFilter() {
-  return !event.button;
-}
-
-function defaultContainer() {
-  return this.parentNode;
-}
-
-function defaultSubject(d) {
-  return d == null ? { x: event.x, y: event.y } : d;
-}
-
-function defaultTouchable() {
-  return "ontouchstart" in this;
-}
-
-var drag = function () {
-  var filter = defaultFilter,
-      container = defaultContainer,
-      subject = defaultSubject,
-      touchable = defaultTouchable,
-      gestures = {},
-      listeners = dispatch("start", "drag", "end"),
-      active = 0,
-      mousedownx,
-      mousedowny,
-      mousemoving,
-      touchending,
-      clickDistance2 = 0;
-
-  function drag(selection$$1) {
-    selection$$1.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
-  }
-
-  function mousedowned() {
-    if (touchending || !filter.apply(this, arguments)) return;
-    var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
-    if (!gesture) return;
-    select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
-    dragDisable(event.view);
-    nopropagation();
-    mousemoving = false;
-    mousedownx = event.clientX;
-    mousedowny = event.clientY;
-    gesture("start");
-  }
-
-  function mousemoved() {
-    noevent();
-    if (!mousemoving) {
-      var dx = event.clientX - mousedownx,
-          dy = event.clientY - mousedowny;
-      mousemoving = dx * dx + dy * dy > clickDistance2;
-    }
-    gestures.mouse("drag");
-  }
-
-  function mouseupped() {
-    select(event.view).on("mousemove.drag mouseup.drag", null);
-    yesdrag(event.view, mousemoving);
-    noevent();
-    gestures.mouse("end");
-  }
-
-  function touchstarted() {
-    if (!filter.apply(this, arguments)) return;
-    var touches$$1 = event.changedTouches,
-        c = container.apply(this, arguments),
-        n = touches$$1.length,
-        i,
-        gesture;
-
-    for (i = 0; i < n; ++i) {
-      if (gesture = beforestart(touches$$1[i].identifier, c, touch, this, arguments)) {
-        nopropagation();
-        gesture("start");
-      }
-    }
-  }
-
-  function touchmoved() {
-    var touches$$1 = event.changedTouches,
-        n = touches$$1.length,
-        i,
-        gesture;
-
-    for (i = 0; i < n; ++i) {
-      if (gesture = gestures[touches$$1[i].identifier]) {
-        noevent();
-        gesture("drag");
-      }
-    }
-  }
-
-  function touchended() {
-    var touches$$1 = event.changedTouches,
-        n = touches$$1.length,
-        i,
-        gesture;
-
-    if (touchending) clearTimeout(touchending);
-    touchending = setTimeout(function () {
-      touchending = null;
-    }, 500); // Ghost clicks are delayed!
-    for (i = 0; i < n; ++i) {
-      if (gesture = gestures[touches$$1[i].identifier]) {
-        nopropagation();
-        gesture("end");
-      }
-    }
-  }
-
-  function beforestart(id, container, point$$1, that, args) {
-    var p = point$$1(container, id),
-        s,
-        dx,
-        dy,
-        sublisteners = listeners.copy();
-
-    if (!customEvent(new DragEvent(drag, "beforestart", s, id, active, p[0], p[1], 0, 0, sublisteners), function () {
-      if ((event.subject = s = subject.apply(that, args)) == null) return false;
-      dx = s.x - p[0] || 0;
-      dy = s.y - p[1] || 0;
-      return true;
-    })) return;
-
-    return function gesture(type) {
-      var p0 = p,
-          n;
-      switch (type) {
-        case "start":
-          gestures[id] = gesture, n = active++;break;
-        case "end":
-          delete gestures[id], --active; // nobreak
-        case "drag":
-          p = point$$1(container, id), n = active;break;
-      }
-      customEvent(new DragEvent(drag, type, s, id, n, p[0] + dx, p[1] + dy, p[0] - p0[0], p[1] - p0[1], sublisteners), sublisteners.apply, sublisteners, [type, that, args]);
-    };
-  }
-
-  drag.filter = function (_) {
-    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$4(!!_), drag) : filter;
-  };
-
-  drag.container = function (_) {
-    return arguments.length ? (container = typeof _ === "function" ? _ : constant$4(_), drag) : container;
-  };
-
-  drag.subject = function (_) {
-    return arguments.length ? (subject = typeof _ === "function" ? _ : constant$4(_), drag) : subject;
-  };
-
-  drag.touchable = function (_) {
-    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$4(!!_), drag) : touchable;
-  };
-
-  drag.on = function () {
-    var value = listeners.on.apply(listeners, arguments);
-    return value === listeners ? drag : value;
-  };
-
-  drag.clickDistance = function (_) {
-    return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
-  };
-
-  return drag;
-};
-
 /**
  * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
  * Available via the MIT license.
@@ -5059,6 +4829,236 @@ var InitialState = {
   flipAxes: [],
   animationTime: 1100, // How long it takes to flip the axis when you double click
   rotateLabels: false
+};
+
+function nopropagation() {
+  event.stopImmediatePropagation();
+}
+
+var noevent = function () {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+};
+
+var nodrag = function (view) {
+  var root = view.document.documentElement,
+      selection$$1 = select(view).on("dragstart.drag", noevent, true);
+  if ("onselectstart" in root) {
+    selection$$1.on("selectstart.drag", noevent, true);
+  } else {
+    root.__noselect = root.style.MozUserSelect;
+    root.style.MozUserSelect = "none";
+  }
+};
+
+function yesdrag(view, noclick) {
+  var root = view.document.documentElement,
+      selection$$1 = select(view).on("dragstart.drag", null);
+  if (noclick) {
+    selection$$1.on("click.drag", noevent, true);
+    setTimeout(function () {
+      selection$$1.on("click.drag", null);
+    }, 0);
+  }
+  if ("onselectstart" in root) {
+    selection$$1.on("selectstart.drag", null);
+  } else {
+    root.style.MozUserSelect = root.__noselect;
+    delete root.__noselect;
+  }
+}
+
+var constant$4 = function (x) {
+  return function () {
+    return x;
+  };
+};
+
+function DragEvent(target, type, subject, id, active, x, y, dx, dy, dispatch) {
+  this.target = target;
+  this.type = type;
+  this.subject = subject;
+  this.identifier = id;
+  this.active = active;
+  this.x = x;
+  this.y = y;
+  this.dx = dx;
+  this.dy = dy;
+  this._ = dispatch;
+}
+
+DragEvent.prototype.on = function () {
+  var value = this._.on.apply(this._, arguments);
+  return value === this._ ? this : value;
+};
+
+function defaultFilter$1() {
+  return !event.button;
+}
+
+function defaultContainer() {
+  return this.parentNode;
+}
+
+function defaultSubject(d) {
+  return d == null ? { x: event.x, y: event.y } : d;
+}
+
+function defaultTouchable() {
+  return "ontouchstart" in this;
+}
+
+var drag = function () {
+  var filter = defaultFilter$1,
+      container = defaultContainer,
+      subject = defaultSubject,
+      touchable = defaultTouchable,
+      gestures = {},
+      listeners = dispatch("start", "drag", "end"),
+      active = 0,
+      mousedownx,
+      mousedowny,
+      mousemoving,
+      touchending,
+      clickDistance2 = 0;
+
+  function drag(selection$$1) {
+    selection$$1.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
+  }
+
+  function mousedowned() {
+    if (touchending || !filter.apply(this, arguments)) return;
+    var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
+    if (!gesture) return;
+    select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
+    nodrag(event.view);
+    nopropagation();
+    mousemoving = false;
+    mousedownx = event.clientX;
+    mousedowny = event.clientY;
+    gesture("start");
+  }
+
+  function mousemoved() {
+    noevent();
+    if (!mousemoving) {
+      var dx = event.clientX - mousedownx,
+          dy = event.clientY - mousedowny;
+      mousemoving = dx * dx + dy * dy > clickDistance2;
+    }
+    gestures.mouse("drag");
+  }
+
+  function mouseupped() {
+    select(event.view).on("mousemove.drag mouseup.drag", null);
+    yesdrag(event.view, mousemoving);
+    noevent();
+    gestures.mouse("end");
+  }
+
+  function touchstarted() {
+    if (!filter.apply(this, arguments)) return;
+    var touches$$1 = event.changedTouches,
+        c = container.apply(this, arguments),
+        n = touches$$1.length,
+        i,
+        gesture;
+
+    for (i = 0; i < n; ++i) {
+      if (gesture = beforestart(touches$$1[i].identifier, c, touch, this, arguments)) {
+        nopropagation();
+        gesture("start");
+      }
+    }
+  }
+
+  function touchmoved() {
+    var touches$$1 = event.changedTouches,
+        n = touches$$1.length,
+        i,
+        gesture;
+
+    for (i = 0; i < n; ++i) {
+      if (gesture = gestures[touches$$1[i].identifier]) {
+        noevent();
+        gesture("drag");
+      }
+    }
+  }
+
+  function touchended() {
+    var touches$$1 = event.changedTouches,
+        n = touches$$1.length,
+        i,
+        gesture;
+
+    if (touchending) clearTimeout(touchending);
+    touchending = setTimeout(function () {
+      touchending = null;
+    }, 500); // Ghost clicks are delayed!
+    for (i = 0; i < n; ++i) {
+      if (gesture = gestures[touches$$1[i].identifier]) {
+        nopropagation();
+        gesture("end");
+      }
+    }
+  }
+
+  function beforestart(id, container, point$$1, that, args) {
+    var p = point$$1(container, id),
+        s,
+        dx,
+        dy,
+        sublisteners = listeners.copy();
+
+    if (!customEvent(new DragEvent(drag, "beforestart", s, id, active, p[0], p[1], 0, 0, sublisteners), function () {
+      if ((event.subject = s = subject.apply(that, args)) == null) return false;
+      dx = s.x - p[0] || 0;
+      dy = s.y - p[1] || 0;
+      return true;
+    })) return;
+
+    return function gesture(type) {
+      var p0 = p,
+          n;
+      switch (type) {
+        case "start":
+          gestures[id] = gesture, n = active++;break;
+        case "end":
+          delete gestures[id], --active; // nobreak
+        case "drag":
+          p = point$$1(container, id), n = active;break;
+      }
+      customEvent(new DragEvent(drag, type, s, id, n, p[0] + dx, p[1] + dy, p[0] - p0[0], p[1] - p0[1], sublisteners), sublisteners.apply, sublisteners, [type, that, args]);
+    };
+  }
+
+  drag.filter = function (_) {
+    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$4(!!_), drag) : filter;
+  };
+
+  drag.container = function (_) {
+    return arguments.length ? (container = typeof _ === "function" ? _ : constant$4(_), drag) : container;
+  };
+
+  drag.subject = function (_) {
+    return arguments.length ? (subject = typeof _ === "function" ? _ : constant$4(_), drag) : subject;
+  };
+
+  drag.touchable = function (_) {
+    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$4(!!_), drag) : touchable;
+  };
+
+  drag.on = function () {
+    var value = listeners.on.apply(listeners, arguments);
+    return value === listeners ? drag : value;
+  };
+
+  drag.clickDistance = function (_) {
+    return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
+  };
+
+  return drag;
 };
 
 var frame = 0;
@@ -6633,7 +6633,7 @@ function type(t) {
 }
 
 // Ignore right-click, since that should open the context menu.
-function defaultFilter$1() {
+function defaultFilter() {
   return !event.button;
 }
 
@@ -6666,7 +6666,7 @@ function brushY() {
 
 function brush$1(dim) {
   var extent = defaultExtent,
-      filter = defaultFilter$1,
+      filter = defaultFilter,
       listeners = dispatch(brush, "start", "brush", "end"),
       handleSize = 6,
       touchending;
@@ -6847,7 +6847,7 @@ function brush$1(dim) {
     } else {
       var view = select(event.view).on("keydown.brush", keydowned, true).on("keyup.brush", keyupped, true).on("mousemove.brush", moved, true).on("mouseup.brush", ended, true);
 
-      dragDisable(event.view);
+      nodrag(event.view);
     }
 
     nopropagation$1();
@@ -9402,38 +9402,63 @@ var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   return axisCfg;
 };
 
-var _this$3 = undefined;
-
 // Jason Davies, http://bl.ocks.org/1341281
 var reorderable = function reorderable(config, pc, xscale, position, dragging, flags) {
-    return function () {
-        if (pc.g() === undefined) pc.createAxes();
-        var g = pc.g();
+  return function () {
+    if (pc.g() === undefined) pc.createAxes();
+    var g = pc.g();
 
-        g.style('cursor', 'move').call(drag().on('start', function (d) {
-            dragging[d] = this.__origin__ = xscale(d);
-        }).on('drag', function (d) {
-            dragging[d] = Math.min(w$1(__), Math.max(0, this.__origin__ += event.dx));
-            pc.sortDimensions();
-            xscale.domain(pc.getOrderedDimensionKeys());
-            pc.render();
-            g.attr('transform', function (d) {
-                return 'translate(' + position(d) + ')';
-            });
-        }).on('end', function (d) {
-            delete this.__origin__;
-            delete dragging[d];
-            select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
-            pc.render();
-        }));
-        flags.reorderable = true;
-        return _this$3;
+    g.style('cursor', 'move').call(drag().on('start', function (d) {
+      dragging[d] = this.__origin__ = xscale(d);
+    }).on('drag', function (d) {
+      dragging[d] = Math.min(w$1(__), Math.max(0, this.__origin__ += event.dx));
+      pc.sortDimensions();
+      xscale.domain(pc.getOrderedDimensionKeys());
+      pc.render();
+      g.attr('transform', function (d) {
+        return 'translate(' + position(d) + ')';
+      });
+    }).on('end', function (d) {
+      delete this.__origin__;
+      delete dragging[d];
+      select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
+      pc.render();
+    }));
+    flags.reorderable = true;
+    return this;
+  };
+};
+
+// rescale for height, width and margins
+// TODO currently assumes chart is brushable, and destroys old brushes
+var resize = function resize(config, pc, flags, events) {
+    return function () {
+        // selection size
+        pc.selection.select('svg').attr('width', config.width).attr('height', config.height);
+        pc.svg.attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
+
+        // FIXME: the current brush state should pass through
+        if (flags.brushable) pc.brushReset();
+
+        // scales
+        pc.autoscale();
+
+        // axes, destroys old brushes.
+        if (pc.g()) pc.createAxes();
+        if (flags.brushable) pc.brushable();
+        if (flags.reorderable) pc.reorderable();
+
+        events.call('resize', this, {
+            width: config.width,
+            height: config.height,
+            margin: config.margin
+        });
+
+        return this;
     };
 };
 
 var _this = undefined;
-
-//============================================================================================
 
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
@@ -9886,31 +9911,7 @@ var ParCoords = function ParCoords(config) {
     return pc._g;
   };
 
-  // rescale for height, width and margins
-  // TODO currently assumes chart is brushable, and destroys old brushes
-  pc.resize = function () {
-    // selection size
-    pc.selection.select('svg').attr('width', __.width).attr('height', __.height);
-    pc.svg.attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
-
-    // FIXME: the current brush state should pass through
-    if (flags.brushable) pc.brushReset();
-
-    // scales
-    pc.autoscale();
-
-    // axes, destroys old brushes.
-    if (g) pc.createAxes();
-    if (flags.brushable) pc.brushable();
-    if (flags.reorderable) pc.reorderable();
-
-    events.call('resize', this, {
-      width: __.width,
-      height: __.height,
-      margin: __.margin
-    });
-    return this;
-  };
+  pc.resize = resize(__, pc, flags, events);
 
   // highlight an array of data
   pc.highlight = function (data) {
