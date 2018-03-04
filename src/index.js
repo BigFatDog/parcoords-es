@@ -34,6 +34,7 @@ import reorderable from './api/reorderable';
 import w from './util/width';
 import h from './util/height';
 import resize from './api/resize';
+import sortDimensions from "./api/sortDimensions";
 //============================================================================================
 
 const ParCoords = config => {
@@ -487,21 +488,7 @@ const ParCoords = config => {
     });
   };
 
-  pc.sortDimensions = function() {
-    let copy = __.dimensions;
-    let positionSortedKeys = keys(__.dimensions).sort(function(a, b) {
-      if (position(a) - position(b) === 0) {
-        return 1;
-      } else {
-        return position(a) - position(b);
-      }
-    });
-    __.dimensions = {};
-    positionSortedKeys.forEach(function(p, i) {
-      __.dimensions[p] = copy[p];
-      __.dimensions[p].index = i;
-    });
-  };
+  pc.sortDimensions = sortDimensions(__, position);
 
   // pairs of adjacent dimensions
   pc.adjacent_pairs = function(arr) {

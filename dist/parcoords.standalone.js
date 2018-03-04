@@ -9457,6 +9457,20 @@ var resize = function resize(config, pc, flags, events) {
   };
 };
 
+var sortDimensions = function sortDimensions(config, position) {
+    return function () {
+        var copy = Object.assign({}, config.dimensions);
+        var positionSortedKeys = keys(config.dimensions).sort(function (a, b) {
+            return position(a) - position(b) === 0 ? 1 : position(a) - position(b);
+        });
+        config.dimensions = {};
+        positionSortedKeys.forEach(function (p, i) {
+            config.dimensions[p] = copy[p];
+            config.dimensions[p].index = i;
+        });
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9848,21 +9862,7 @@ var ParCoords = function ParCoords(config) {
     });
   };
 
-  pc.sortDimensions = function () {
-    var copy = __.dimensions;
-    var positionSortedKeys = keys(__.dimensions).sort(function (a, b) {
-      if (position(a) - position(b) === 0) {
-        return 1;
-      } else {
-        return position(a) - position(b);
-      }
-    });
-    __.dimensions = {};
-    positionSortedKeys.forEach(function (p, i) {
-      __.dimensions[p] = copy[p];
-      __.dimensions[p].index = i;
-    });
-  };
+  pc.sortDimensions = sortDimensions(__, position);
 
   // pairs of adjacent dimensions
   pc.adjacent_pairs = function (arr) {
