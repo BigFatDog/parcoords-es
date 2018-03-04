@@ -900,7 +900,6 @@ const ParCoords = config => {
     }
 
     flags.axes = true;
-    this._g = g;
     return this;
   };
 

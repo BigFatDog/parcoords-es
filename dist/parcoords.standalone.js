@@ -2576,7 +2576,6 @@ var formatTypes = {
   }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4708,7 +4707,6 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7065,11 +7063,6 @@ var InitialState = {
 };
 
 // brush mode: 1D-Axes
-// This function can be used for 'live' updates of brushes. That is, during the
-// specification of a brush, this method can be called to update the view.
-//
-// @param newSelection - The new set of data items that is currently contained
-//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -7236,7 +7229,7 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
   }
 
   function install() {
-    if (!g) g = pc.createAxes()._g;
+    if (!g) g = pc.createAxes().g();
     // Add and store a brush for each axis.
     var brush$$1 = g.append('svg:g').attr('class', 'brush').each(function (d) {
       select(this).call(brushFor(d, select(this)));
@@ -7504,7 +7497,7 @@ var install2DStrums = function install2DStrums(brushGroup, config, pc, events, x
   }
 
   function install() {
-    if (!g) g = pc.createAxes()._g;
+    if (!g) g = pc.createAxes().g();
 
     var _drag = drag();
 
@@ -8847,8 +8840,6 @@ var brushMode = function brushMode(brushGroup, config, pc) {
 
 var _this = undefined;
 
-//============================================================================================
-
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
 
@@ -9537,7 +9528,6 @@ var ParCoords = function ParCoords(config) {
     }
 
     flags.axes = true;
-    this._g = g;
     return this;
   };
 

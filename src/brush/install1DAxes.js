@@ -195,7 +195,7 @@ const install1DAxes = (brushGroup, config, pc, events) => {
   }
 
   function install() {
-    if (!g) g = pc.createAxes()._g;
+    if (!g) g = pc.createAxes().g();
     // Add and store a brush for each axis.
     let brush = g
       .append('svg:g')
