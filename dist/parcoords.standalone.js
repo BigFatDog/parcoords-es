@@ -9752,6 +9752,14 @@ var ParCoords = function ParCoords(config) {
     }
   });
 
+  function position(d) {
+    if (xscale.range().length === 0) {
+      xscale.range([0, w$1(__)], 1);
+    }
+    var v = dragging[d];
+    return v == null ? xscale(d) : v;
+  }
+
   // expose the state of the chart
   pc.state = __;
   pc.flags = flags;
@@ -9956,24 +9964,13 @@ var ParCoords = function ParCoords(config) {
   // points are objects with x and y properties
   pc.intersection = intersection;
 
-  function position(d) {
-    if (xscale.range().length === 0) {
-      xscale.range([0, w$1(__)], 1);
-    }
-    var v = dragging[d];
-    return v == null ? xscale(d) : v;
-  }
-
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
-
   pc.brushModes = function () {
     return Object.getOwnPropertyNames(brush.modes);
   };
-
   pc.brushMode = brushMode(brush, __, pc);
-
   install1DAxes(brush, __, pc, events);
   install2DStrums(brush, __, pc, events, xscale);
   installAngularBrush(brush, __, pc, events, xscale);
