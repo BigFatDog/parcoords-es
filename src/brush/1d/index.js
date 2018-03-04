@@ -4,9 +4,9 @@ import selected from './selected';
 import uninstall from './uninstall';
 
 const BrushState = {
-    brushes: {},
-    brushNodes: {}
-}
+  brushes: {},
+  brushNodes: {},
+};
 
 const install1DAxes = (brushObj, config, pc, g) => {
   brushObj.modes['1D-axes'] = {

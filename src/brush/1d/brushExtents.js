@@ -2,7 +2,7 @@ import { keys } from 'd3-collection';
 import { brushSelection } from 'd3-brush';
 
 const brushExtents = (brushState, pc, g) => extents => {
-  const { brushes } =  brushState;
+  const { brushes } = brushState;
 
   if (typeof extents === 'undefined') {
     return keys(config.dimensions).reduce((acc, cur) => {

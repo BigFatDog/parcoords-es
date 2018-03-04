@@ -3,7 +3,7 @@ import { keys, entries, map } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
 import { extent, ascending, min } from 'd3-array';
 import { scalePoint, scaleOrdinal, scaleTime, scaleLinear } from 'd3-scale';
-import { line, arc as d3Arc } from 'd3-shape';
+import { line } from 'd3-shape';
 import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
 import { brushSelection, brushY } from 'd3-brush';
 import { drag } from 'd3-drag';
@@ -1562,7 +1562,6 @@ const ParCoords = config => {
 
     return pc;
   };
-
 
   pc.interactive = function() {
     flags.interactive = true;
