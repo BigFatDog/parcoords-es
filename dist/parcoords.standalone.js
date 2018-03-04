@@ -9039,59 +9039,59 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
 };
 
 var brushable = function brushable(config, pc, flags) {
-    return function () {
-        var g = pc.g();
-        if (!g) {
-            pc.createAxes();
-            g = pc.g();
-        }
+  return function () {
+    var g = pc.g();
+    if (!g) {
+      pc.createAxes();
+      g = pc.g();
+    }
 
-        // Add and store a brush for each axis.
-        g.append('svg:g').attr('class', 'brush').each(function (d) {
-            if (config.dimensions[d] !== undefined) {
-                config.dimensions[d]['brush'] = brushY(select(this)).extent([[-15, 0], [15, config.dimensions[d].yscale.range()[0]]]);
-                select(this).call(config.dimensions[d]['brush'].on('start', function () {
-                    if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
-                        pc.brushReset();
-                    }
-                }).on('brush', function () {
-                    if (!event.sourceEvent.ctrlKey) {
-                        pc.brush();
-                    }
-                }).on('end', function () {
-                    // save brush selection is ctrl key is held
-                    // store important brush information and
-                    // the html element of the selection,
-                    // to make a dummy selection element
-                    if (event.sourceEvent.ctrlKey) {
-                        var html = select(this).select('.selection').nodes()[0].outerHTML;
-                        html = html.replace('class="selection"', 'class="selection dummy' + ' selection-' + config.brushes.length + '"');
-                        var dat = select(this).nodes()[0].__data__;
-                        var brush$$1 = {
-                            id: config.brushes.length,
-                            extent: brushSelection(this),
-                            html: html,
-                            data: dat
-                        };
-                        config.brushes.push(brush$$1);
-                        select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
-                        pc.brush();
-                        config.dimensions[d].brush.move(select(this, null));
-                        select(this).select('.selection').attr('style', 'display:none');
-                        pc.brushable();
-                    } else {
-                        pc.brush();
-                    }
-                }));
-                select(this).on('dblclick', function () {
-                    pc.brushReset(d);
-                });
-            }
+    // Add and store a brush for each axis.
+    g.append('svg:g').attr('class', 'brush').each(function (d) {
+      if (config.dimensions[d] !== undefined) {
+        config.dimensions[d]['brush'] = brushY(select(this)).extent([[-15, 0], [15, config.dimensions[d].yscale.range()[0]]]);
+        select(this).call(config.dimensions[d]['brush'].on('start', function () {
+          if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
+            pc.brushReset();
+          }
+        }).on('brush', function () {
+          if (!event.sourceEvent.ctrlKey) {
+            pc.brush();
+          }
+        }).on('end', function () {
+          // save brush selection is ctrl key is held
+          // store important brush information and
+          // the html element of the selection,
+          // to make a dummy selection element
+          if (event.sourceEvent.ctrlKey) {
+            var html = select(this).select('.selection').nodes()[0].outerHTML;
+            html = html.replace('class="selection"', 'class="selection dummy' + ' selection-' + config.brushes.length + '"');
+            var dat = select(this).nodes()[0].__data__;
+            var brush$$1 = {
+              id: config.brushes.length,
+              extent: brushSelection(this),
+              html: html,
+              data: dat
+            };
+            config.brushes.push(brush$$1);
+            select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
+            pc.brush();
+            config.dimensions[d].brush.move(select(this, null));
+            select(this).select('.selection').attr('style', 'display:none');
+            pc.brushable();
+          } else {
+            pc.brush();
+          }
+        }));
+        select(this).on('dblclick', function () {
+          pc.brushReset(d);
         });
+      }
+    });
 
-        flags.brushable = true;
-        return this;
-    };
+    flags.brushable = true;
+    return this;
+  };
 };
 
 var commonScale = function commonScale(config, pc) {
@@ -9172,69 +9172,92 @@ var computeClusterCentroids = function computeClusterCentroids(config, d) {
 };
 
 var computeCentroids = function computeCentroids(config, position, row) {
-    var centroids = [];
+  var centroids = [];
 
-    var p = keys(config.dimensions);
-    var cols = p.length;
-    var a = 0.5; // center between axes
-    for (var i = 0; i < cols; ++i) {
-        // centroids on 'real' axes
-        var x = position(p[i]);
-        var y = config.dimensions[p[i]].yscale(row[p[i]]);
-        centroids.push($V([x, y]));
+  var p = keys(config.dimensions);
+  var cols = p.length;
+  var a = 0.5; // center between axes
+  for (var i = 0; i < cols; ++i) {
+    // centroids on 'real' axes
+    var x = position(p[i]);
+    var y = config.dimensions[p[i]].yscale(row[p[i]]);
+    centroids.push($V([x, y]));
 
-        // centroids on 'virtual' axes
-        if (i < cols - 1) {
-            var cx = x + a * (position(p[i + 1]) - x);
-            var cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
-            if (__.bundleDimension !== null) {
-                var leftCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i]);
-                var rightCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i + 1]);
-                var centroid = 0.5 * (leftCentroid + rightCentroid);
-                cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
-            }
-            centroids.push($V([cx, cy]));
-        }
+    // centroids on 'virtual' axes
+    if (i < cols - 1) {
+      var cx = x + a * (position(p[i + 1]) - x);
+      var cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
+      if (__.bundleDimension !== null) {
+        var leftCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i]);
+        var rightCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i + 1]);
+        var centroid = 0.5 * (leftCentroid + rightCentroid);
+        cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
+      }
+      centroids.push($V([cx, cy]));
     }
+  }
 
-    return centroids;
+  return centroids;
 };
 
 var computeRealCentroids = function computeRealCentroids(dimensions, position) {
-    return function (row) {
-        var realCentroids = [];
+  return function (row) {
+    var realCentroids = [];
 
-        var p = keys(dimensions);
-        var cols = p.length;
-        var a = 0.5;
+    var p = keys(dimensions);
+    var cols = p.length;
+    var a = 0.5;
 
-        for (var i = 0; i < cols; ++i) {
-            var x = position(p[i]);
-            var y = dimensions[p[i]].yscale(row[p[i]]);
-            realCentroids.push([x, y]);
-        }
+    for (var i = 0; i < cols; ++i) {
+      var x = position(p[i]);
+      var y = dimensions[p[i]].yscale(row[p[i]]);
+      realCentroids.push([x, y]);
+    }
 
-        return realCentroids;
-    };
+    return realCentroids;
+  };
 };
 
 var getset = function getset(obj, state, events, side_effects) {
-    keys(state).forEach(function (key) {
-        obj[key] = function (x) {
-            if (!arguments.length) {
-                return state[key];
-            }
-            if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-                console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
-                x = pc.applyDimensionDefaults(x);
-            }
-            var old = state[key];
-            state[key] = x;
-            side_effects.call(key, pc, { value: x, previous: old });
-            events.call(key, pc, { value: x, previous: old });
-            return obj;
-        };
+  keys(state).forEach(function (key) {
+    obj[key] = function (x) {
+      if (!arguments.length) {
+        return state[key];
+      }
+      if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
+        console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
+        x = pc.applyDimensionDefaults(x);
+      }
+      var old = state[key];
+      state[key] = x;
+      side_effects.call(key, pc, { value: x, previous: old });
+      events.call(key, pc, { value: x, previous: old });
+      return obj;
+    };
+  });
+};
+
+var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
+  return function (dims) {
+    var types = pc.detectDimensionTypes(config.data);
+    dims = dims ? dims : keys(types);
+    var newDims = {};
+    var currIndex = 0;
+    dims.forEach(function (k) {
+      newDims[k] = config.dimensions[k] ? config.dimensions[k] : {};
+      //Set up defaults
+      newDims[k].orient = newDims[k].orient ? newDims[k].orient : 'left';
+      newDims[k].ticks = newDims[k].ticks != null ? newDims[k].ticks : 5;
+      newDims[k].innerTickSize = newDims[k].innerTickSize != null ? newDims[k].innerTickSize : 6;
+      newDims[k].outerTickSize = newDims[k].outerTickSize != null ? newDims[k].outerTickSize : 0;
+      newDims[k].tickPadding = newDims[k].tickPadding != null ? newDims[k].tickPadding : 3;
+      newDims[k].type = newDims[k].type ? newDims[k].type : types[k];
+
+      newDims[k].index = newDims[k].index != null ? newDims[k].index : currIndex;
+      currIndex++;
     });
+    return newDims;
+  };
 };
 
 var _this = undefined;
@@ -9364,7 +9387,6 @@ var ParCoords = function ParCoords(config) {
 
   // getter/setter with event firing
 
-
   pc.autoscale = autoscale(__, pc, xscale, ctx);
 
   pc.scale = function (d, domain) {
@@ -9386,26 +9408,7 @@ var ParCoords = function ParCoords(config) {
     return this;
   };
 
-  pc.applyDimensionDefaults = function (dims) {
-    var types = pc.detectDimensionTypes(__.data);
-    dims = dims ? dims : keys(types);
-    var newDims = {};
-    var currIndex = 0;
-    dims.forEach(function (k) {
-      newDims[k] = __.dimensions[k] ? __.dimensions[k] : {};
-      //Set up defaults
-      newDims[k].orient = newDims[k].orient ? newDims[k].orient : 'left';
-      newDims[k].ticks = newDims[k].ticks != null ? newDims[k].ticks : 5;
-      newDims[k].innerTickSize = newDims[k].innerTickSize != null ? newDims[k].innerTickSize : 6;
-      newDims[k].outerTickSize = newDims[k].outerTickSize != null ? newDims[k].outerTickSize : 0;
-      newDims[k].tickPadding = newDims[k].tickPadding != null ? newDims[k].tickPadding : 3;
-      newDims[k].type = newDims[k].type ? newDims[k].type : types[k];
-
-      newDims[k].index = newDims[k].index != null ? newDims[k].index : currIndex;
-      currIndex++;
-    });
-    return newDims;
-  };
+  pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
 
   pc.getOrderedDimensionKeys = function () {
     return keys(__.dimensions).sort(function (x, y) {
