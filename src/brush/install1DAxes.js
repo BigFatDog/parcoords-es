@@ -197,8 +197,8 @@ const install1DAxes = (brushGroup, config, pc, events) => {
   function install() {
     g = pc.g();
     if (!g) {
-        pc.createAxes();
-        g = pc.g();
+      pc.createAxes();
+      g = pc.g();
     }
 
     // Add and store a brush for each axis.

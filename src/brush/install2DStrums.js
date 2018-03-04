@@ -271,11 +271,11 @@ const install2DStrums = (brushGroup, config, pc, events, xscale) => {
   }
 
   function install() {
+    g = pc.g();
+    if (!g) {
+      pc.createAxes();
       g = pc.g();
-      if (!g) {
-          pc.createAxes();
-          g = pc.g();
-      }
+    }
 
     let _drag = drag();
 

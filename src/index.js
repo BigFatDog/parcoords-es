@@ -479,23 +479,6 @@ const ParCoords = config => {
     pc.render();
   }
 
-  function rotateLabels() {
-    if (!__.rotateLabels) return;
-
-    let delta = event.deltaY;
-    delta = delta < 0 ? -5 : delta;
-    delta = delta > 0 ? 5 : delta;
-
-    __.dimensionTitleRotation += delta;
-    pc.svg
-      .selectAll('text.label')
-      .attr(
-        'transform',
-        'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')'
-      );
-    event.preventDefault();
-  }
-
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
 
   pc.removeAxes = function() {
@@ -730,7 +713,7 @@ const ParCoords = config => {
   pc.xscale = xscale;
   pc.ctx = ctx;
   pc.canvas = canvas;
-  pc.g = ()=> pc._g;
+  pc.g = () => pc._g;
 
   // rescale for height, width and margins
   // TODO currently assumes chart is brushable, and destroys old brushes
