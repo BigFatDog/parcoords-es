@@ -21,6 +21,7 @@ import selected from './api/selected';
 import brushMode from './api/brushMode';
 import updateAxes from './api/updateAxes';
 import autoscale from './api/autoscale';
+import commonScale from './api/commonScale';
 //============================================================================================
 
 const ParCoords = config => {
@@ -217,54 +218,7 @@ const ParCoords = config => {
     return this;
   };
 
-  pc.commonScale = function(global, type) {
-    let t = type || 'number';
-    if (typeof global === 'undefined') {
-      global = true;
-    }
-
-    // try to autodetect dimensions and create scales
-    if (!keys(__.dimensions).length) {
-      pc.detectDimensions();
-    }
-    pc.autoscale();
-
-    // scales of the same type
-    let scales = keys(__.dimensions).filter(function(p) {
-      return __.dimensions[p].type == t;
-    });
-
-    if (global) {
-      let _extent = extent(
-        scales
-          .map(function(d, i) {
-            return __.dimensions[d].yscale.domain();
-          })
-          .reduce(function(a, b) {
-            return a.concat(b);
-          })
-      );
-
-      scales.forEach(function(d) {
-        __.dimensions[d].yscale.domain(_extent);
-      });
-    } else {
-      scales.forEach(function(d) {
-        __.dimensions[d].yscale.domain(
-          extent(__.data, function(d) {
-            return +d[k];
-          })
-        );
-      });
-    }
-
-    // update centroids
-    if (__.bundleDimension !== null) {
-      pc.bundleDimension(__.bundleDimension);
-    }
-
-    return this;
-  };
+  pc.commonScale = commonScale(__, pc);
   pc.detectDimensions = function() {
     pc.dimensions(pc.applyDimensionDefaults());
     return this;

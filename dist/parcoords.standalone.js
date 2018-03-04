@@ -9038,7 +9038,54 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
   };
 };
 
+var commonScale = function commonScale(config, pc) {
+    return function (global, type) {
+        var t = type || 'number';
+        if (typeof global === 'undefined') {
+            global = true;
+        }
+
+        // try to autodetect dimensions and create scales
+        if (!keys(config.dimensions).length) {
+            pc.detectDimensions();
+        }
+        pc.autoscale();
+
+        // scales of the same type
+        var scales = keys(config.dimensions).filter(function (p) {
+            return config.dimensions[p].type == t;
+        });
+
+        if (global) {
+            var _extent = extent(scales.map(function (d, i) {
+                return config.dimensions[d].yscale.domain();
+            }).reduce(function (a, b) {
+                return a.concat(b);
+            }));
+
+            scales.forEach(function (d) {
+                config.dimensions[d].yscale.domain(_extent);
+            });
+        } else {
+            scales.forEach(function (d) {
+                config.dimensions[d].yscale.domain(extent(config.data, function (d) {
+                    return +d[k];
+                }));
+            });
+        }
+
+        // update centroids
+        if (config.bundleDimension !== null) {
+            pc.bundleDimension(config.bundleDimension);
+        }
+
+        return this;
+    };
+};
+
 var _this = undefined;
+
+//============================================================================================
 
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
@@ -9196,48 +9243,7 @@ var ParCoords = function ParCoords(config) {
     return this;
   };
 
-  pc.commonScale = function (global, type) {
-    var t = type || 'number';
-    if (typeof global === 'undefined') {
-      global = true;
-    }
-
-    // try to autodetect dimensions and create scales
-    if (!keys(__.dimensions).length) {
-      pc.detectDimensions();
-    }
-    pc.autoscale();
-
-    // scales of the same type
-    var scales = keys(__.dimensions).filter(function (p) {
-      return __.dimensions[p].type == t;
-    });
-
-    if (global) {
-      var _extent = extent(scales.map(function (d, i) {
-        return __.dimensions[d].yscale.domain();
-      }).reduce(function (a, b) {
-        return a.concat(b);
-      }));
-
-      scales.forEach(function (d) {
-        __.dimensions[d].yscale.domain(_extent);
-      });
-    } else {
-      scales.forEach(function (d) {
-        __.dimensions[d].yscale.domain(extent(__.data, function (d) {
-          return +d[k];
-        }));
-      });
-    }
-
-    // update centroids
-    if (__.bundleDimension !== null) {
-      pc.bundleDimension(__.bundleDimension);
-    }
-
-    return this;
-  };
+  pc.commonScale = commonScale(__, pc);
   pc.detectDimensions = function () {
     pc.dimensions(pc.applyDimensionDefaults());
     return this;
