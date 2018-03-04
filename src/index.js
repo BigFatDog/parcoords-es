@@ -45,6 +45,7 @@ import {
 import brushReset from './api/brushReset';
 import toType from './api/toType';
 import toString from './api/toString';
+import adjacentPairs from './api/adjacentPairs';
 //============================================================================================
 
 const ParCoords = config => {
@@ -213,11 +214,21 @@ const ParCoords = config => {
     });
 
   function position(d) {
-      if (xscale.range().length === 0) {
-          xscale.range([0, w(__)], 1);
-      }
-      let v = dragging[d];
-      return v == null ? xscale(d) : v;
+    if (xscale.range().length === 0) {
+      xscale.range([0, w(__)], 1);
+    }
+    let v = dragging[d];
+    return v == null ? xscale(d) : v;
+  }
+
+  function path_foreground(d, i) {
+    ctx.foreground.strokeStyle = _functor(__.color)(d, i);
+    return colorPath(__, position, d, ctx.foreground);
+  }
+
+  function path_highlight(d, i) {
+    ctx.highlight.strokeStyle = _functor(__.color)(d, i);
+    return colorPath(__, position, d, ctx.highlight);
   }
 
   // expose the state of the chart
@@ -339,16 +350,6 @@ const ParCoords = config => {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-  function path_foreground(d, i) {
-    ctx.foreground.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.foreground);
-  }
-
-  function path_highlight(d, i) {
-    ctx.highlight.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.highlight);
-  }
-
   pc.clear = clear(__, ctx, brush);
 
   _rebind(
@@ -389,13 +390,7 @@ const ParCoords = config => {
   pc.sortDimensions = sortDimensions(__, position);
 
   // pairs of adjacent dimensions
-  pc.adjacent_pairs = function(arr) {
-    let ret = [];
-    for (let i = 0; i < arr.length - 1; i++) {
-      ret.push([arr[i], arr[i + 1]]);
-    }
-    return ret;
-  };
+  pc.adjacent_pairs = adjacentPairs;
 
   pc.interactive = function() {
     flags.interactive = true;
@@ -439,7 +434,7 @@ const ParCoords = config => {
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
-  pc.brushModes = ()=> Object.getOwnPropertyNames(brush.modes);
+  pc.brushModes = () => Object.getOwnPropertyNames(brush.modes);
   pc.brushMode = brushMode(brush, __, pc);
   install1DAxes(brush, __, pc, events);
   install2DStrums(brush, __, pc, events, xscale);

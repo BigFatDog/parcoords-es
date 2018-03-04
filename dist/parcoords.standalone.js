@@ -9612,13 +9612,21 @@ var brushReset = function brushReset(config) {
 
 // a better "typeof" from this post: http://stackoverflow.com/questions/7390426/better-way-to-get-type-of-a-javascript-variable
 var toType = function toType(v) {
-    return {}.toString.call(v).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
+  return {}.toString.call(v).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
 };
 
 var toString = function toString(config) {
-    return function () {
-        return 'Parallel Coordinates: ' + keys(config.dimensions).length + ' dimensions (' + keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
-    };
+  return function () {
+    return 'Parallel Coordinates: ' + keys(config.dimensions).length + ' dimensions (' + keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
+  };
+};
+
+var adjacentPairs = function adjacentPairs(arr) {
+  var ret = [];
+  for (var i = 0; i < arr.length - 1; i++) {
+    ret.push([arr[i], arr[i + 1]]);
+  }
+  return ret;
 };
 
 var _this = undefined;
@@ -9760,6 +9768,16 @@ var ParCoords = function ParCoords(config) {
     return v == null ? xscale(d) : v;
   }
 
+  function path_foreground(d, i) {
+    ctx.foreground.strokeStyle = _functor(__.color)(d, i);
+    return colorPath(__, position, d, ctx.foreground);
+  }
+
+  function path_highlight(d, i) {
+    ctx.highlight.strokeStyle = _functor(__.color)(d, i);
+    return colorPath(__, position, d, ctx.highlight);
+  }
+
   // expose the state of the chart
   pc.state = __;
   pc.flags = flags;
@@ -9875,16 +9893,6 @@ var ParCoords = function ParCoords(config) {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-  function path_foreground(d, i) {
-    ctx.foreground.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.foreground);
-  }
-
-  function path_highlight(d, i) {
-    ctx.highlight.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.highlight);
-  }
-
   pc.clear = clear(__, ctx, brush);
 
   _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
@@ -9915,13 +9923,7 @@ var ParCoords = function ParCoords(config) {
   pc.sortDimensions = sortDimensions(__, position);
 
   // pairs of adjacent dimensions
-  pc.adjacent_pairs = function (arr) {
-    var ret = [];
-    for (var i = 0; i < arr.length - 1; i++) {
-      ret.push([arr[i], arr[i + 1]]);
-    }
-    return ret;
-  };
+  pc.adjacent_pairs = adjacentPairs;
 
   pc.interactive = function () {
     flags.interactive = true;
