@@ -16,8 +16,8 @@ import InitialState from './initialState';
 import install1DAxes from './brush/install1DAxes';
 import install2DStrums from './brush/install2DStrums';
 import installAngularBrush from './brush/installAngularBrush';
-import intersection from "./api/intersection";
-
+import intersection from './api/intersection';
+import mergeParcoords from './api/mergeParcoords';
 //============================================================================================
 
 const ParCoords = config => {
@@ -710,7 +710,6 @@ const ParCoords = config => {
     }
     ctx.stroke();
   }
-
 
   // returns the y-position just beyond the separating null value line
   function getNullPosition() {
@@ -1626,58 +1625,7 @@ const ParCoords = config => {
 
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
-  pc.mergeParcoords = function(callback) {
-    // Retina display, etc.
-    let devicePixelRatio = window.devicePixelRatio || 1;
-
-    // Create a canvas element to store the merged canvases
-    let mergedCanvas = document.createElement('canvas');
-    mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
-    mergedCanvas.height =
-      (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
-    mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
-    mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
-
-    // Give the canvas a white background
-    let context = mergedCanvas.getContext('2d');
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, mergedCanvas.width, mergedCanvas.height);
-
-    // Merge all the canvases
-    for (let key in pc.canvas) {
-      context.drawImage(
-        pc.canvas[key],
-        0,
-        24 * devicePixelRatio,
-        mergedCanvas.width,
-        mergedCanvas.height - 30 * devicePixelRatio
-      );
-    }
-
-    // Add SVG elements to canvas
-    let DOMURL = window.URL || window.webkitURL || window;
-    let serializer = new XMLSerializer();
-    let svgStr = serializer.serializeToString(
-      pc.selection.select('svg').node()
-    );
-
-    // Create a Data URI.
-    let src = 'data:image/svg+xml;base64,' + window.btoa(svgStr);
-    let img = new Image();
-    img.onload = function() {
-      context.drawImage(
-        img,
-        0,
-        0,
-        img.width * devicePixelRatio,
-        img.height * devicePixelRatio
-      );
-      if (typeof callback === 'function') {
-        callback(mergedCanvas);
-      }
-    };
-    img.src = src;
-  };
+  pc.mergeParcoords = mergeParcoords(pc);
 
   install1DAxes(brush, __, pc, events, brushUpdated);
   install2DStrums(brush, __, pc, events, xscale);

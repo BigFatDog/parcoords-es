@@ -8574,10 +8574,50 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
 };
 
 var intersection = function intersection(a, b, c, d) {
-    return {
-        x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
-        y: ((a.x * b.y - a.y * b.x) * (c.y - d.y) - (a.y - b.y) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x))
+  return {
+    x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
+    y: ((a.x * b.y - a.y * b.x) * (c.y - d.y) - (a.y - b.y) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x))
+  };
+};
+
+var mergeParcoords = function mergeParcoords(pc) {
+  return function (callback) {
+    // Retina display, etc.
+    var devicePixelRatio = window.devicePixelRatio || 1;
+
+    // Create a canvas element to store the merged canvases
+    var mergedCanvas = document.createElement('canvas');
+    mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
+    mergedCanvas.height = (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
+    mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
+    mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
+
+    // Give the canvas a white background
+    var context = mergedCanvas.getContext('2d');
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, mergedCanvas.width, mergedCanvas.height);
+
+    // Merge all the canvases
+    for (var key in pc.canvas) {
+      context.drawImage(pc.canvas[key], 0, 24 * devicePixelRatio, mergedCanvas.width, mergedCanvas.height - 30 * devicePixelRatio);
+    }
+
+    // Add SVG elements to canvas
+    var DOMURL = window.URL || window.webkitURL || window;
+    var serializer = new XMLSerializer();
+    var svgStr = serializer.serializeToString(pc.selection.select('svg').node());
+
+    // Create a Data URI.
+    var src = 'data:image/svg+xml;base64,' + window.btoa(svgStr);
+    var img = new Image();
+    img.onload = function () {
+      context.drawImage(img, 0, 0, img.width * devicePixelRatio, img.height * devicePixelRatio);
+      if (typeof callback === 'function') {
+        callback(mergedCanvas);
+      }
     };
+    img.src = src;
+  };
 };
 
 var _this = undefined;
@@ -9853,43 +9893,7 @@ var ParCoords = function ParCoords(config) {
 
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
-  pc.mergeParcoords = function (callback) {
-    // Retina display, etc.
-    var devicePixelRatio = window.devicePixelRatio || 1;
-
-    // Create a canvas element to store the merged canvases
-    var mergedCanvas = document.createElement('canvas');
-    mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
-    mergedCanvas.height = (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
-    mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
-    mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
-
-    // Give the canvas a white background
-    var context = mergedCanvas.getContext('2d');
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, mergedCanvas.width, mergedCanvas.height);
-
-    // Merge all the canvases
-    for (var key in pc.canvas) {
-      context.drawImage(pc.canvas[key], 0, 24 * devicePixelRatio, mergedCanvas.width, mergedCanvas.height - 30 * devicePixelRatio);
-    }
-
-    // Add SVG elements to canvas
-    var DOMURL = window.URL || window.webkitURL || window;
-    var serializer = new XMLSerializer();
-    var svgStr = serializer.serializeToString(pc.selection.select('svg').node());
-
-    // Create a Data URI.
-    var src = 'data:image/svg+xml;base64,' + window.btoa(svgStr);
-    var img = new Image();
-    img.onload = function () {
-      context.drawImage(img, 0, 0, img.width * devicePixelRatio, img.height * devicePixelRatio);
-      if (typeof callback === 'function') {
-        callback(mergedCanvas);
-      }
-    };
-    img.src = src;
-  };
+  pc.mergeParcoords = mergeParcoords(pc);
 
   install1DAxes(brush$$1, __, pc, events, brushUpdated);
   install2DStrums(brush$$1, __, pc, events, xscale);
