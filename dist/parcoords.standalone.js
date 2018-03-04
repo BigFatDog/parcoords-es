@@ -9402,6 +9402,35 @@ var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   return axisCfg;
 };
 
+var _this$3 = undefined;
+
+// Jason Davies, http://bl.ocks.org/1341281
+var reorderable = function reorderable(config, pc, xscale, position, dragging, flags) {
+    return function () {
+        if (pc.g() === undefined) pc.createAxes();
+        var g = pc.g();
+
+        g.style('cursor', 'move').call(drag().on('start', function (d) {
+            dragging[d] = this.__origin__ = xscale(d);
+        }).on('drag', function (d) {
+            dragging[d] = Math.min(w$1(__), Math.max(0, this.__origin__ += event.dx));
+            pc.sortDimensions();
+            xscale.domain(pc.getOrderedDimensionKeys());
+            pc.render();
+            g.attr('transform', function (d) {
+                return 'translate(' + position(d) + ')';
+            });
+        }).on('end', function (d) {
+            delete this.__origin__;
+            delete dragging[d];
+            select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
+            pc.render();
+        }));
+        flags.reorderable = true;
+        return _this$3;
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9740,30 +9769,7 @@ var ParCoords = function ParCoords(config) {
 
   pc.selected = selected(__);
 
-  // Jason Davies, http://bl.ocks.org/1341281
-  pc.reorderable = function () {
-    if (pc.g() === undefined) pc.createAxes();
-    var g = pc.g();
-
-    g.style('cursor', 'move').call(drag().on('start', function (d) {
-      dragging[d] = this.__origin__ = xscale(d);
-    }).on('drag', function (d) {
-      dragging[d] = Math.min(w$1(__), Math.max(0, this.__origin__ += event.dx));
-      pc.sortDimensions();
-      xscale.domain(pc.getOrderedDimensionKeys());
-      pc.render();
-      g.attr('transform', function (d) {
-        return 'translate(' + position(d) + ')';
-      });
-    }).on('end', function (d) {
-      delete this.__origin__;
-      delete dragging[d];
-      select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
-      pc.render();
-    }));
-    flags.reorderable = true;
-    return this;
-  };
+  pc.reorderable = reorderable(__, pc, xscale, position, dragging, flags);
 
   // Reorder dimensions, such that the highest value (visually) is on the left and
   // the lowest on the right. Visual values are determined by the data values in
