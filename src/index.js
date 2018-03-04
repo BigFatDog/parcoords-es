@@ -23,6 +23,7 @@ import autoscale from './api/autoscale';
 import brushable from './api/brushable';
 import commonScale from './api/commonScale';
 import computeClusterCentroids from './util/computeClusterCentroids';
+import computeCentroids from './util/computeCentroids';
 //============================================================================================
 
 const ParCoords = config => {
@@ -361,42 +362,6 @@ const ParCoords = config => {
     }
   };
 
-  function compute_centroids(row) {
-    let centroids = [];
-
-    let p = keys(__.dimensions);
-    let cols = p.length;
-    let a = 0.5; // center between axes
-    for (let i = 0; i < cols; ++i) {
-      // centroids on 'real' axes
-      let x = position(p[i]);
-      let y = __.dimensions[p[i]].yscale(row[p[i]]);
-      centroids.push($V([x, y]));
-
-      // centroids on 'virtual' axes
-      if (i < cols - 1) {
-        let cx = x + a * (position(p[i + 1]) - x);
-        let cy = y + a * (__.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
-        if (__.bundleDimension !== null) {
-          let leftCentroid = __.clusterCentroids
-            .get(
-              __.dimensions[__.bundleDimension].yscale(row[__.bundleDimension])
-            )
-            .get(p[i]);
-          let rightCentroid = __.clusterCentroids
-            .get(
-              __.dimensions[__.bundleDimension].yscale(row[__.bundleDimension])
-            )
-            .get(p[i + 1]);
-          let centroid = 0.5 * (leftCentroid + rightCentroid);
-          cy = centroid + (1 - __.bundlingStrength) * (cy - centroid);
-        }
-        centroids.push($V([cx, cy]));
-      }
-    }
-
-    return centroids;
-  }
 
   pc.compute_real_centroids = function(row) {
     let realCentroids = [];
@@ -447,7 +412,7 @@ const ParCoords = config => {
 
   // draw single cubic bezier curve
   function single_curve(d, ctx) {
-    let centroids = compute_centroids(d);
+    let centroids = computeCentroids(__, position, d);
     let cps = computeControlPoints(__.smoothness, centroids);
 
     ctx.moveTo(cps[0].e(1), cps[0].e(2));
