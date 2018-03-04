@@ -2576,6 +2576,7 @@ var formatTypes = {
   }
 };
 
+// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4707,6 +4708,7 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
+// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7063,6 +7065,11 @@ var InitialState = {
 };
 
 // brush mode: 1D-Axes
+// This function can be used for 'live' updates of brushes. That is, during the
+// specification of a brush, this method can be called to update the view.
+//
+// @param newSelection - The new set of data items that is currently contained
+//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -8838,7 +8845,101 @@ var brushMode = function brushMode(brushGroup, config, pc) {
     };
 };
 
+/**
+ * dimension display names
+ *
+ * @param config
+ * @param d
+ * @returns {*}
+ */
+var dimensionLabels = function dimensionLabels(config) {
+  return function (d) {
+    return config.dimensions[d].title ? config.dimensions[d].title : d;
+  };
+};
+
+var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
+    return function (dimension) {
+        pc.flip(dimension);
+        pc.brushReset(dimension);
+        select(this.parentElement).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
+        pc.render();
+    };
+};
+
+var rotateLabels = function rotateLabels(config, pc) {
+    if (!config.rotateLabels) return;
+
+    var delta = event.deltaY;
+    delta = delta < 0 ? -5 : delta;
+    delta = delta > 0 ? 5 : delta;
+
+    config.dimensionTitleRotation += delta;
+    pc.svg.selectAll('text.label').attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
+    event.preventDefault();
+};
+
+var _this$1 = undefined;
+
+var updateAxes = function updateAxes(config, pc, position, axis, flags) {
+    return function () {
+        var animationTime = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+        if (animationTime === null) {
+            animationTime = config.animationTime;
+        }
+
+        var g_data = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys());
+        // Enter
+        g_data.enter().append('svg:g').attr('class', 'dimension').attr('transform', function (p) {
+            return 'translate(' + position(p) + ')';
+        }).style('opacity', 0).append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
+            var axisElement = select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+
+            axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+
+            axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+        }).append('svg:text').attr({
+            'text-anchor': 'middle',
+            y: 0,
+            transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
+            x: 0,
+            class: 'label'
+        }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+
+        // Update
+        g_data.attr('opacity', 0);
+        g_data.select('.axis').transition().duration(animationTime).each(function (d) {
+            select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+        });
+        g_data.select('.label').transition().duration(animationTime).text(dimensionLabels(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
+
+        // Exit
+        g_data.exit().remove();
+
+        g = pc.svg.selectAll('.dimension');
+        g.transition().duration(animationTime).attr('transform', function (p) {
+            return 'translate(' + position(p) + ')';
+        }).style('opacity', 1);
+
+        pc.svg.selectAll('.axis').transition().duration(animationTime).each(function (d) {
+            select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+        });
+
+        if (flags.brushable) pc.brushable();
+        if (flags.reorderable) pc.reorderable();
+        if (pc.brushMode() !== 'None') {
+            var mode = pc.brushMode();
+            pc.brushMode('None');
+            pc.brushMode(mode);
+        }
+        return _this$1;
+    };
+};
+
 var _this = undefined;
+
+//============================================================================================
 
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
@@ -9537,56 +9638,7 @@ var ParCoords = function ParCoords(config) {
     return this;
   };
 
-  pc.updateAxes = function (animationTime) {
-    if (typeof animationTime === 'undefined') {
-      animationTime = __.animationTime;
-    }
-    var g_data = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys());
-    // Enter
-    g_data.enter().append('svg:g').attr('class', 'dimension').attr('transform', function (p) {
-      return 'translate(' + position(p) + ')';
-    }).style('opacity', 0).append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
-      var axisElement = select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
-
-      axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-
-      axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-    }).append('svg:text').attr({
-      'text-anchor': 'middle',
-      y: 0,
-      transform: 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')',
-      x: 0,
-      class: 'label'
-    }).text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
-
-    // Update
-    g_data.attr('opacity', 0);
-    g_data.select('.axis').transition().duration(animationTime).each(function (d) {
-      select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
-    });
-    g_data.select('.label').transition().duration(animationTime).text(dimensionLabels).attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')');
-
-    // Exit
-    g_data.exit().remove();
-
-    g = pc.svg.selectAll('.dimension');
-    g.transition().duration(animationTime).attr('transform', function (p) {
-      return 'translate(' + position(p) + ')';
-    }).style('opacity', 1);
-
-    pc.svg.selectAll('.axis').transition().duration(animationTime).each(function (d) {
-      select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
-    });
-
-    if (flags.brushable) pc.brushable();
-    if (flags.reorderable) pc.reorderable();
-    if (pc.brushMode() !== 'None') {
-      var mode = pc.brushMode();
-      pc.brushMode('None');
-      pc.brushMode(mode);
-    }
-    return this;
-  };
+  pc.updateAxes = updateAxes(__, pc, position, axis, flags);
 
   pc.applyAxisConfig = function (axis, dimension) {
     var axisCfg = void 0;

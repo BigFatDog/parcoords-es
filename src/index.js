@@ -20,6 +20,7 @@ import intersection from './api/intersection';
 import mergeParcoords from './api/mergeParcoords';
 import selected from './api/selected';
 import brushMode from './api/brushMode';
+import updateAxes from './api/updateAxes';
 //============================================================================================
 
 const ParCoords = config => {
@@ -909,102 +910,7 @@ const ParCoords = config => {
     return this;
   };
 
-  pc.updateAxes = function(animationTime) {
-    if (typeof animationTime === 'undefined') {
-      animationTime = __.animationTime;
-    }
-    let g_data = pc.svg
-      .selectAll('.dimension')
-      .data(pc.getOrderedDimensionKeys());
-    // Enter
-    g_data
-      .enter()
-      .append('svg:g')
-      .attr('class', 'dimension')
-      .attr('transform', function(p) {
-        return 'translate(' + position(p) + ')';
-      })
-      .style('opacity', 0)
-      .append('svg:g')
-      .attr('class', 'axis')
-      .attr('transform', 'translate(0,0)')
-      .each(function(d) {
-        let axisElement = select(this).call(
-          pc.applyAxisConfig(axis, __.dimensions[d])
-        );
-
-        axisElement
-          .selectAll('path')
-          .style('fill', 'none')
-          .style('stroke', '#222')
-          .style('shape-rendering', 'crispEdges');
-
-        axisElement
-          .selectAll('line')
-          .style('fill', 'none')
-          .style('stroke', '#222')
-          .style('shape-rendering', 'crispEdges');
-      })
-      .append('svg:text')
-      .attr({
-        'text-anchor': 'middle',
-        y: 0,
-        transform: 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')',
-        x: 0,
-        class: 'label',
-      })
-      .text(dimensionLabels)
-      .on('dblclick', flipAxisAndUpdatePCP)
-      .on('wheel', rotateLabels);
-
-    // Update
-    g_data.attr('opacity', 0);
-    g_data
-      .select('.axis')
-      .transition()
-      .duration(animationTime)
-      .each(function(d) {
-        select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
-      });
-    g_data
-      .select('.label')
-      .transition()
-      .duration(animationTime)
-      .text(dimensionLabels)
-      .attr(
-        'transform',
-        'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')'
-      );
-
-    // Exit
-    g_data.exit().remove();
-
-    g = pc.svg.selectAll('.dimension');
-    g
-      .transition()
-      .duration(animationTime)
-      .attr('transform', function(p) {
-        return 'translate(' + position(p) + ')';
-      })
-      .style('opacity', 1);
-
-    pc.svg
-      .selectAll('.axis')
-      .transition()
-      .duration(animationTime)
-      .each(function(d) {
-        select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
-      });
-
-    if (flags.brushable) pc.brushable();
-    if (flags.reorderable) pc.reorderable();
-    if (pc.brushMode() !== 'None') {
-      let mode = pc.brushMode();
-      pc.brushMode('None');
-      pc.brushMode(mode);
-    }
-    return this;
-  };
+  pc.updateAxes = updateAxes(__, pc, position, axis, flags);
 
   pc.applyAxisConfig = function(axis, dimension) {
     let axisCfg;
