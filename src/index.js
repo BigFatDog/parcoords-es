@@ -5,14 +5,22 @@ import { ascending } from 'd3-array';
 import { scalePoint } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 
-import './parallel-coordinates.css';
-import renderQueue from './renderQueue';
 
+// misc
+import renderQueue from './renderQueue';
 import { _functor, _rebind, without } from './helper';
 import InitialState from './initialState';
+import getset from './util/getset';
+import colorPath from './util/colorPath';
+import w from './util/width';
+import computeClusterCentroids from './util/computeClusterCentroids';
+
+// brush
 import install1DAxes from './brush/install1DAxes';
 import install2DStrums from './brush/install2DStrums';
 import installAngularBrush from './brush/installAngularBrush';
+
+// api
 import intersection from './api/intersection';
 import mergeParcoords from './api/mergeParcoords';
 import selected from './api/selected';
@@ -21,17 +29,12 @@ import updateAxes from './api/updateAxes';
 import autoscale from './api/autoscale';
 import brushable from './api/brushable';
 import commonScale from './api/commonScale';
-import computeClusterCentroids from './util/computeClusterCentroids';
 import computeRealCentroids from './api/computeRealCentroids';
-import getset from './util/getset';
 import applyDimensionDefaults from './api/applyDimensionDefaults';
 import createAxes from './api/createAxes';
 import axisDots from './api/axisDots';
-import colorPath from './util/colorPath';
 import applyAxisConfig from './api/applyAxisConfig';
 import reorderable from './api/reorderable';
-
-import w from './util/width';
 import resize from './api/resize';
 import reorder from './api/reorder';
 import sortDimensions from './api/sortDimensions';
@@ -49,7 +52,9 @@ import adjacentPairs from './api/adjacentPairs';
 import highlight from './api/highlight';
 import unhighlight from './api/unhighlight';
 import removeAxes from './api/removeAxes';
-//============================================================================================
+
+//css
+import './parallel-coordinates.css';
 
 const ParCoords = config => {
   const __ = Object.assign({}, InitialState, config);

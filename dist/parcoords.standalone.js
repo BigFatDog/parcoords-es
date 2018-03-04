@@ -4831,6 +4831,145 @@ var InitialState = {
   rotateLabels: false
 };
 
+var getset = function getset(obj, state, events, side_effects) {
+  keys(state).forEach(function (key) {
+    obj[key] = function (x) {
+      if (!arguments.length) {
+        return state[key];
+      }
+      if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
+        console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
+        x = pc.applyDimensionDefaults(x);
+      }
+      var old = state[key];
+      state[key] = x;
+      side_effects.call(key, obj, { value: x, previous: old });
+      events.call(key, obj, { value: x, previous: old });
+      return obj;
+    };
+  });
+};
+
+var computeCentroids = function computeCentroids(config, position, row) {
+  var centroids = [];
+
+  var p = keys(config.dimensions);
+  var cols = p.length;
+  var a = 0.5; // center between axes
+  for (var i = 0; i < cols; ++i) {
+    // centroids on 'real' axes
+    var x = position(p[i]);
+    var y = config.dimensions[p[i]].yscale(row[p[i]]);
+    centroids.push($V([x, y]));
+
+    // centroids on 'virtual' axes
+    if (i < cols - 1) {
+      var cx = x + a * (position(p[i + 1]) - x);
+      var cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
+      if (__.bundleDimension !== null) {
+        var leftCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i]);
+        var rightCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i + 1]);
+        var centroid = 0.5 * (leftCentroid + rightCentroid);
+        cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
+      }
+      centroids.push($V([cx, cy]));
+    }
+  }
+
+  return centroids;
+};
+
+var h$1 = function h(config) {
+  return config.height - config.margin.top - config.margin.bottom;
+};
+
+// draw single cubic bezier curve
+var singleCurve = function singleCurve(config, position, d, ctx) {
+  var centroids = computeCentroids(config, position, d);
+  var cps = computeControlPoints(config.smoothness, centroids);
+
+  ctx.moveTo(cps[0].e(1), cps[0].e(2));
+
+  for (var i = 1; i < cps.length; i += 3) {
+    if (config.showControlPoints) {
+      for (var j = 0; j < 3; j++) {
+        ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
+      }
+    }
+    ctx.bezierCurveTo(cps[i].e(1), cps[i].e(2), cps[i + 1].e(1), cps[i + 1].e(2), cps[i + 2].e(1), cps[i + 2].e(2));
+  }
+};
+
+// returns the y-position just beyond the separating null value line
+var getNullPosition = function getNullPosition(config) {
+  if (config.nullValueSeparator == 'bottom') {
+    return h$1(config) + 1;
+  } else if (config.nullValueSeparator == 'top') {
+    return 1;
+  } else {
+    console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
+  }
+  return h$1(config) + 1;
+};
+
+var singlePath = function singlePath(config, position, d, ctx) {
+  entries(config.dimensions).forEach(function (p, i) {
+    //p isn't really p
+    if (i == 0) {
+      ctx.moveTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
+    } else {
+      ctx.lineTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
+    }
+  });
+};
+
+// draw single polyline
+var colorPath = function colorPath(config, position, d, ctx) {
+  ctx.beginPath();
+  if (config.bundleDimension !== null && config.bundlingStrength > 0 || config.smoothness > 0) {
+    singleCurve(config, position, d, ctx);
+  } else {
+    singlePath(config, position, d, ctx);
+  }
+  ctx.stroke();
+};
+
+var w$1 = function w(config) {
+  return config.width - config.margin.right - config.margin.left;
+};
+
+var computeClusterCentroids = function computeClusterCentroids(config, d) {
+  var clusterCentroids = map();
+  var clusterCounts = map();
+  // determine clusterCounts
+  config.data.forEach(function (row) {
+    var scaled = config.dimensions[d].yscale(row[d]);
+    if (!clusterCounts.has(scaled)) {
+      clusterCounts.set(scaled, 0);
+    }
+    var count = clusterCounts.get(scaled);
+    clusterCounts.set(scaled, count + 1);
+  });
+
+  config.data.forEach(function (row) {
+    keys(config.dimensions).map(function (p, i) {
+      var scaled = config.dimensions[d].yscale(row[d]);
+      if (!clusterCentroids.has(scaled)) {
+        var _map = map();
+        clusterCentroids.set(scaled, _map);
+      }
+      if (!clusterCentroids.get(scaled).has(p)) {
+        clusterCentroids.get(scaled).set(p, 0);
+      }
+      var value = clusterCentroids.get(scaled).get(p);
+      value += config.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
+      clusterCentroids.get(scaled).set(p, value);
+    });
+  });
+
+  return clusterCentroids;
+};
+
 function nopropagation() {
   event.stopImmediatePropagation();
 }
@@ -7253,14 +7392,6 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
   };
 };
 
-var w$1 = function w(config) {
-  return config.width - config.margin.right - config.margin.left;
-};
-
-var h$1 = function h(config) {
-  return config.height - config.margin.top - config.margin.bottom;
-};
-
 // brush mode: 2D-strums
 // bl.ocks.org/syntagmatic/5441022
 var install2DStrums = function install2DStrums(brushGroup, config, pc, events, xscale) {
@@ -9152,38 +9283,6 @@ var commonScale = function commonScale(config, pc) {
   };
 };
 
-var computeClusterCentroids = function computeClusterCentroids(config, d) {
-  var clusterCentroids = map();
-  var clusterCounts = map();
-  // determine clusterCounts
-  config.data.forEach(function (row) {
-    var scaled = config.dimensions[d].yscale(row[d]);
-    if (!clusterCounts.has(scaled)) {
-      clusterCounts.set(scaled, 0);
-    }
-    var count = clusterCounts.get(scaled);
-    clusterCounts.set(scaled, count + 1);
-  });
-
-  config.data.forEach(function (row) {
-    keys(config.dimensions).map(function (p, i) {
-      var scaled = config.dimensions[d].yscale(row[d]);
-      if (!clusterCentroids.has(scaled)) {
-        var _map = map();
-        clusterCentroids.set(scaled, _map);
-      }
-      if (!clusterCentroids.get(scaled).has(p)) {
-        clusterCentroids.get(scaled).set(p, 0);
-      }
-      var value = clusterCentroids.get(scaled).get(p);
-      value += config.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
-      clusterCentroids.get(scaled).set(p, value);
-    });
-  });
-
-  return clusterCentroids;
-};
-
 var computeRealCentroids = function computeRealCentroids(dimensions, position) {
   return function (row) {
     var realCentroids = [];
@@ -9200,25 +9299,6 @@ var computeRealCentroids = function computeRealCentroids(dimensions, position) {
 
     return realCentroids;
   };
-};
-
-var getset = function getset(obj, state, events, side_effects) {
-  keys(state).forEach(function (key) {
-    obj[key] = function (x) {
-      if (!arguments.length) {
-        return state[key];
-      }
-      if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-        console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
-        x = pc.applyDimensionDefaults(x);
-      }
-      var old = state[key];
-      state[key] = x;
-      side_effects.call(key, obj, { value: x, previous: old });
-      events.call(key, obj, { value: x, previous: old });
-      return obj;
-    };
-  });
 };
 
 var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
@@ -9294,86 +9374,6 @@ var axisDots = function axisDots(config, pc, position) {
     });
     return _this$2;
   };
-};
-
-var computeCentroids = function computeCentroids(config, position, row) {
-  var centroids = [];
-
-  var p = keys(config.dimensions);
-  var cols = p.length;
-  var a = 0.5; // center between axes
-  for (var i = 0; i < cols; ++i) {
-    // centroids on 'real' axes
-    var x = position(p[i]);
-    var y = config.dimensions[p[i]].yscale(row[p[i]]);
-    centroids.push($V([x, y]));
-
-    // centroids on 'virtual' axes
-    if (i < cols - 1) {
-      var cx = x + a * (position(p[i + 1]) - x);
-      var cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
-      if (__.bundleDimension !== null) {
-        var leftCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i]);
-        var rightCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i + 1]);
-        var centroid = 0.5 * (leftCentroid + rightCentroid);
-        cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
-      }
-      centroids.push($V([cx, cy]));
-    }
-  }
-
-  return centroids;
-};
-
-// draw single cubic bezier curve
-var singleCurve = function singleCurve(config, position, d, ctx) {
-  var centroids = computeCentroids(config, position, d);
-  var cps = computeControlPoints(config.smoothness, centroids);
-
-  ctx.moveTo(cps[0].e(1), cps[0].e(2));
-
-  for (var i = 1; i < cps.length; i += 3) {
-    if (config.showControlPoints) {
-      for (var j = 0; j < 3; j++) {
-        ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
-      }
-    }
-    ctx.bezierCurveTo(cps[i].e(1), cps[i].e(2), cps[i + 1].e(1), cps[i + 1].e(2), cps[i + 2].e(1), cps[i + 2].e(2));
-  }
-};
-
-// returns the y-position just beyond the separating null value line
-var getNullPosition = function getNullPosition(config) {
-  if (config.nullValueSeparator == 'bottom') {
-    return h$1(config) + 1;
-  } else if (config.nullValueSeparator == 'top') {
-    return 1;
-  } else {
-    console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
-  }
-  return h$1(config) + 1;
-};
-
-var singlePath = function singlePath(config, position, d, ctx) {
-  entries(config.dimensions).forEach(function (p, i) {
-    //p isn't really p
-    if (i == 0) {
-      ctx.moveTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-    } else {
-      ctx.lineTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-    }
-  });
-};
-
-// draw single polyline
-var colorPath = function colorPath(config, position, d, ctx) {
-  ctx.beginPath();
-  if (config.bundleDimension !== null && config.bundlingStrength > 0 || config.smoothness > 0) {
-    singleCurve(config, position, d, ctx);
-  } else {
-    singlePath(config, position, d, ctx);
-  }
-  ctx.stroke();
 };
 
 var applyAxisConfig = function applyAxisConfig(axis, dimension) {
@@ -9673,8 +9673,10 @@ var removeAxes = function removeAxes(pc) {
 
 var _this = undefined;
 
-//============================================================================================
-
+// misc
+// brush
+// api
+//css
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
 
