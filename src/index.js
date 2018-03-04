@@ -34,7 +34,8 @@ import reorderable from './api/reorderable';
 import w from './util/width';
 import h from './util/height';
 import resize from './api/resize';
-import sortDimensions from "./api/sortDimensions";
+import sortDimensions from './api/sortDimensions';
+import sortDimensionsByRowData from './api/sortDimensionsByRowData';
 //============================================================================================
 
 const ParCoords = config => {
@@ -466,27 +467,7 @@ const ParCoords = config => {
     }
   };
 
-  pc.sortDimensionsByRowData = function(rowdata) {
-    let copy = __.dimensions;
-    let positionSortedKeys = keys(__.dimensions).sort(function(a, b) {
-      let pixelDifference =
-        __.dimensions[a].yscale(rowdata[a]) -
-        __.dimensions[b].yscale(rowdata[b]);
-
-      // Array.sort is not necessarily stable, this means that if pixelDifference is zero
-      // the ordering of dimensions might change unexpectedly. This is solved by sorting on
-      // variable name in that case.
-      if (pixelDifference === 0) {
-        return a.localeCompare(b);
-      } // else
-      return pixelDifference;
-    });
-    __.dimensions = {};
-    positionSortedKeys.forEach(function(p, i) {
-      __.dimensions[p] = copy[p];
-      __.dimensions[p].index = i;
-    });
-  };
+  pc.sortDimensionsByRowData = sortDimensionsByRowData(__);
 
   pc.sortDimensions = sortDimensions(__, position);
 

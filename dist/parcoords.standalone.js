@@ -9458,17 +9458,36 @@ var resize = function resize(config, pc, flags, events) {
 };
 
 var sortDimensions = function sortDimensions(config, position) {
-    return function () {
-        var copy = Object.assign({}, config.dimensions);
-        var positionSortedKeys = keys(config.dimensions).sort(function (a, b) {
-            return position(a) - position(b) === 0 ? 1 : position(a) - position(b);
-        });
-        config.dimensions = {};
-        positionSortedKeys.forEach(function (p, i) {
-            config.dimensions[p] = copy[p];
-            config.dimensions[p].index = i;
-        });
-    };
+  return function () {
+    var copy = Object.assign({}, config.dimensions);
+    var positionSortedKeys = keys(config.dimensions).sort(function (a, b) {
+      return position(a) - position(b) === 0 ? 1 : position(a) - position(b);
+    });
+    config.dimensions = {};
+    positionSortedKeys.forEach(function (p, i) {
+      config.dimensions[p] = copy[p];
+      config.dimensions[p].index = i;
+    });
+  };
+};
+
+var sortDimensionsByRowData = function sortDimensionsByRowData(config) {
+  return function (rowdata) {
+    var copy = Object.assign({}, config.dimensions);
+    var positionSortedKeys = keys(config.dimensions).sort(function (a, b) {
+      var pixelDifference = config.dimensions[a].yscale(rowdata[a]) - config.dimensions[b].yscale(rowdata[b]);
+
+      // Array.sort is not necessarily stable, this means that if pixelDifference is zero
+      // the ordering of dimensions might change unexpectedly. This is solved by sorting on
+      // variable name in that case.
+      return pixelDifference === 0 ? a.localeCompare(b) : pixelDifference;
+    });
+    config.dimensions = {};
+    positionSortedKeys.forEach(function (p, i) {
+      __.dimensions[p] = copy[p];
+      __.dimensions[p].index = i;
+    });
+  };
 };
 
 var _this = undefined;
@@ -9842,25 +9861,7 @@ var ParCoords = function ParCoords(config) {
     }
   };
 
-  pc.sortDimensionsByRowData = function (rowdata) {
-    var copy = __.dimensions;
-    var positionSortedKeys = keys(__.dimensions).sort(function (a, b) {
-      var pixelDifference = __.dimensions[a].yscale(rowdata[a]) - __.dimensions[b].yscale(rowdata[b]);
-
-      // Array.sort is not necessarily stable, this means that if pixelDifference is zero
-      // the ordering of dimensions might change unexpectedly. This is solved by sorting on
-      // variable name in that case.
-      if (pixelDifference === 0) {
-        return a.localeCompare(b);
-      } // else
-      return pixelDifference;
-    });
-    __.dimensions = {};
-    positionSortedKeys.forEach(function (p, i) {
-      __.dimensions[p] = copy[p];
-      __.dimensions[p].index = i;
-    });
-  };
+  pc.sortDimensionsByRowData = sortDimensionsByRowData(__);
 
   pc.sortDimensions = sortDimensions(__, position);
 
