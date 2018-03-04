@@ -1,7 +1,7 @@
 import { select, selectAll, event } from 'd3-selection';
-import { keys, entries, map } from 'd3-collection';
+import { keys, entries } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
-import { extent, ascending, min } from 'd3-array';
+import { ascending, min } from 'd3-array';
 import { scalePoint } from 'd3-scale';
 import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
 import { brushSelection, brushY } from 'd3-brush';
@@ -22,6 +22,7 @@ import brushMode from './api/brushMode';
 import updateAxes from './api/updateAxes';
 import autoscale from './api/autoscale';
 import commonScale from './api/commonScale';
+import computeClusterCentroids from './util/computeClusterCentroids';
 //============================================================================================
 
 const ParCoords = config => {
@@ -150,7 +151,7 @@ const ParCoords = config => {
         __.bundleDimension = d.value;
       }
 
-      __.clusterCentroids = compute_cluster_centroids(__.bundleDimension);
+      __.clusterCentroids = computeClusterCentroids(__, __.bundleDimension);
       if (flags.interactive) {
         pc.render();
       }
@@ -359,38 +360,6 @@ const ParCoords = config => {
       brushedQueue([]); // This is needed to clear the currently brushed items
     }
   };
-
-  function compute_cluster_centroids(d) {
-    let clusterCentroids = map();
-    let clusterCounts = map();
-    // determine clusterCounts
-    __.data.forEach(function(row) {
-      let scaled = __.dimensions[d].yscale(row[d]);
-      if (!clusterCounts.has(scaled)) {
-        clusterCounts.set(scaled, 0);
-      }
-      let count = clusterCounts.get(scaled);
-      clusterCounts.set(scaled, count + 1);
-    });
-
-    __.data.forEach(function(row) {
-      keys(__.dimensions).map(function(p, i) {
-        let scaled = __.dimensions[d].yscale(row[d]);
-        if (!clusterCentroids.has(scaled)) {
-          let _map = map();
-          clusterCentroids.set(scaled, _map);
-        }
-        if (!clusterCentroids.get(scaled).has(p)) {
-          clusterCentroids.get(scaled).set(p, 0);
-        }
-        let value = clusterCentroids.get(scaled).get(p);
-        value += __.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
-        clusterCentroids.get(scaled).set(p, value);
-      });
-    });
-
-    return clusterCentroids;
-  }
 
   function compute_centroids(row) {
     let centroids = [];

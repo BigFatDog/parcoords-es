@@ -9039,48 +9039,80 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
 };
 
 var commonScale = function commonScale(config, pc) {
-    return function (global, type) {
-        var t = type || 'number';
-        if (typeof global === 'undefined') {
-            global = true;
-        }
+  return function (global, type) {
+    var t = type || 'number';
+    if (typeof global === 'undefined') {
+      global = true;
+    }
 
-        // try to autodetect dimensions and create scales
-        if (!keys(config.dimensions).length) {
-            pc.detectDimensions();
-        }
-        pc.autoscale();
+    // try to autodetect dimensions and create scales
+    if (!keys(config.dimensions).length) {
+      pc.detectDimensions();
+    }
+    pc.autoscale();
 
-        // scales of the same type
-        var scales = keys(config.dimensions).filter(function (p) {
-            return config.dimensions[p].type == t;
-        });
+    // scales of the same type
+    var scales = keys(config.dimensions).filter(function (p) {
+      return config.dimensions[p].type == t;
+    });
 
-        if (global) {
-            var _extent = extent(scales.map(function (d, i) {
-                return config.dimensions[d].yscale.domain();
-            }).reduce(function (a, b) {
-                return a.concat(b);
-            }));
+    if (global) {
+      var _extent = extent(scales.map(function (d, i) {
+        return config.dimensions[d].yscale.domain();
+      }).reduce(function (a, b) {
+        return a.concat(b);
+      }));
 
-            scales.forEach(function (d) {
-                config.dimensions[d].yscale.domain(_extent);
-            });
-        } else {
-            scales.forEach(function (d) {
-                config.dimensions[d].yscale.domain(extent(config.data, function (d) {
-                    return +d[k];
-                }));
-            });
-        }
+      scales.forEach(function (d) {
+        config.dimensions[d].yscale.domain(_extent);
+      });
+    } else {
+      scales.forEach(function (d) {
+        config.dimensions[d].yscale.domain(extent(config.data, function (d) {
+          return +d[k];
+        }));
+      });
+    }
 
-        // update centroids
-        if (config.bundleDimension !== null) {
-            pc.bundleDimension(config.bundleDimension);
-        }
+    // update centroids
+    if (config.bundleDimension !== null) {
+      pc.bundleDimension(config.bundleDimension);
+    }
 
-        return this;
-    };
+    return this;
+  };
+};
+
+var computeClusterCentroids = function computeClusterCentroids(config, d) {
+  var clusterCentroids = map();
+  var clusterCounts = map();
+  // determine clusterCounts
+  config.data.forEach(function (row) {
+    var scaled = config.dimensions[d].yscale(row[d]);
+    if (!clusterCounts.has(scaled)) {
+      clusterCounts.set(scaled, 0);
+    }
+    var count = clusterCounts.get(scaled);
+    clusterCounts.set(scaled, count + 1);
+  });
+
+  config.data.forEach(function (row) {
+    keys(config.dimensions).map(function (p, i) {
+      var scaled = config.dimensions[d].yscale(row[d]);
+      if (!clusterCentroids.has(scaled)) {
+        var _map = map();
+        clusterCentroids.set(scaled, _map);
+      }
+      if (!clusterCentroids.get(scaled).has(p)) {
+        clusterCentroids.get(scaled).set(p, 0);
+      }
+      var value = clusterCentroids.get(scaled).get(p);
+      value += config.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
+      clusterCentroids.get(scaled).set(p, value);
+    });
+  });
+
+  return clusterCentroids;
 };
 
 var _this = undefined;
@@ -9182,7 +9214,7 @@ var ParCoords = function ParCoords(config) {
       __.bundleDimension = d.value;
     }
 
-    __.clusterCentroids = compute_cluster_centroids(__.bundleDimension);
+    __.clusterCentroids = computeClusterCentroids(__, __.bundleDimension);
     if (flags.interactive) {
       pc.render();
     }
@@ -9371,38 +9403,6 @@ var ParCoords = function ParCoords(config) {
       brushedQueue([]); // This is needed to clear the currently brushed items
     }
   };
-
-  function compute_cluster_centroids(d) {
-    var clusterCentroids = map();
-    var clusterCounts = map();
-    // determine clusterCounts
-    __.data.forEach(function (row) {
-      var scaled = __.dimensions[d].yscale(row[d]);
-      if (!clusterCounts.has(scaled)) {
-        clusterCounts.set(scaled, 0);
-      }
-      var count = clusterCounts.get(scaled);
-      clusterCounts.set(scaled, count + 1);
-    });
-
-    __.data.forEach(function (row) {
-      keys(__.dimensions).map(function (p, i) {
-        var scaled = __.dimensions[d].yscale(row[d]);
-        if (!clusterCentroids.has(scaled)) {
-          var _map = map();
-          clusterCentroids.set(scaled, _map);
-        }
-        if (!clusterCentroids.get(scaled).has(p)) {
-          clusterCentroids.get(scaled).set(p, 0);
-        }
-        var value = clusterCentroids.get(scaled).get(p);
-        value += __.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
-        clusterCentroids.get(scaled).set(p, value);
-      });
-    });
-
-    return clusterCentroids;
-  }
 
   function compute_centroids(row) {
     var centroids = [];
