@@ -4655,7 +4655,7 @@ var noevent = function () {
   event.stopImmediatePropagation();
 };
 
-var nodrag = function (view) {
+var dragDisable = function (view) {
   var root = view.document.documentElement,
       selection$$1 = select(view).on("dragstart.drag", noevent, true);
   if ("onselectstart" in root) {
@@ -4707,7 +4707,7 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-function defaultFilter$1() {
+function defaultFilter() {
   return !event.button;
 }
 
@@ -4724,7 +4724,7 @@ function defaultTouchable() {
 }
 
 var drag = function () {
-  var filter = defaultFilter$1,
+  var filter = defaultFilter,
       container = defaultContainer,
       subject = defaultSubject,
       touchable = defaultTouchable,
@@ -4746,7 +4746,7 @@ var drag = function () {
     var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
     if (!gesture) return;
     select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
-    nodrag(event.view);
+    dragDisable(event.view);
     nopropagation();
     mousemoving = false;
     mousedownx = event.clientX;
@@ -4874,6 +4874,191 @@ var drag = function () {
   };
 
   return drag;
+};
+
+/**
+ * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
+ * Available via the MIT license.
+ * see: http://github.com/cagosta/requestAnimationFrame for details
+ *
+ * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+ * http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
+ * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
+ * MIT license
+ *
+ */
+
+(function (global) {
+
+    (function () {
+
+        if (global.requestAnimationFrame) {
+
+            return;
+        }
+
+        if (global.webkitRequestAnimationFrame) {
+            // Chrome <= 23, Safari <= 6.1, Blackberry 10
+
+            global.requestAnimationFrame = global['webkitRequestAnimationFrame'];
+            global.cancelAnimationFrame = global['webkitCancelAnimationFrame'] || global['webkitCancelRequestAnimationFrame'];
+            return;
+        }
+
+        // IE <= 9, Android <= 4.3, very old/rare browsers
+
+        var lastTime = 0;
+
+        global.requestAnimationFrame = function (callback) {
+
+            var currTime = new Date().getTime();
+
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+
+            var id = global.setTimeout(function () {
+
+                callback(currTime + timeToCall);
+            }, timeToCall);
+
+            lastTime = currTime + timeToCall;
+
+            return id; // return the id for cancellation capabilities
+        };
+
+        global.cancelAnimationFrame = function (id) {
+
+            clearTimeout(id);
+        };
+    })();
+
+    if (typeof define === 'function') {
+
+        define(function () {
+
+            return global.requestAnimationFrame;
+        });
+    }
+})(window);
+
+var renderQueue = function renderQueue(func) {
+  var _queue = [],
+      // data to be rendered
+  _rate = 1000,
+      // number of calls per frame
+  _invalidate = function _invalidate() {},
+      // invalidate last render queue
+  _clear = function _clear() {}; // clearing function
+
+  var rq = function rq(data) {
+    if (data) rq.data(data);
+    _invalidate();
+    _clear();
+    rq.render();
+  };
+
+  rq.render = function () {
+    var valid = true;
+    _invalidate = rq.invalidate = function () {
+      valid = false;
+    };
+
+    function doFrame() {
+      if (!valid) return true;
+      var chunk = _queue.splice(0, _rate);
+      chunk.map(func);
+      requestAnimationFrame(doFrame);
+    }
+
+    doFrame();
+  };
+
+  rq.data = function (data) {
+    _invalidate();
+    _queue = data.slice(0); // creates a copy of the data
+    return rq;
+  };
+
+  rq.add = function (data) {
+    _queue = _queue.concat(data);
+  };
+
+  rq.rate = function (value) {
+    if (!arguments.length) return _rate;
+    _rate = value;
+    return rq;
+  };
+
+  rq.remaining = function () {
+    return _queue.length;
+  };
+
+  // clear the canvas
+  rq.clear = function (func) {
+    if (!arguments.length) {
+      _clear();
+      return rq;
+    }
+    _clear = func;
+    return rq;
+  };
+
+  rq.invalidate = _invalidate;
+
+  return rq;
+};
+
+var without = function without(arr, items) {
+  items.forEach(function (el) {
+    delete arr[el];
+  });
+  return arr;
+};
+
+var d3_rebind = function d3_rebind(target, source, method) {
+  return function () {
+    var value = method.apply(source, arguments);
+    return value === source ? target : value;
+  };
+};
+
+var _rebind = function _rebind(target, source, method) {
+  target[method] = d3_rebind(target, source, source[method]);
+  return target;
+};
+
+var _functor = function _functor(v) {
+  return typeof v === 'function' ? v : function () {
+    return v;
+  };
+};
+
+var InitialState = {
+  data: [],
+  highlighted: [],
+  dimensions: {},
+  dimensionTitleRotation: 0,
+  brushes: [],
+  brushed: false,
+  brushedColor: null,
+  alphaOnBrushed: 0.0,
+  mode: 'default',
+  rate: 20,
+  width: 600,
+  height: 300,
+  margin: { top: 24, right: 20, bottom: 12, left: 20 },
+  nullValueSeparator: 'undefined', // set to "top" or "bottom"
+  nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
+  color: '#069',
+  composite: 'source-over',
+  alpha: 0.7,
+  bundlingStrength: 0.5,
+  bundleDimension: null,
+  smoothness: 0.0,
+  showControlPoints: false,
+  hideAxis: [],
+  flipAxes: [],
+  animationTime: 1100, // How long it takes to flip the axis when you double click
+  rotateLabels: false
 };
 
 var frame = 0;
@@ -6448,7 +6633,7 @@ function type(t) {
 }
 
 // Ignore right-click, since that should open the context menu.
-function defaultFilter() {
+function defaultFilter$1() {
   return !event.button;
 }
 
@@ -6481,7 +6666,7 @@ function brushY() {
 
 function brush$1(dim) {
   var extent = defaultExtent,
-      filter = defaultFilter,
+      filter = defaultFilter$1,
       listeners = dispatch(brush, "start", "brush", "end"),
       handleSize = 6,
       touchending;
@@ -6662,7 +6847,7 @@ function brush$1(dim) {
     } else {
       var view = select(event.view).on("keydown.brush", keydowned, true).on("keyup.brush", keyupped, true).on("mousemove.brush", moved, true).on("mouseup.brush", ended, true);
 
-      nodrag(event.view);
+      dragDisable(event.view);
     }
 
     nopropagation$1();
@@ -6864,191 +7049,6 @@ function brush$1(dim) {
 
   return brush;
 }
-
-/**
- * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
- * Available via the MIT license.
- * see: http://github.com/cagosta/requestAnimationFrame for details
- *
- * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
- * http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
- * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
- * MIT license
- *
- */
-
-(function (global) {
-
-    (function () {
-
-        if (global.requestAnimationFrame) {
-
-            return;
-        }
-
-        if (global.webkitRequestAnimationFrame) {
-            // Chrome <= 23, Safari <= 6.1, Blackberry 10
-
-            global.requestAnimationFrame = global['webkitRequestAnimationFrame'];
-            global.cancelAnimationFrame = global['webkitCancelAnimationFrame'] || global['webkitCancelRequestAnimationFrame'];
-            return;
-        }
-
-        // IE <= 9, Android <= 4.3, very old/rare browsers
-
-        var lastTime = 0;
-
-        global.requestAnimationFrame = function (callback) {
-
-            var currTime = new Date().getTime();
-
-            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-
-            var id = global.setTimeout(function () {
-
-                callback(currTime + timeToCall);
-            }, timeToCall);
-
-            lastTime = currTime + timeToCall;
-
-            return id; // return the id for cancellation capabilities
-        };
-
-        global.cancelAnimationFrame = function (id) {
-
-            clearTimeout(id);
-        };
-    })();
-
-    if (typeof define === 'function') {
-
-        define(function () {
-
-            return global.requestAnimationFrame;
-        });
-    }
-})(window);
-
-var renderQueue = function renderQueue(func) {
-  var _queue = [],
-      // data to be rendered
-  _rate = 1000,
-      // number of calls per frame
-  _invalidate = function _invalidate() {},
-      // invalidate last render queue
-  _clear = function _clear() {}; // clearing function
-
-  var rq = function rq(data) {
-    if (data) rq.data(data);
-    _invalidate();
-    _clear();
-    rq.render();
-  };
-
-  rq.render = function () {
-    var valid = true;
-    _invalidate = rq.invalidate = function () {
-      valid = false;
-    };
-
-    function doFrame() {
-      if (!valid) return true;
-      var chunk = _queue.splice(0, _rate);
-      chunk.map(func);
-      requestAnimationFrame(doFrame);
-    }
-
-    doFrame();
-  };
-
-  rq.data = function (data) {
-    _invalidate();
-    _queue = data.slice(0); // creates a copy of the data
-    return rq;
-  };
-
-  rq.add = function (data) {
-    _queue = _queue.concat(data);
-  };
-
-  rq.rate = function (value) {
-    if (!arguments.length) return _rate;
-    _rate = value;
-    return rq;
-  };
-
-  rq.remaining = function () {
-    return _queue.length;
-  };
-
-  // clear the canvas
-  rq.clear = function (func) {
-    if (!arguments.length) {
-      _clear();
-      return rq;
-    }
-    _clear = func;
-    return rq;
-  };
-
-  rq.invalidate = _invalidate;
-
-  return rq;
-};
-
-var without = function without(arr, items) {
-  items.forEach(function (el) {
-    delete arr[el];
-  });
-  return arr;
-};
-
-var d3_rebind = function d3_rebind(target, source, method) {
-  return function () {
-    var value = method.apply(source, arguments);
-    return value === source ? target : value;
-  };
-};
-
-var _rebind = function _rebind(target, source, method) {
-  target[method] = d3_rebind(target, source, source[method]);
-  return target;
-};
-
-var _functor = function _functor(v) {
-  return typeof v === 'function' ? v : function () {
-    return v;
-  };
-};
-
-var InitialState = {
-  data: [],
-  highlighted: [],
-  dimensions: {},
-  dimensionTitleRotation: 0,
-  brushes: [],
-  brushed: false,
-  brushedColor: null,
-  alphaOnBrushed: 0.0,
-  mode: 'default',
-  rate: 20,
-  width: 600,
-  height: 300,
-  margin: { top: 24, right: 20, bottom: 12, left: 20 },
-  nullValueSeparator: 'undefined', // set to "top" or "bottom"
-  nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
-  color: '#069',
-  composite: 'source-over',
-  alpha: 0.7,
-  bundlingStrength: 0.5,
-  bundleDimension: null,
-  smoothness: 0.0,
-  showControlPoints: false,
-  hideAxis: [],
-  flipAxes: [],
-  animationTime: 1100, // How long it takes to flip the axis when you double click
-  rotateLabels: false
-};
 
 // brush mode: 1D-Axes
 var brushUpdated = function brushUpdated(config, pc, events) {
@@ -9038,6 +9038,62 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
   };
 };
 
+var brushable = function brushable(config, pc, flags) {
+    return function () {
+        var g = pc.g();
+        if (!g) {
+            pc.createAxes();
+            g = pc.g();
+        }
+
+        // Add and store a brush for each axis.
+        g.append('svg:g').attr('class', 'brush').each(function (d) {
+            if (config.dimensions[d] !== undefined) {
+                config.dimensions[d]['brush'] = brushY(select(this)).extent([[-15, 0], [15, config.dimensions[d].yscale.range()[0]]]);
+                select(this).call(config.dimensions[d]['brush'].on('start', function () {
+                    if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
+                        pc.brushReset();
+                    }
+                }).on('brush', function () {
+                    if (!event.sourceEvent.ctrlKey) {
+                        pc.brush();
+                    }
+                }).on('end', function () {
+                    // save brush selection is ctrl key is held
+                    // store important brush information and
+                    // the html element of the selection,
+                    // to make a dummy selection element
+                    if (event.sourceEvent.ctrlKey) {
+                        var html = select(this).select('.selection').nodes()[0].outerHTML;
+                        html = html.replace('class="selection"', 'class="selection dummy' + ' selection-' + config.brushes.length + '"');
+                        var dat = select(this).nodes()[0].__data__;
+                        var brush$$1 = {
+                            id: config.brushes.length,
+                            extent: brushSelection(this),
+                            html: html,
+                            data: dat
+                        };
+                        config.brushes.push(brush$$1);
+                        select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
+                        pc.brush();
+                        config.dimensions[d].brush.move(select(this, null));
+                        select(this).select('.selection').attr('style', 'display:none');
+                        pc.brushable();
+                    } else {
+                        pc.brush();
+                    }
+                }));
+                select(this).on('dblclick', function () {
+                    pc.brushReset(d);
+                });
+            }
+        });
+
+        flags.brushable = true;
+        return this;
+    };
+};
+
 var commonScale = function commonScale(config, pc) {
   return function (global, type) {
     var t = type || 'number';
@@ -9354,7 +9410,7 @@ var ParCoords = function ParCoords(config) {
   function isBrushed() {
     if (__.brushed && __.brushed.length !== __.data.length) return true;
 
-    var object = brush$$1.currentMode().brushState();
+    var object = brush.currentMode().brushState();
 
     for (var key in object) {
       if (object.hasOwnProperty(key)) {
@@ -9648,55 +9704,7 @@ var ParCoords = function ParCoords(config) {
     return axisCfg;
   };
 
-  pc.brushable = function () {
-    if (!g) pc.createAxes();
-
-    // Add and store a brush for each axis.
-    g.append('svg:g').attr('class', 'brush').each(function (d) {
-      if (__.dimensions[d] !== undefined) {
-        __.dimensions[d]['brush'] = brushY(select(this)).extent([[-15, 0], [15, __.dimensions[d].yscale.range()[0]]]);
-        select(this).call(__.dimensions[d]['brush'].on('start', function () {
-          if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
-            pc.brushReset();
-          }
-        }).on('brush', function () {
-          if (!event.sourceEvent.ctrlKey) {
-            pc.brush();
-          }
-        }).on('end', function () {
-          // save brush selection is ctrl key is held
-          // store important brush information and
-          // the html element of the selection,
-          // to make a dummy selection element
-          if (event.sourceEvent.ctrlKey) {
-            var html = select(this).select('.selection').nodes()[0].outerHTML;
-            html = html.replace('class="selection"', 'class="selection dummy' + ' selection-' + __.brushes.length + '"');
-            var dat = select(this).nodes()[0].__data__;
-            var _brush = {
-              id: __.brushes.length,
-              extent: brushSelection(this),
-              html: html,
-              data: dat
-            };
-            __.brushes.push(_brush);
-            select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
-            pc.brush();
-            __.dimensions[d].brush.move(select(this, null));
-            select(this).select('.selection').attr('style', 'display:none');
-            pc.brushable();
-          } else {
-            pc.brush();
-          }
-        }));
-        select(this).on('dblclick', function () {
-          pc.brushReset(d);
-        });
-      }
-    });
-
-    flags.brushable = true;
-    return this;
-  };
+  pc.brushable = brushable(__, pc, flags);
 
   pc.brush = function () {
     __.brushed = pc.selected();
@@ -9828,7 +9836,7 @@ var ParCoords = function ParCoords(config) {
     return ret;
   };
 
-  var brush$$1 = {
+  var brush = {
     modes: {
       None: {
         install: function install(pc) {}, // Nothing to be done.
@@ -9849,10 +9857,10 @@ var ParCoords = function ParCoords(config) {
   };
 
   pc.brushModes = function () {
-    return Object.getOwnPropertyNames(brush$$1.modes);
+    return Object.getOwnPropertyNames(brush.modes);
   };
 
-  pc.brushMode = brushMode(brush$$1, __, pc);
+  pc.brushMode = brushMode(brush, __, pc);
 
   pc.interactive = function () {
     flags.interactive = true;
@@ -9931,9 +9939,9 @@ var ParCoords = function ParCoords(config) {
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
 
-  install1DAxes(brush$$1, __, pc, events);
-  install2DStrums(brush$$1, __, pc, events, xscale);
-  installAngularBrush(brush$$1, __, pc, events, xscale);
+  install1DAxes(brush, __, pc, events);
+  install2DStrums(brush, __, pc, events, xscale);
+  installAngularBrush(brush, __, pc, events, xscale);
 
   pc.version = '1.0.3';
   // this descriptive text should live with other introspective methods

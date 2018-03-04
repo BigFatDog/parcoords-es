@@ -4,7 +4,6 @@ import { dispatch } from 'd3-dispatch';
 import { ascending, min } from 'd3-array';
 import { scalePoint } from 'd3-scale';
 import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis';
-import { brushSelection, brushY } from 'd3-brush';
 import { drag } from 'd3-drag';
 
 import './parallel-coordinates.css';
@@ -21,6 +20,7 @@ import selected from './api/selected';
 import brushMode from './api/brushMode';
 import updateAxes from './api/updateAxes';
 import autoscale from './api/autoscale';
+import brushable from './api/brushable';
 import commonScale from './api/commonScale';
 import computeClusterCentroids from './util/computeClusterCentroids';
 //============================================================================================
@@ -716,78 +716,7 @@ const ParCoords = config => {
     return axisCfg;
   };
 
-  pc.brushable = function() {
-    if (!g) pc.createAxes();
-
-    // Add and store a brush for each axis.
-    g
-      .append('svg:g')
-      .attr('class', 'brush')
-      .each(function(d) {
-        if (__.dimensions[d] !== undefined) {
-          __.dimensions[d]['brush'] = brushY(select(this)).extent([
-            [-15, 0],
-            [15, __.dimensions[d].yscale.range()[0]],
-          ]);
-          select(this).call(
-            __.dimensions[d]['brush']
-              .on('start', function() {
-                if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
-                  pc.brushReset();
-                }
-              })
-              .on('brush', function() {
-                if (!event.sourceEvent.ctrlKey) {
-                  pc.brush();
-                }
-              })
-              .on('end', function() {
-                // save brush selection is ctrl key is held
-                // store important brush information and
-                // the html element of the selection,
-                // to make a dummy selection element
-                if (event.sourceEvent.ctrlKey) {
-                  let html = select(this)
-                    .select('.selection')
-                    .nodes()[0].outerHTML;
-                  html = html.replace(
-                    'class="selection"',
-                    'class="selection dummy' +
-                      ' selection-' +
-                      __.brushes.length +
-                      '"'
-                  );
-                  let dat = select(this).nodes()[0].__data__;
-                  let brush = {
-                    id: __.brushes.length,
-                    extent: brushSelection(this),
-                    html: html,
-                    data: dat,
-                  };
-                  __.brushes.push(brush);
-                  select(select(this).nodes()[0].parentNode)
-                    .select('.axis')
-                    .nodes()[0].outerHTML += html;
-                  pc.brush();
-                  __.dimensions[d].brush.move(select(this, null));
-                  select(this)
-                    .select('.selection')
-                    .attr('style', 'display:none');
-                  pc.brushable();
-                } else {
-                  pc.brush();
-                }
-              })
-          );
-          select(this).on('dblclick', function() {
-            pc.brushReset(d);
-          });
-        }
-      });
-
-    flags.brushable = true;
-    return this;
-  };
+  pc.brushable = brushable(__, pc, flags);
 
   pc.brush = function() {
     __.brushed = pc.selected();
