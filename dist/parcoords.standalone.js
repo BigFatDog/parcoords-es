@@ -9535,7 +9535,7 @@ var isBrushed = function isBrushed(config, brushGroup) {
   return false;
 };
 
-var clear = function clear(config, ctx, brushGroup) {
+var clear = function clear(config, pc, ctx, brushGroup) {
   return function (layer) {
     ctx[layer].clearRect(0, 0, w$1(config) + 2, h$1(config) + 2);
 
@@ -9627,6 +9627,30 @@ var adjacentPairs = function adjacentPairs(arr) {
     ret.push([arr[i], arr[i + 1]]);
   }
   return ret;
+};
+
+var pathHighlight = function pathHighlight(config, ctx, position) {
+    return function (d, i) {
+        ctx.highlight.strokeStyle = _functor(config.color)(d, i);
+        return colorPath(config, position, d, ctx.highlight);
+    };
+};
+
+var highlight = function highlight(config, pc, canvas, events, ctx, position) {
+    return function () {
+        var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+        if (data === null) {
+            return config.highlighted;
+        }
+
+        config.highlighted = data;
+        pc.clear('highlight');
+        selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
+        data.forEach(pathHighlight(config, ctx, position));
+        events.call('highlight', this, data);
+        return this;
+    };
 };
 
 var _this = undefined;
@@ -9773,11 +9797,6 @@ var ParCoords = function ParCoords(config) {
     return colorPath(__, position, d, ctx.foreground);
   }
 
-  function path_highlight(d, i) {
-    ctx.highlight.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.highlight);
-  }
-
   // expose the state of the chart
   pc.state = __;
   pc.flags = flags;
@@ -9893,7 +9912,7 @@ var ParCoords = function ParCoords(config) {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-  pc.clear = clear(__, ctx, brush);
+  pc.clear = clear(__, pc, ctx, brush);
 
   _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
 
@@ -9941,18 +9960,7 @@ var ParCoords = function ParCoords(config) {
   pc.resize = resize(__, pc, flags, events);
 
   // highlight an array of data
-  pc.highlight = function (data) {
-    if (arguments.length === 0) {
-      return __.highlighted;
-    }
-
-    __.highlighted = data;
-    pc.clear('highlight');
-    selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
-    data.forEach(path_highlight);
-    events.call('highlight', this, data);
-    return this;
-  };
+  pc.highlight = highlight(__, pc, canvas, events, ctx, position);
 
   // clear highlighting
   pc.unhighlight = function () {

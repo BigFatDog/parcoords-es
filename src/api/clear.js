@@ -2,7 +2,7 @@ import h from '../util/height';
 import w from '../util/width';
 import isBrushed from '../util/isBrushed';
 
-const clear = (config, ctx, brushGroup) =>
+const clear = (config, pc, ctx, brushGroup) =>
   function(layer) {
     ctx[layer].clearRect(0, 0, w(config) + 2, h(config) + 2);
 

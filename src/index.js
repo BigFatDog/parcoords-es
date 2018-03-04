@@ -46,6 +46,7 @@ import brushReset from './api/brushReset';
 import toType from './api/toType';
 import toString from './api/toString';
 import adjacentPairs from './api/adjacentPairs';
+import highlight from './api/highlight';
 //============================================================================================
 
 const ParCoords = config => {
@@ -226,10 +227,6 @@ const ParCoords = config => {
     return colorPath(__, position, d, ctx.foreground);
   }
 
-  function path_highlight(d, i) {
-    ctx.highlight.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.highlight);
-  }
 
   // expose the state of the chart
   pc.state = __;
@@ -350,7 +347,7 @@ const ParCoords = config => {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-  pc.clear = clear(__, ctx, brush);
+  pc.clear = clear(__, pc, ctx, brush);
 
   _rebind(
     pc,
@@ -406,18 +403,7 @@ const ParCoords = config => {
   pc.resize = resize(__, pc, flags, events);
 
   // highlight an array of data
-  pc.highlight = function(data) {
-    if (arguments.length === 0) {
-      return __.highlighted;
-    }
-
-    __.highlighted = data;
-    pc.clear('highlight');
-    selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
-    data.forEach(path_highlight);
-    events.call('highlight', this, data);
-    return this;
-  };
+  pc.highlight = highlight(__, pc, canvas, events, ctx, position);
 
   // clear highlighting
   pc.unhighlight = function() {
