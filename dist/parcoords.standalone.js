@@ -8852,7 +8852,7 @@ var dimensionLabels = function dimensionLabels(config) {
   };
 };
 
-var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
+var flipAxisAndUpdatePCP$1 = function flipAxisAndUpdatePCP(config, pc, axis) {
   return function (dimension) {
     pc.flip(dimension);
     pc.brushReset(dimension);
@@ -8899,7 +8899,7 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
       transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
       x: 0,
       class: 'label'
-    }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+    }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP$1(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
     // Update
     g_data.attr('opacity', 0);
@@ -9291,7 +9291,7 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
       axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
       axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-    }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+    }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP$1(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
     if (config.nullValueSeparator == 'top') {
       pc.svg.append('line').attr('x1', 0).attr('y1', 1 + config.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + config.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
@@ -9411,7 +9411,7 @@ var ParCoords = function ParCoords(config) {
   }).on('flipAxes', function (d) {
     if (d.value && d.value.length) {
       d.value.forEach(function (axis) {
-        flipAxisAndUpdatePCP(axis);
+        flipAxisAndUpdatePCP(__, pc, axis);
       });
       pc.updateAxes(0);
     }
@@ -9665,13 +9665,6 @@ var ParCoords = function ParCoords(config) {
     return this;
   };
   _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
-
-  function flipAxisAndUpdatePCP(dimension) {
-    pc.flip(dimension);
-    pc.brushReset(dimension);
-    select(this.parentElement).transition().duration(__.animationTime).call(axis.scale(__.dimensions[dimension].yscale));
-    pc.render();
-  }
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
 

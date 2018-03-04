@@ -108,7 +108,7 @@ const ParCoords = config => {
   };
 
   // side effects for setters
-  let side_effects = dispatch
+  const side_effects = dispatch
     .apply(this, keys(__))
     .on('composite', function(d) {
       ctx.foreground.globalCompositeOperation = d.value;
@@ -167,7 +167,7 @@ const ParCoords = config => {
     .on('flipAxes', function(d) {
       if (d.value && d.value.length) {
         d.value.forEach(function(axis) {
-          flipAxisAndUpdatePCP(axis);
+          flipAxisAndUpdatePCP(__, pc, axis);
         });
         pc.updateAxes(0);
       }
@@ -468,16 +468,6 @@ const ParCoords = config => {
     'tickPadding',
     'tickFormat'
   );
-
-  function flipAxisAndUpdatePCP(dimension) {
-    pc.flip(dimension);
-    pc.brushReset(dimension);
-    select(this.parentElement)
-      .transition()
-      .duration(__.animationTime)
-      .call(axis.scale(__.dimensions[dimension].yscale));
-    pc.render();
-  }
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
 
