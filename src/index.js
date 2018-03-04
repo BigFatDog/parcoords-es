@@ -28,6 +28,7 @@ import computeRealCentroids from './api/computeRealCentroids';
 import getset from './util/getset';
 import applyDimensionDefaults from './api/applyDimensionDefaults';
 import createAxes from './api/createAxes';
+import axisDots from './api/axisDots';
 //============================================================================================
 
 const ParCoords = config => {
@@ -329,28 +330,7 @@ const ParCoords = config => {
   };
 
   // draw dots with radius r on the axis line where data intersects
-  pc.axisDots = function(_r) {
-    let r = _r || 0.1;
-    let ctx = pc.ctx.marks;
-    let startAngle = 0;
-    let endAngle = 2 * Math.PI;
-    ctx.globalAlpha = min([1 / Math.pow(__.data.length, 1 / 2), 1]);
-    __.data.forEach(function(d) {
-      entries(__.dimensions).forEach(function(p, i) {
-        ctx.beginPath();
-        ctx.arc(
-          position(p),
-          __.dimensions[p.key].yscale(d[p]),
-          r,
-          startAngle,
-          endAngle
-        );
-        ctx.stroke();
-        ctx.fill();
-      });
-    });
-    return this;
-  };
+  pc.axisDots = axisDots(__, pc, position);
 
   // draw single cubic bezier curve
   function single_curve(d, ctx) {

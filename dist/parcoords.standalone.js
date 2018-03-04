@@ -9304,6 +9304,27 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
   };
 };
 
+var _this$2 = undefined;
+
+var axisDots = function axisDots(config, pc, position) {
+    return function (_r) {
+        var r = _r || 0.1;
+        var ctx = pc.ctx.marks;
+        var startAngle = 0;
+        var endAngle = 2 * Math.PI;
+        ctx.globalAlpha = min([1 / Math.pow(config.data.length, 1 / 2), 1]);
+        config.data.forEach(function (d) {
+            entries(config.dimensions).forEach(function (p, i) {
+                ctx.beginPath();
+                ctx.arc(position(p), config.dimensions[p.key].yscale(d[p]), r, startAngle, endAngle);
+                ctx.stroke();
+                ctx.fill();
+            });
+        });
+        return _this$2;
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9564,22 +9585,7 @@ var ParCoords = function ParCoords(config) {
   };
 
   // draw dots with radius r on the axis line where data intersects
-  pc.axisDots = function (_r) {
-    var r = _r || 0.1;
-    var ctx = pc.ctx.marks;
-    var startAngle = 0;
-    var endAngle = 2 * Math.PI;
-    ctx.globalAlpha = min([1 / Math.pow(__.data.length, 1 / 2), 1]);
-    __.data.forEach(function (d) {
-      entries(__.dimensions).forEach(function (p, i) {
-        ctx.beginPath();
-        ctx.arc(position(p), __.dimensions[p.key].yscale(d[p]), r, startAngle, endAngle);
-        ctx.stroke();
-        ctx.fill();
-      });
-    });
-    return this;
-  };
+  pc.axisDots = axisDots(__, pc, position);
 
   // draw single cubic bezier curve
   function single_curve(d, ctx) {
