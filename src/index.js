@@ -23,12 +23,12 @@ import autoscale from './api/autoscale';
 import brushable from './api/brushable';
 import commonScale from './api/commonScale';
 import computeClusterCentroids from './util/computeClusterCentroids';
-import computeCentroids from './util/computeCentroids';
 import computeRealCentroids from './api/computeRealCentroids';
 import getset from './util/getset';
 import applyDimensionDefaults from './api/applyDimensionDefaults';
 import createAxes from './api/createAxes';
 import axisDots from './api/axisDots';
+import colorPath from './util/colorPath';
 //============================================================================================
 
 const ParCoords = config => {
@@ -332,77 +332,6 @@ const ParCoords = config => {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-  // draw single cubic bezier curve
-  function single_curve(d, ctx) {
-    let centroids = computeCentroids(__, position, d);
-    let cps = computeControlPoints(__.smoothness, centroids);
-
-    ctx.moveTo(cps[0].e(1), cps[0].e(2));
-    for (let i = 1; i < cps.length; i += 3) {
-      if (__.showControlPoints) {
-        for (let j = 0; j < 3; j++) {
-          ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
-        }
-      }
-      ctx.bezierCurveTo(
-        cps[i].e(1),
-        cps[i].e(2),
-        cps[i + 1].e(1),
-        cps[i + 1].e(2),
-        cps[i + 2].e(1),
-        cps[i + 2].e(2)
-      );
-    }
-  }
-
-  // draw single polyline
-  function color_path(d, ctx) {
-    ctx.beginPath();
-    if (
-      (__.bundleDimension !== null && __.bundlingStrength > 0) ||
-      __.smoothness > 0
-    ) {
-      single_curve(d, ctx);
-    } else {
-      single_path(d, ctx);
-    }
-    ctx.stroke();
-  }
-
-  // returns the y-position just beyond the separating null value line
-  function getNullPosition() {
-    if (__.nullValueSeparator == 'bottom') {
-      return h() + 1;
-    } else if (__.nullValueSeparator == 'top') {
-      return 1;
-    } else {
-      console.log(
-        "A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'."
-      );
-    }
-    return h() + 1;
-  }
-
-  function single_path(d, ctx) {
-    entries(__.dimensions).forEach(function(p, i) {
-      //p isn't really p
-      if (i == 0) {
-        ctx.moveTo(
-          position(p.key),
-          typeof d[p.key] == 'undefined'
-            ? getNullPosition()
-            : __.dimensions[p.key].yscale(d[p.key])
-        );
-      } else {
-        ctx.lineTo(
-          position(p.key),
-          typeof d[p.key] == 'undefined'
-            ? getNullPosition()
-            : __.dimensions[p.key].yscale(d[p.key])
-        );
-      }
-    });
-  }
 
   function path_brushed(d, i) {
     if (__.brushedColor !== null) {
@@ -410,17 +339,17 @@ const ParCoords = config => {
     } else {
       ctx.brushed.strokeStyle = _functor(__.color)(d, i);
     }
-    return color_path(d, ctx.brushed);
+    return colorPath(__, position, d, ctx.brushed);
   }
 
   function path_foreground(d, i) {
     ctx.foreground.strokeStyle = _functor(__.color)(d, i);
-    return color_path(d, ctx.foreground);
+    return colorPath(__, position, d, ctx.foreground);
   }
 
   function path_highlight(d, i) {
     ctx.highlight.strokeStyle = _functor(__.color)(d, i);
-    return color_path(d, ctx.highlight);
+    return colorPath(__, position, d, ctx.highlight);
   }
 
   pc.clear = function(layer) {
@@ -745,7 +674,7 @@ const ParCoords = config => {
 
   function position(d) {
     if (xscale.range().length === 0) {
-      xscale.range([0, w()], 1);
+      xscale.range([0, w(__)], 1);
     }
     let v = dragging[d];
     return v == null ? xscale(d) : v;
