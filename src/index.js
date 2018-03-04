@@ -29,6 +29,9 @@ import applyDimensionDefaults from './api/applyDimensionDefaults';
 import createAxes from './api/createAxes';
 import axisDots from './api/axisDots';
 import colorPath from './util/colorPath';
+
+import w from './util/width';
+import h  from './util/height';
 //============================================================================================
 
 const ParCoords = config => {
@@ -62,8 +65,6 @@ const ParCoords = config => {
   ].concat(keys(__));
 
   let events = dispatch.apply(this, eventTypes),
-    w = () => __.width - __.margin.right - __.margin.left,
-    h = () => __.height - __.margin.top - __.margin.bottom,
     flags = {
       brushable: false,
       reorderable: false,
@@ -353,7 +354,7 @@ const ParCoords = config => {
   }
 
   pc.clear = function(layer) {
-    ctx[layer].clearRect(0, 0, w() + 2, h() + 2);
+    ctx[layer].clearRect(0, 0, w(__) + 2, h(__) + 2);
 
     // This will make sure that the foreground items are transparent
     // without the need for changing the opacity style of the foreground canvas
@@ -361,7 +362,7 @@ const ParCoords = config => {
     if (layer === 'brushed' && isBrushed()) {
       ctx.brushed.fillStyle = pc.selection.style('background-color');
       ctx.brushed.globalAlpha = 1 - __.alphaOnBrushed;
-      ctx.brushed.fillRect(0, 0, w() + 2, h() + 2);
+      ctx.brushed.fillRect(0, 0, w(__) + 2, h(__) + 2);
       ctx.brushed.globalAlpha = __.alpha;
     }
     return this;
@@ -473,7 +474,7 @@ const ParCoords = config => {
         })
         .on('drag', function(d) {
           dragging[d] = Math.min(
-            w(),
+            w(__),
             Math.max(0, (this.__origin__ += event.dx))
           );
           pc.sortDimensions();

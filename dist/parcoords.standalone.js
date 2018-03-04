@@ -2576,7 +2576,6 @@ var formatTypes = {
   }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4708,7 +4707,6 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-// Ignore right-click, since that should open the context menu.
 function defaultFilter() {
   return !event.button;
 }
@@ -7053,11 +7051,6 @@ function brush$1(dim) {
 }
 
 // brush mode: 1D-Axes
-// This function can be used for 'live' updates of brushes. That is, during the
-// specification of a brush, this method can be called to update the view.
-//
-// @param newSelection - The new set of data items that is currently contained
-//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -9406,12 +9399,6 @@ var ParCoords = function ParCoords(config) {
   var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(__));
 
   var events = dispatch.apply(_this, eventTypes),
-      w = function w() {
-    return __.width - __.margin.right - __.margin.left;
-  },
-      h = function h() {
-    return __.height - __.margin.top - __.margin.bottom;
-  },
       flags = {
     brushable: false,
     reorderable: false,
@@ -9665,7 +9652,7 @@ var ParCoords = function ParCoords(config) {
   }
 
   pc.clear = function (layer) {
-    ctx[layer].clearRect(0, 0, w() + 2, h() + 2);
+    ctx[layer].clearRect(0, 0, w$1(__) + 2, h$1(__) + 2);
 
     // This will make sure that the foreground items are transparent
     // without the need for changing the opacity style of the foreground canvas
@@ -9673,7 +9660,7 @@ var ParCoords = function ParCoords(config) {
     if (layer === 'brushed' && isBrushed()) {
       ctx.brushed.fillStyle = pc.selection.style('background-color');
       ctx.brushed.globalAlpha = 1 - __.alphaOnBrushed;
-      ctx.brushed.fillRect(0, 0, w() + 2, h() + 2);
+      ctx.brushed.fillRect(0, 0, w$1(__) + 2, h$1(__) + 2);
       ctx.brushed.globalAlpha = __.alpha;
     }
     return this;
@@ -9763,7 +9750,7 @@ var ParCoords = function ParCoords(config) {
     g.style('cursor', 'move').call(drag().on('start', function (d) {
       dragging[d] = this.__origin__ = xscale(d);
     }).on('drag', function (d) {
-      dragging[d] = Math.min(w(), Math.max(0, this.__origin__ += event.dx));
+      dragging[d] = Math.min(w$1(__), Math.max(0, this.__origin__ += event.dx));
       pc.sortDimensions();
       xscale.domain(pc.getOrderedDimensionKeys());
       pc.render();
@@ -9949,7 +9936,7 @@ var ParCoords = function ParCoords(config) {
 
   function position(d) {
     if (xscale.range().length === 0) {
-      xscale.range([0, w(__)], 1);
+      xscale.range([0, w$1(__)], 1);
     }
     var v = dragging[d];
     return v == null ? xscale(d) : v;
