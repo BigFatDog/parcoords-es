@@ -62,12 +62,10 @@ const ParCoords = config => {
     },
     xscale = scalePoint(),
     dragging = {},
-    _line = line(),
     axis = axisLeft().ticks(5),
     g, // groups for axes, brushes
     ctx = {},
-    canvas = {},
-    clusterCentroids = [];
+    canvas = {};
 
   const pc = function(selection) {
     selection = pc.selection = select(selection);

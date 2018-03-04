@@ -4939,56 +4939,6 @@ function y(p) {
   return p[1];
 }
 
-var line = function () {
-  var x$$1 = x,
-      y$$1 = y,
-      defined = constant$4(true),
-      context = null,
-      curve = curveLinear,
-      output = null;
-
-  function line(data) {
-    var i,
-        n = data.length,
-        d,
-        defined0 = false,
-        buffer;
-
-    if (context == null) output = curve(buffer = path());
-
-    for (i = 0; i <= n; ++i) {
-      if (!(i < n && defined(d = data[i], i, data)) === defined0) {
-        if (defined0 = !defined0) output.lineStart();else output.lineEnd();
-      }
-      if (defined0) output.point(+x$$1(d, i, data), +y$$1(d, i, data));
-    }
-
-    if (buffer) return output = null, buffer + "" || null;
-  }
-
-  line.x = function (_) {
-    return arguments.length ? (x$$1 = typeof _ === "function" ? _ : constant$4(+_), line) : x$$1;
-  };
-
-  line.y = function (_) {
-    return arguments.length ? (y$$1 = typeof _ === "function" ? _ : constant$4(+_), line) : y$$1;
-  };
-
-  line.defined = function (_) {
-    return arguments.length ? (defined = typeof _ === "function" ? _ : constant$4(!!_), line) : defined;
-  };
-
-  line.curve = function (_) {
-    return arguments.length ? (curve = _, context != null && (output = curve(context)), line) : curve;
-  };
-
-  line.context = function (_) {
-    return arguments.length ? (_ == null ? context = output = null : output = curve(context = _), line) : context;
-  };
-
-  return line;
-};
-
 function sign(x) {
   return x < 0 ? -1 : 1;
 }
@@ -8625,8 +8575,6 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
 
 var _this = undefined;
 
-//============================================================================================
-
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
 
@@ -8661,13 +8609,11 @@ var ParCoords = function ParCoords(config) {
   },
       xscale = point$1(),
       dragging = {},
-      _line = line(),
       axis = axisLeft().ticks(5),
       g = void 0,
       // groups for axes, brushes
   ctx = {},
-      canvas = {},
-      clusterCentroids = [];
+      canvas = {};
 
   var pc = function pc(selection) {
     selection = pc.selection = select(selection);
