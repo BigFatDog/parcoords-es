@@ -9522,6 +9522,23 @@ var sortDimensionsByRowData = function sortDimensionsByRowData(config) {
   };
 };
 
+var clear = function clear(config, ctx, brushGroup) {
+    return function (layer) {
+        ctx[layer].clearRect(0, 0, w$1(config) + 2, h$1(config) + 2);
+
+        // This will make sure that the foreground items are transparent
+        // without the need for changing the opacity style of the foreground canvas
+        // as this would stop the css styling from working
+        if (layer === 'brushed' && isBrushed(config, brushGroup)) {
+            ctx.brushed.fillStyle = pc.selection.style('background-color');
+            ctx.brushed.globalAlpha = 1 - config.alphaOnBrushed;
+            ctx.brushed.fillRect(0, 0, w$1(config) + 2, h$1(config) + 2);
+            ctx.brushed.globalAlpha = config.alpha;
+        }
+        return this;
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9797,20 +9814,7 @@ var ParCoords = function ParCoords(config) {
     return colorPath(__, position, d, ctx.highlight);
   }
 
-  pc.clear = function (layer) {
-    ctx[layer].clearRect(0, 0, w$1(__) + 2, h$1(__) + 2);
-
-    // This will make sure that the foreground items are transparent
-    // without the need for changing the opacity style of the foreground canvas
-    // as this would stop the css styling from working
-    if (layer === 'brushed' && isBrushed()) {
-      ctx.brushed.fillStyle = pc.selection.style('background-color');
-      ctx.brushed.globalAlpha = 1 - __.alphaOnBrushed;
-      ctx.brushed.fillRect(0, 0, w$1(__) + 2, h$1(__) + 2);
-      ctx.brushed.globalAlpha = __.alpha;
-    }
-    return this;
-  };
+  pc.clear = clear(__, ctx, brush);
   _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
