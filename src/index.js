@@ -512,32 +512,6 @@ const ParCoords = config => {
     return ret;
   };
 
-  const brush = {
-    modes: {
-      None: {
-        install: function(pc) {}, // Nothing to be done.
-        uninstall: function(pc) {}, // Nothing to be done.
-        selected: function() {
-          return [];
-        }, // Nothing to return
-        brushState: function() {
-          return {};
-        },
-      },
-    },
-    mode: 'None',
-    predicate: 'AND',
-    currentMode: function() {
-      return this.modes[this.mode];
-    },
-  };
-
-  pc.brushModes = function() {
-    return Object.getOwnPropertyNames(brush.modes);
-  };
-
-  pc.brushMode = brushMode(brush, __, pc);
-
   pc.interactive = function() {
     flags.interactive = true;
     return this;
@@ -588,6 +562,32 @@ const ParCoords = config => {
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
+
+  const brush = {
+    modes: {
+      None: {
+        install: function(pc) {}, // Nothing to be done.
+        uninstall: function(pc) {}, // Nothing to be done.
+        selected: function() {
+          return [];
+        }, // Nothing to return
+        brushState: function() {
+          return {};
+        },
+      },
+    },
+    mode: 'None',
+    predicate: 'AND',
+    currentMode: function() {
+      return this.modes[this.mode];
+    },
+  };
+
+  pc.brushModes = function() {
+    return Object.getOwnPropertyNames(brush.modes);
+  };
+
+  pc.brushMode = brushMode(brush, __, pc);
 
   install1DAxes(brush, __, pc, events);
   install2DStrums(brush, __, pc, events, xscale);

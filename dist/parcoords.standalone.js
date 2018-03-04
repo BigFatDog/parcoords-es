@@ -9402,7 +9402,6 @@ var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   return axisCfg;
 };
 
-// Jason Davies, http://bl.ocks.org/1341281
 var reorderable = function reorderable(config, pc, xscale, position, dragging, flags) {
   return function () {
     if (pc.g() === undefined) pc.createAxes();
@@ -9432,33 +9431,35 @@ var reorderable = function reorderable(config, pc, xscale, position, dragging, f
 // rescale for height, width and margins
 // TODO currently assumes chart is brushable, and destroys old brushes
 var resize = function resize(config, pc, flags, events) {
-    return function () {
-        // selection size
-        pc.selection.select('svg').attr('width', config.width).attr('height', config.height);
-        pc.svg.attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
+  return function () {
+    // selection size
+    pc.selection.select('svg').attr('width', config.width).attr('height', config.height);
+    pc.svg.attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
 
-        // FIXME: the current brush state should pass through
-        if (flags.brushable) pc.brushReset();
+    // FIXME: the current brush state should pass through
+    if (flags.brushable) pc.brushReset();
 
-        // scales
-        pc.autoscale();
+    // scales
+    pc.autoscale();
 
-        // axes, destroys old brushes.
-        if (pc.g()) pc.createAxes();
-        if (flags.brushable) pc.brushable();
-        if (flags.reorderable) pc.reorderable();
+    // axes, destroys old brushes.
+    if (pc.g()) pc.createAxes();
+    if (flags.brushable) pc.brushable();
+    if (flags.reorderable) pc.reorderable();
 
-        events.call('resize', this, {
-            width: config.width,
-            height: config.height,
-            margin: config.margin
-        });
+    events.call('resize', this, {
+      width: config.width,
+      height: config.height,
+      margin: config.margin
+    });
 
-        return this;
-    };
+    return this;
+  };
 };
 
 var _this = undefined;
+
+//============================================================================================
 
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
@@ -9872,32 +9873,6 @@ var ParCoords = function ParCoords(config) {
     return ret;
   };
 
-  var brush = {
-    modes: {
-      None: {
-        install: function install(pc) {}, // Nothing to be done.
-        uninstall: function uninstall(pc) {}, // Nothing to be done.
-        selected: function selected$$1() {
-          return [];
-        }, // Nothing to return
-        brushState: function brushState() {
-          return {};
-        }
-      }
-    },
-    mode: 'None',
-    predicate: 'AND',
-    currentMode: function currentMode() {
-      return this.modes[this.mode];
-    }
-  };
-
-  pc.brushModes = function () {
-    return Object.getOwnPropertyNames(brush.modes);
-  };
-
-  pc.brushMode = brushMode(brush, __, pc);
-
   pc.interactive = function () {
     flags.interactive = true;
     return this;
@@ -9950,6 +9925,32 @@ var ParCoords = function ParCoords(config) {
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
+
+  var brush = {
+    modes: {
+      None: {
+        install: function install(pc) {}, // Nothing to be done.
+        uninstall: function uninstall(pc) {}, // Nothing to be done.
+        selected: function selected$$1() {
+          return [];
+        }, // Nothing to return
+        brushState: function brushState() {
+          return {};
+        }
+      }
+    },
+    mode: 'None',
+    predicate: 'AND',
+    currentMode: function currentMode() {
+      return this.modes[this.mode];
+    }
+  };
+
+  pc.brushModes = function () {
+    return Object.getOwnPropertyNames(brush.modes);
+  };
+
+  pc.brushMode = brushMode(brush, __, pc);
 
   install1DAxes(brush, __, pc, events);
   install2DStrums(brush, __, pc, events, xscale);
