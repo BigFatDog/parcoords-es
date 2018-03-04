@@ -9461,32 +9461,32 @@ var resize = function resize(config, pc, flags, events) {
 // the lowest on the right. Visual values are determined by the data values in
 // the given row.
 var reorder = function reorder(config, pc, xscale) {
-    return function (rowdata) {
-        var firstDim = pc.getOrderedDimensionKeys()[0];
+  return function (rowdata) {
+    var firstDim = pc.getOrderedDimensionKeys()[0];
 
-        pc.sortDimensionsByRowData(rowdata);
-        // NOTE: this is relatively cheap given that:
-        // number of dimensions < number of data items
-        // Thus we check equality of order to prevent rerendering when this is the case.
-        var reordered = firstDim !== pc.getOrderedDimensionKeys()[0];
+    pc.sortDimensionsByRowData(rowdata);
+    // NOTE: this is relatively cheap given that:
+    // number of dimensions < number of data items
+    // Thus we check equality of order to prevent rerendering when this is the case.
+    var reordered = firstDim !== pc.getOrderedDimensionKeys()[0];
 
-        if (reordered) {
-            xscale.domain(pc.getOrderedDimensionKeys());
-            var highlighted = config.highlighted.slice(0);
-            pc.unhighlight();
+    if (reordered) {
+      xscale.domain(pc.getOrderedDimensionKeys());
+      var highlighted = config.highlighted.slice(0);
+      pc.unhighlight();
 
-            var g = pc.g();
-            g.transition().duration(1500).attr('transform', function (d) {
-                return 'translate(' + xscale(d) + ')';
-            });
-            pc.render();
+      var g = pc.g();
+      g.transition().duration(1500).attr('transform', function (d) {
+        return 'translate(' + xscale(d) + ')';
+      });
+      pc.render();
 
-            // pc.highlight() does not check whether highlighted is length zero, so we do that here.
-            if (highlighted.length !== 0) {
-                pc.highlight(highlighted);
-            }
-        }
-    };
+      // pc.highlight() does not check whether highlighted is length zero, so we do that here.
+      if (highlighted.length !== 0) {
+        pc.highlight(highlighted);
+      }
+    }
+  };
 };
 
 var sortDimensions = function sortDimensions(config, position) {
@@ -9522,34 +9522,92 @@ var sortDimensionsByRowData = function sortDimensionsByRowData(config) {
   };
 };
 
-var clear = function clear(config, ctx, brushGroup) {
-    return function (layer) {
-        ctx[layer].clearRect(0, 0, w$1(config) + 2, h$1(config) + 2);
+var isBrushed = function isBrushed(config, brushGroup) {
+  if (config.brushed && config.brushed.length !== config.data.length) return true;
 
-        // This will make sure that the foreground items are transparent
-        // without the need for changing the opacity style of the foreground canvas
-        // as this would stop the css styling from working
-        if (layer === 'brushed' && isBrushed(config, brushGroup)) {
-            ctx.brushed.fillStyle = pc.selection.style('background-color');
-            ctx.brushed.globalAlpha = 1 - config.alphaOnBrushed;
-            ctx.brushed.fillRect(0, 0, w$1(config) + 2, h$1(config) + 2);
-            ctx.brushed.globalAlpha = config.alpha;
-        }
-        return this;
-    };
+  var object = brushGroup.currentMode().brushState();
+
+  for (var key in object) {
+    if (object.hasOwnProperty(key)) {
+      return true;
+    }
+  }
+  return false;
 };
 
-var isBrushed$1 = function isBrushed(config, brushGroup) {
-    if (config.brushed && config.brushed.length !== config.data.length) return true;
+var clear = function clear(config, ctx, brushGroup) {
+  return function (layer) {
+    ctx[layer].clearRect(0, 0, w$1(config) + 2, h$1(config) + 2);
 
-    var object = brushGroup.currentMode().brushState();
-
-    for (var key in object) {
-        if (object.hasOwnProperty(key)) {
-            return true;
-        }
+    // This will make sure that the foreground items are transparent
+    // without the need for changing the opacity style of the foreground canvas
+    // as this would stop the css styling from working
+    if (layer === 'brushed' && isBrushed(config, brushGroup)) {
+      ctx.brushed.fillStyle = pc.selection.style('background-color');
+      ctx.brushed.globalAlpha = 1 - config.alphaOnBrushed;
+      ctx.brushed.fillRect(0, 0, w$1(config) + 2, h$1(config) + 2);
+      ctx.brushed.globalAlpha = config.alpha;
     }
-    return false;
+    return this;
+  };
+};
+
+var pathBrushed = function pathBrushed(config, ctx, position) {
+  return function (d, i) {
+    if (config.brushedColor !== null) {
+      ctx.brushed.strokeStyle = _functor(config.brushedColor)(d, i);
+    } else {
+      ctx.brushed.strokeStyle = _functor(config.color)(d, i);
+    }
+    return colorPath(config, position, d, ctx.brushed);
+  };
+};
+
+var renderBrushedDefault = function renderBrushedDefault(config, ctx, position, pc, brushGroup) {
+  return function () {
+    pc.clear('brushed');
+
+    if (isBrushed(config, brushGroup)) {
+      config.brushed.forEach(pathBrushed(config, ctx, position));
+    }
+  };
+};
+
+var renderBrushedQueue = function renderBrushedQueue(config, brushGroup, brushedQueue) {
+  return function () {
+    if (isBrushed(config, brushGroup)) {
+      brushedQueue(config.brushed);
+    } else {
+      brushedQueue([]); // This is needed to clear the currently brushed items
+    }
+  };
+};
+
+var brushReset = function brushReset(config) {
+  return function (dimension) {
+    var brushesToKeep = [];
+    for (var j = 0; j < config.brushes.length; j++) {
+      if (config.brushes[j].data !== dimension) {
+        brushesToKeep.push(config.brushes[j]);
+      }
+    }
+
+    config.brushes = brushesToKeep;
+    config.brushed = false;
+
+    if (pc.g() !== undefined) {
+      var nodes = selectAll('.brush').nodes();
+      for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i].__data__ === dimension) {
+          // remove all dummy brushes for this axis or the real brush
+          select(select(nodes[i]).nodes()[0].parentNode).selectAll('.dummy').remove();
+          config.dimensions[dimension].brush.move(select(nodes[i], null));
+        }
+      }
+    }
+
+    return this;
+  };
 };
 
 var _this = undefined;
@@ -9603,6 +9661,30 @@ var ParCoords = function ParCoords(config) {
     pc.svg = selection.append('svg').attr('width', __.width).attr('height', __.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
 
     return pc;
+  };
+
+  var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
+    return pc.clear('brushed');
+  });
+
+  var brush = {
+    modes: {
+      None: {
+        install: function install(pc) {}, // Nothing to be done.
+        uninstall: function uninstall(pc) {}, // Nothing to be done.
+        selected: function selected$$1() {
+          return [];
+        }, // Nothing to return
+        brushState: function brushState() {
+          return {};
+        }
+      }
+    },
+    mode: 'None',
+    predicate: 'AND',
+    currentMode: function currentMode() {
+      return this.modes[this.mode];
+    }
   };
 
   // side effects for setters
@@ -9763,26 +9845,8 @@ var ParCoords = function ParCoords(config) {
     foregroundQueue(__.data);
   };
 
-  pc.renderBrushed.default = function () {
-    pc.clear('brushed');
-
-    if (isBrushed$1(__, brush)) {
-      __.brushed.forEach(path_brushed);
-    }
-  };
-
-  var brushedQueue = renderQueue(path_brushed).rate(50).clear(function () {
-    pc.clear('brushed');
-  });
-
-  pc.renderBrushed.queue = function () {
-    if (isBrushed$1(__, brush)) {
-      brushedQueue(__.brushed);
-    } else {
-      brushedQueue([]); // This is needed to clear the currently brushed items
-    }
-  };
-
+  pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
+  pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
   pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
 
   pc.shadows = function () {
@@ -9795,15 +9859,6 @@ var ParCoords = function ParCoords(config) {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-  function path_brushed(d, i) {
-    if (__.brushedColor !== null) {
-      ctx.brushed.strokeStyle = _functor(__.brushedColor)(d, i);
-    } else {
-      ctx.brushed.strokeStyle = _functor(__.color)(d, i);
-    }
-    return colorPath(__, position, d, ctx.brushed);
-  }
-
   function path_foreground(d, i) {
     ctx.foreground.strokeStyle = _functor(__.color)(d, i);
     return colorPath(__, position, d, ctx.foreground);
@@ -9815,6 +9870,7 @@ var ParCoords = function ParCoords(config) {
   }
 
   pc.clear = clear(__, ctx, brush);
+
   _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
@@ -9903,26 +9959,6 @@ var ParCoords = function ParCoords(config) {
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
-
-  var brush = {
-    modes: {
-      None: {
-        install: function install(pc) {}, // Nothing to be done.
-        uninstall: function uninstall(pc) {}, // Nothing to be done.
-        selected: function selected$$1() {
-          return [];
-        }, // Nothing to return
-        brushState: function brushState() {
-          return {};
-        }
-      }
-    },
-    mode: 'None',
-    predicate: 'AND',
-    currentMode: function currentMode() {
-      return this.modes[this.mode];
-    }
-  };
 
   pc.brushModes = function () {
     return Object.getOwnPropertyNames(brush.modes);

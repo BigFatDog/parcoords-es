@@ -37,7 +37,12 @@ import reorder from './api/reorder';
 import sortDimensions from './api/sortDimensions';
 import sortDimensionsByRowData from './api/sortDimensionsByRowData';
 import clear from './api/clear';
-import isBrushed from './util/isBrushed';
+import {
+  pathBrushed,
+  renderBrushedDefault,
+  renderBrushedQueue,
+} from './api/renderBrushed';
+import brushReset from './api/brushReset';
 //============================================================================================
 
 const ParCoords = config => {
@@ -113,6 +118,30 @@ const ParCoords = config => {
       );
 
     return pc;
+  };
+
+  const brushedQueue = renderQueue(pathBrushed(__, ctx, position))
+    .rate(50)
+    .clear(() => pc.clear('brushed'));
+
+  const brush = {
+    modes: {
+      None: {
+        install: function(pc) {}, // Nothing to be done.
+        uninstall: function(pc) {}, // Nothing to be done.
+        selected: function() {
+          return [];
+        }, // Nothing to return
+        brushState: function() {
+          return {};
+        },
+      },
+    },
+    mode: 'None',
+    predicate: 'AND',
+    currentMode: function() {
+      return this.modes[this.mode];
+    },
   };
 
   // side effects for setters
@@ -292,28 +321,8 @@ const ParCoords = config => {
     foregroundQueue(__.data);
   };
 
-  pc.renderBrushed.default = function() {
-    pc.clear('brushed');
-
-    if (isBrushed(__, brush)) {
-      __.brushed.forEach(path_brushed);
-    }
-  };
-
-  let brushedQueue = renderQueue(path_brushed)
-    .rate(50)
-    .clear(function() {
-      pc.clear('brushed');
-    });
-
-  pc.renderBrushed.queue = function() {
-    if (isBrushed(__, brush)) {
-      brushedQueue(__.brushed);
-    } else {
-      brushedQueue([]); // This is needed to clear the currently brushed items
-    }
-  };
-
+  pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
+  pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
   pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
 
   pc.shadows = function() {
@@ -326,15 +335,6 @@ const ParCoords = config => {
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
 
-  function path_brushed(d, i) {
-    if (__.brushedColor !== null) {
-      ctx.brushed.strokeStyle = _functor(__.brushedColor)(d, i);
-    } else {
-      ctx.brushed.strokeStyle = _functor(__.color)(d, i);
-    }
-    return colorPath(__, position, d, ctx.brushed);
-  }
-
   function path_foreground(d, i) {
     ctx.foreground.strokeStyle = _functor(__.color)(d, i);
     return colorPath(__, position, d, ctx.foreground);
@@ -346,6 +346,7 @@ const ParCoords = config => {
   }
 
   pc.clear = clear(__, ctx, brush);
+
   _rebind(
     pc,
     axis,
@@ -442,26 +443,6 @@ const ParCoords = config => {
   // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
-
-  const brush = {
-    modes: {
-      None: {
-        install: function(pc) {}, // Nothing to be done.
-        uninstall: function(pc) {}, // Nothing to be done.
-        selected: function() {
-          return [];
-        }, // Nothing to return
-        brushState: function() {
-          return {};
-        },
-      },
-    },
-    mode: 'None',
-    predicate: 'AND',
-    currentMode: function() {
-      return this.modes[this.mode];
-    },
-  };
 
   pc.brushModes = function() {
     return Object.getOwnPropertyNames(brush.modes);
