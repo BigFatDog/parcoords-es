@@ -1,4 +1,4 @@
-import { select, selectAll } from 'd3-selection';
+import { select } from 'd3-selection';
 import { keys, entries } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
 import { ascending } from 'd3-array';
@@ -48,6 +48,7 @@ import toString from './api/toString';
 import adjacentPairs from './api/adjacentPairs';
 import highlight from './api/highlight';
 import unhighlight from './api/unhighlight';
+import removeAxes from './api/removeAxes';
 //============================================================================================
 
 const ParCoords = config => {
@@ -363,12 +364,7 @@ const ParCoords = config => {
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
 
-  pc.removeAxes = function() {
-    pc._g.remove();
-
-    delete pc._g;
-    return this;
-  };
+  pc.removeAxes = removeAxes(pc);
 
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
   pc.applyAxisConfig = applyAxisConfig;

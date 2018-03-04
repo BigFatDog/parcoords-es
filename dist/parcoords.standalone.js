@@ -9662,6 +9662,15 @@ var unhighlight = function unhighlight(config, pc, canvas) {
   };
 };
 
+var removeAxes = function removeAxes(pc) {
+    return function () {
+        pc._g.remove();
+
+        delete pc._g;
+        return this;
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9927,12 +9936,7 @@ var ParCoords = function ParCoords(config) {
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
 
-  pc.removeAxes = function () {
-    pc._g.remove();
-
-    delete pc._g;
-    return this;
-  };
+  pc.removeAxes = removeAxes(pc);
 
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
   pc.applyAxisConfig = applyAxisConfig;
