@@ -9200,6 +9200,24 @@ var computeCentroids = function computeCentroids(config, position, row) {
     return centroids;
 };
 
+var computeRealCentroids = function computeRealCentroids(dimensions, position) {
+    return function (row) {
+        var realCentroids = [];
+
+        var p = keys(dimensions);
+        var cols = p.length;
+        var a = 0.5;
+
+        for (var i = 0; i < cols; ++i) {
+            var x = position(p[i]);
+            var y = dimensions[p[i]].yscale(row[p[i]]);
+            realCentroids.push([x, y]);
+        }
+
+        return realCentroids;
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9489,21 +9507,7 @@ var ParCoords = function ParCoords(config) {
     }
   };
 
-  pc.compute_real_centroids = function (row) {
-    var realCentroids = [];
-
-    var p = keys(__.dimensions);
-    var cols = p.length;
-    var a = 0.5;
-
-    for (var i = 0; i < cols; ++i) {
-      var x = position(p[i]);
-      var y = __.dimensions[p[i]].yscale(row[p[i]]);
-      realCentroids.push([x, y]);
-    }
-
-    return realCentroids;
-  };
+  pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
 
   pc.shadows = function () {
     flags.shadows = true;

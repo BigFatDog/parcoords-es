@@ -24,6 +24,7 @@ import brushable from './api/brushable';
 import commonScale from './api/commonScale';
 import computeClusterCentroids from './util/computeClusterCentroids';
 import computeCentroids from './util/computeCentroids';
+import computeRealCentroids from './api/computeRealCentroids';
 //============================================================================================
 
 const ParCoords = config => {
@@ -363,21 +364,7 @@ const ParCoords = config => {
   };
 
 
-  pc.compute_real_centroids = function(row) {
-    let realCentroids = [];
-
-    let p = keys(__.dimensions);
-    let cols = p.length;
-    let a = 0.5;
-
-    for (let i = 0; i < cols; ++i) {
-      let x = position(p[i]);
-      let y = __.dimensions[p[i]].yscale(row[p[i]]);
-      realCentroids.push([x, y]);
-    }
-
-    return realCentroids;
-  };
+  pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
 
   pc.shadows = function() {
     flags.shadows = true;
