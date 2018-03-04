@@ -8775,6 +8775,8 @@ var selected = function selected(config) {
 
 var _this = undefined;
 
+//============================================================================================
+
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
 
@@ -9765,58 +9767,11 @@ var ParCoords = function ParCoords(config) {
     pc.renderBrushed();
   }
 
-  function brushPredicate(predicate) {
-    if (!arguments.length) {
-      return brush$$1.predicate;
-    }
-
-    predicate = String(predicate).toUpperCase();
-    if (predicate !== 'AND' && predicate !== 'OR') {
-      throw new Error('Invalid predicate ' + predicate);
-    }
-
-    brush$$1.predicate = predicate;
-    __.brushed = brush$$1.currentMode().selected();
-    pc.renderBrushed();
-    return pc;
-  }
-
   pc.brushModes = function () {
     return Object.getOwnPropertyNames(brush$$1.modes);
   };
 
-  pc.brushMode = function (mode) {
-    if (arguments.length === 0) {
-      return brush$$1.mode;
-    }
-
-    if (pc.brushModes().indexOf(mode) === -1) {
-      throw new Error('pc.brushmode: Unsupported brush mode: ' + mode);
-    }
-
-    // Make sure that we don't trigger unnecessary events by checking if the mode
-    // actually changes.
-    if (mode !== brush$$1.mode) {
-      // When changing brush modes, the first thing we need to do is clearing any
-      // brushes from the current mode, if any.
-      if (brush$$1.mode !== 'None') {
-        pc.brushReset();
-      }
-
-      // Next, we need to 'uninstall' the current brushMode.
-      brush$$1.modes[brush$$1.mode].uninstall(pc);
-      // Finally, we can install the requested one.
-      brush$$1.mode = mode;
-      brush$$1.modes[brush$$1.mode].install();
-      if (mode === 'None') {
-        delete pc.brushPredicate;
-      } else {
-        pc.brushPredicate = brushPredicate;
-      }
-    }
-
-    return pc;
-  };
+  pc.brushMode = brushMode(brush$$1, __, pc);
 
   pc.interactive = function () {
     flags.interactive = true;
