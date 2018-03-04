@@ -19,6 +19,7 @@ import installAngularBrush from './brush/installAngularBrush';
 import intersection from './api/intersection';
 import mergeParcoords from './api/mergeParcoords';
 import selected from './api/selected';
+import brushMode from './api/brushMode';
 //============================================================================================
 
 const ParCoords = config => {
@@ -1282,18 +1283,6 @@ const ParCoords = config => {
     },
   };
 
-  // This function can be used for 'live' updates of brushes. That is, during the
-  // specification of a brush, this method can be called to update the view.
-  //
-  // @param newSelection - The new set of data items that is currently contained
-  //                       by the brushes
-  function brushUpdated(newSelection) {
-    __.brushed = newSelection;
-    events.call('brush', pc, __.brushed);
-    pc.renderBrushed();
-  }
-
-
 
   pc.brushModes = function() {
     return Object.getOwnPropertyNames(brush.modes);
@@ -1384,7 +1373,7 @@ const ParCoords = config => {
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
 
-  install1DAxes(brush, __, pc, events, brushUpdated);
+  install1DAxes(brush, __, pc, events);
   install2DStrums(brush, __, pc, events, xscale);
   installAngularBrush(brush, __, pc, events, xscale);
 

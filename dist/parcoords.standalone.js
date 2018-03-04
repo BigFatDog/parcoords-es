@@ -2576,6 +2576,7 @@ var formatTypes = {
   }
 };
 
+// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4707,6 +4708,7 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
+// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7063,7 +7065,20 @@ var InitialState = {
 };
 
 // brush mode: 1D-Axes
-var install1DAxes = function install1DAxes(brushGroup, config, pc, events, brushUpdated) {
+// This function can be used for 'live' updates of brushes. That is, during the
+// specification of a brush, this method can be called to update the view.
+//
+// @param newSelection - The new set of data items that is currently contained
+//                       by the brushes
+var brushUpdated = function brushUpdated(config, pc, events) {
+  return function (newSelection) {
+    config.brushed = newSelection;
+    events.call('brush', pc, config.brushed);
+    pc.renderBrushed();
+  };
+};
+
+var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
   var brushes = {};
   var brushNodes = {};
   var g = null;
@@ -7187,9 +7202,9 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events, brush
         event.sourceEvent.stopPropagation();
       }
     }).on('brush', function () {
-      brushUpdated(selected());
+      brushUpdated(config, pc, events)(selected());
     }).on('end', function () {
-      brushUpdated(selected());
+      brushUpdated(config, pc, events)(selected());
       events.call('brushend', pc, config.brushed);
     });
 
@@ -8773,6 +8788,63 @@ var selected = function selected(config) {
     }
 };
 
+var brushPredicate = function brushPredicate(brushGroup, config, pc) {
+    return function () {
+        var predicate = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+        if (predicate === null) {
+            return brushGroup.predicate;
+        }
+
+        predicate = String(predicate).toUpperCase();
+        if (predicate !== 'AND' && predicate !== 'OR') {
+            throw new Error('Invalid predicate ' + predicate);
+        }
+
+        brushGroup.predicate = predicate;
+        config.brushed = brushGroup.currentMode().selected();
+        pc.renderBrushed();
+        return pc;
+    };
+};
+
+var brushMode = function brushMode(brushGroup, config, pc) {
+    return function () {
+        var mode = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+        if (mode === null) {
+            return brushGroup.mode;
+        }
+
+        if (pc.brushModes().indexOf(mode) === -1) {
+            throw new Error('pc.brushmode: Unsupported brush mode: ' + mode);
+        }
+
+        // Make sure that we don't trigger unnecessary events by checking if the mode
+        // actually changes.
+        if (mode !== brushGroup.mode) {
+            // When changing brush modes, the first thing we need to do is clearing any
+            // brushes from the current mode, if any.
+            if (brushGroup.mode !== 'None') {
+                pc.brushReset();
+            }
+
+            // Next, we need to 'uninstall' the current brushMode.
+            brushGroup.modes[brushGroup.mode].uninstall(pc);
+            // Finally, we can install the requested one.
+            brushGroup.mode = mode;
+            brushGroup.modes[brushGroup.mode].install();
+            if (mode === 'None') {
+                delete pc.brushPredicate;
+            } else {
+                pc.brushPredicate = brushPredicate(brushGroup, config, pc);
+            }
+        }
+
+        return pc;
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -9756,17 +9828,6 @@ var ParCoords = function ParCoords(config) {
     }
   };
 
-  // This function can be used for 'live' updates of brushes. That is, during the
-  // specification of a brush, this method can be called to update the view.
-  //
-  // @param newSelection - The new set of data items that is currently contained
-  //                       by the brushes
-  function brushUpdated(newSelection) {
-    __.brushed = newSelection;
-    events.call('brush', pc, __.brushed);
-    pc.renderBrushed();
-  }
-
   pc.brushModes = function () {
     return Object.getOwnPropertyNames(brush$$1.modes);
   };
@@ -9850,7 +9911,7 @@ var ParCoords = function ParCoords(config) {
   // (so you can choose to save it to disk, etc.)
   pc.mergeParcoords = mergeParcoords(pc);
 
-  install1DAxes(brush$$1, __, pc, events, brushUpdated);
+  install1DAxes(brush$$1, __, pc, events);
   install2DStrums(brush$$1, __, pc, events, xscale);
   installAngularBrush(brush$$1, __, pc, events, xscale);
 

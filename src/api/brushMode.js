@@ -47,3 +47,5 @@ const brushMode = (brushGroup, config, pc) => (mode = null)=> {
 
     return pc;
 };
+
+export default brushMode;

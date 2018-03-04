@@ -3,7 +3,18 @@ import { keys } from 'd3-collection';
 import { brushSelection, brushY } from 'd3-brush';
 import { event, select } from 'd3-selection';
 
-const install1DAxes = (brushGroup, config, pc, events, brushUpdated) => {
+// This function can be used for 'live' updates of brushes. That is, during the
+// specification of a brush, this method can be called to update the view.
+//
+// @param newSelection - The new set of data items that is currently contained
+//                       by the brushes
+const brushUpdated = (config, pc, events)=> newSelection=> {
+    config.brushed = newSelection;
+    events.call('brush', pc, config.brushed);
+    pc.renderBrushed();
+};
+
+const install1DAxes = (brushGroup, config, pc, events) => {
   let brushes = {};
   let brushNodes = {};
   let g = null;
@@ -149,10 +160,10 @@ const install1DAxes = (brushGroup, config, pc, events, brushUpdated) => {
         }
       })
       .on('brush', function() {
-        brushUpdated(selected());
+        brushUpdated(config, pc, events)(selected());
       })
       .on('end', function() {
-        brushUpdated(selected());
+        brushUpdated(config, pc, events)(selected());
         events.call('brushend', pc, config.brushed);
       });
 
