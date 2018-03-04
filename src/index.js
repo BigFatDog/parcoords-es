@@ -27,6 +27,7 @@ import computeCentroids from './util/computeCentroids';
 import computeRealCentroids from './api/computeRealCentroids';
 import getset from './util/getset';
 import applyDimensionDefaults from './api/applyDimensionDefaults';
+import createAxes from './api/createAxes';
 //============================================================================================
 
 const ParCoords = config => {
@@ -501,83 +502,7 @@ const ParCoords = config => {
     return __.dimensions[d].title ? __.dimensions[d].title : d; // dimension display names
   }
 
-  pc.createAxes = function() {
-    if (g) pc.removeAxes();
-    // Add a group element for each dimension.
-    g = pc.svg
-      .selectAll('.dimension')
-      .data(pc.getOrderedDimensionKeys(), function(d) {
-        return d;
-      })
-      .enter()
-      .append('svg:g')
-      .attr('class', 'dimension')
-      .attr('transform', function(d) {
-        return 'translate(' + xscale(d) + ')';
-      });
-    // Add an axis and title.
-    g
-      .append('svg:g')
-      .attr('class', 'axis')
-      .attr('transform', 'translate(0,0)')
-      .each(function(d) {
-        let axisElement = select(this).call(
-          pc.applyAxisConfig(axis, __.dimensions[d])
-        );
-
-        axisElement
-          .selectAll('path')
-          .style('fill', 'none')
-          .style('stroke', '#222')
-          .style('shape-rendering', 'crispEdges');
-
-        axisElement
-          .selectAll('line')
-          .style('fill', 'none')
-          .style('stroke', '#222')
-          .style('shape-rendering', 'crispEdges');
-      })
-
-      .append('svg:text')
-      .attr('text-anchor', 'middle')
-      .attr('y', 0)
-      .attr(
-        'transform',
-        'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')'
-      )
-      .attr('x', 0)
-      .attr('class', 'label')
-      .text(dimensionLabels)
-      .on('dblclick', flipAxisAndUpdatePCP)
-      .on('wheel', rotateLabels);
-
-    if (__.nullValueSeparator == 'top') {
-      pc.svg
-        .append('line')
-        .attr('x1', 0)
-        .attr('y1', 1 + __.nullValueSeparatorPadding.top)
-        .attr('x2', w())
-        .attr('y2', 1 + __.nullValueSeparatorPadding.top)
-        .attr('stroke-width', 1)
-        .attr('stroke', '#777')
-        .attr('fill', 'none')
-        .attr('shape-rendering', 'crispEdges');
-    } else if (__.nullValueSeparator == 'bottom') {
-      pc.svg
-        .append('line')
-        .attr('x1', 0)
-        .attr('y1', h() + 1 - __.nullValueSeparatorPadding.bottom)
-        .attr('x2', w())
-        .attr('y2', h() + 1 - __.nullValueSeparatorPadding.bottom)
-        .attr('stroke-width', 1)
-        .attr('stroke', '#777')
-        .attr('fill', 'none')
-        .attr('shape-rendering', 'crispEdges');
-    }
-
-    flags.axes = true;
-    return this;
-  };
+  pc.createAxes = createAxes(__, pc, xscale, flags);
 
   pc.removeAxes = function() {
     g.remove();

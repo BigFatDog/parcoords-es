@@ -4522,7 +4522,7 @@ function entering() {
   return !this.__axis;
 }
 
-function axis(orient, scale) {
+function axis$1(orient, scale) {
   var tickArguments = [],
       tickValues = null,
       tickFormat = null,
@@ -4631,19 +4631,19 @@ function axis(orient, scale) {
 }
 
 function axisTop(scale) {
-  return axis(top, scale);
+  return axis$1(top, scale);
 }
 
 function axisRight(scale) {
-  return axis(right, scale);
+  return axis$1(right, scale);
 }
 
 function axisBottom(scale) {
-  return axis(bottom, scale);
+  return axis$1(bottom, scale);
 }
 
 function axisLeft(scale) {
-  return axis(left, scale);
+  return axis$1(left, scale);
 }
 
 function nopropagation() {
@@ -7248,11 +7248,11 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
   };
 };
 
-var w = function w(config) {
+var w$1 = function w(config) {
   return config.width - config.margin.right - config.margin.left;
 };
 
-var h = function h(config) {
+var h$1 = function h(config) {
   return config.height - config.margin.top - config.margin.bottom;
 };
 
@@ -7354,7 +7354,7 @@ var install2DStrums = function install2DStrums(brushGroup, config, pc, events, x
         minX: xscale(dims.left),
         maxX: xscale(dims.right),
         minY: 0,
-        maxY: h(config)
+        maxY: h$1(config)
       };
 
       strums[dims.i] = strum;
@@ -7545,7 +7545,7 @@ var install2DStrums = function install2DStrums(brushGroup, config, pc, events, x
     // NOTE: The styling needs to be done here and not in the css. This is because
     //       for 1D brushing, the canvas layers should not listen to
     //       pointer-events._.
-    strumRect = pc.selection.select('svg').insert('rect', 'g#strums').attr('id', 'strum-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w(config)).attr('height', h(config) + 2).style('opacity', 0).call(_drag);
+    strumRect = pc.selection.select('svg').insert('rect', 'g#strums').attr('id', 'strum-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w$1(config)).attr('height', h$1(config) + 2).style('opacity', 0).call(_drag);
   }
 
   brushGroup.modes['2D-strums'] = {
@@ -8249,7 +8249,7 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
         minX: xscale(dims.left),
         maxX: xscale(dims.right),
         minY: 0,
-        maxY: h(config),
+        maxY: h$1(config),
         startAngle: undefined,
         endAngle: undefined,
         arc: d3Arc().innerRadius(0)
@@ -8549,7 +8549,7 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
     // NOTE: The styling needs to be done here and not in the css. This is because
     //       for 1D brushing, the canvas layers should not listen to
     //       pointer-events._.
-    strumRect = pc.selection.select('svg').insert('rect', 'g#arcs').attr('id', 'arc-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w(config)).attr('height', h(config) + 2).style('opacity', 0).call(_drag);
+    strumRect = pc.selection.select('svg').insert('rect', 'g#arcs').attr('id', 'arc-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w$1(config)).attr('height', h$1(config) + 2).style('opacity', 0).call(_drag);
   }
 
   brushGroup.modes['angular'] = {
@@ -8833,13 +8833,13 @@ var brushMode = function brushMode(brushGroup, config, pc) {
  * @param d
  * @returns {*}
  */
-var dimensionLabels = function dimensionLabels(config) {
+var dimensionLabels$1 = function dimensionLabels(config) {
   return function (d) {
     return config.dimensions[d].title ? config.dimensions[d].title : d;
   };
 };
 
-var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
+var flipAxisAndUpdatePCP$1 = function flipAxisAndUpdatePCP(config, pc, axis) {
   return function (dimension) {
     pc.flip(dimension);
     pc.brushReset(dimension);
@@ -8848,7 +8848,7 @@ var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
   };
 };
 
-var rotateLabels = function rotateLabels(config, pc) {
+var rotateLabels$1 = function rotateLabels(config, pc) {
   if (!config.rotateLabels) return;
 
   var delta = event.deltaY;
@@ -8886,14 +8886,14 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
       transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
       x: 0,
       class: 'label'
-    }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+    }).text(dimensionLabels$1(config)).on('dblclick', flipAxisAndUpdatePCP$1(config, pc, axis)).on('wheel', rotateLabels$1(config, pc));
 
     // Update
     g_data.attr('opacity', 0);
     g_data.select('.axis').transition().duration(animationTime).each(function (d) {
       select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
     });
-    g_data.select('.label').transition().duration(animationTime).text(dimensionLabels(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
+    g_data.select('.label').transition().duration(animationTime).text(dimensionLabels$1(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
 
     // Exit
     g_data.exit().remove();
@@ -9014,12 +9014,12 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
     });
 
     // xscale
-    xscale.range([0, w(config)], 1);
+    xscale.range([0, w$1(config)], 1);
     // Retina display, etc.
     var devicePixelRatio = window.devicePixelRatio || 1;
 
     // canvas sizes
-    pc.selection.selectAll('canvas').style('margin-top', config.margin.top + 'px').style('margin-left', config.margin.left + 'px').style('width', w(config) + 2 + 'px').style('height', h(config) + 2 + 'px').attr('width', (w(config) + 2) * devicePixelRatio).attr('height', (h(config) + 2) * devicePixelRatio);
+    pc.selection.selectAll('canvas').style('margin-top', config.margin.top + 'px').style('margin-left', config.margin.left + 'px').style('width', w$1(config) + 2 + 'px').style('height', h$1(config) + 2 + 'px').attr('width', (w$1(config) + 2) * devicePixelRatio).attr('height', (h$1(config) + 2) * devicePixelRatio);
     // default styles, needs to be set when canvas width changes
     ctx.foreground.strokeStyle = config.color;
     ctx.foreground.lineWidth = 1.4;
@@ -9258,6 +9258,40 @@ var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
     });
     return newDims;
   };
+};
+
+var createAxes = function createAxes(config, pc, xscale, flags) {
+    return function () {
+        var g = pc.g();
+
+        if (g) {
+            pc.removeAxes();
+            g = pc.g();
+        }
+        // Add a group element for each dimension.
+        g = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys(), function (d) {
+            return d;
+        }).enter().append('svg:g').attr('class', 'dimension').attr('transform', function (d) {
+            return 'translate(' + xscale(d) + ')';
+        });
+        // Add an axis and title.
+        g.append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
+            var axisElement = select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+
+            axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+
+            axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
+        }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
+
+        if (config.nullValueSeparator == 'top') {
+            pc.svg.append('line').attr('x1', 0).attr('y1', 1 + config.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + config.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
+        } else if (config.nullValueSeparator == 'bottom') {
+            pc.svg.append('line').attr('x1', 0).attr('y1', h() + 1 - config.nullValueSeparatorPadding.bottom).attr('x2', w()).attr('y2', h() + 1 - config.nullValueSeparatorPadding.bottom).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
+        }
+
+        flags.axes = true;
+        return this;
+    };
 };
 
 var _this = undefined;
@@ -9632,48 +9666,7 @@ var ParCoords = function ParCoords(config) {
     pc.render();
   }
 
-  function rotateLabels() {
-    if (!__.rotateLabels) return;
-
-    var delta = event.deltaY;
-    delta = delta < 0 ? -5 : delta;
-    delta = delta > 0 ? 5 : delta;
-
-    __.dimensionTitleRotation += delta;
-    pc.svg.selectAll('text.label').attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')');
-    event.preventDefault();
-  }
-
-  function dimensionLabels(d) {
-    return __.dimensions[d].title ? __.dimensions[d].title : d; // dimension display names
-  }
-
-  pc.createAxes = function () {
-    if (g) pc.removeAxes();
-    // Add a group element for each dimension.
-    g = pc.svg.selectAll('.dimension').data(pc.getOrderedDimensionKeys(), function (d) {
-      return d;
-    }).enter().append('svg:g').attr('class', 'dimension').attr('transform', function (d) {
-      return 'translate(' + xscale(d) + ')';
-    });
-    // Add an axis and title.
-    g.append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
-      var axisElement = select(this).call(pc.applyAxisConfig(axis, __.dimensions[d]));
-
-      axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-
-      axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-    }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + __.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels).on('dblclick', flipAxisAndUpdatePCP).on('wheel', rotateLabels);
-
-    if (__.nullValueSeparator == 'top') {
-      pc.svg.append('line').attr('x1', 0).attr('y1', 1 + __.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + __.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
-    } else if (__.nullValueSeparator == 'bottom') {
-      pc.svg.append('line').attr('x1', 0).attr('y1', h() + 1 - __.nullValueSeparatorPadding.bottom).attr('x2', w()).attr('y2', h() + 1 - __.nullValueSeparatorPadding.bottom).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
-    }
-
-    flags.axes = true;
-    return this;
-  };
+  pc.createAxes = createAxes(__, pc, xscale, flags);
 
   pc.removeAxes = function () {
     g.remove();
