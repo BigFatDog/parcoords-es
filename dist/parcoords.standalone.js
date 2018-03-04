@@ -2576,7 +2576,6 @@ var formatTypes = {
   }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -5322,7 +5321,6 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7678,6 +7676,196 @@ var InitialState = {
   rotateLabels: false
 };
 
+// brush mode: 1D-Axes
+var install1DAxes = function install1DAxes(brushGroup, config, pc, events, brushUpdated) {
+    var brushes = {};
+    var brushNodes = {};
+    var g = null;
+
+    //https://github.com/d3/d3-brush/issues/10
+    function is_brushed(p) {
+        return brushSelection(brushNodes[p]) !== null;
+    }
+
+    // data within extents
+    function selected() {
+        var actives = keys(config.dimensions).filter(is_brushed),
+            extents = actives.map(function (p) {
+            var _brushRange = brushSelection(brushNodes[p]);
+
+            if (typeof config.dimensions[p].yscale.invert === 'function') {
+                return [config.dimensions[p].yscale.invert(_brushRange[1]), config.dimensions[p].yscale.invert(_brushRange[0])];
+            } else {
+                return _brushRange;
+            }
+        });
+        // We don't want to return the full data set when there are no axes brushed.
+        // Actually, when there are no axes brushed, by definition, no items are
+        // selected. So, let's avoid the filtering and just return false.
+        //if (actives.length === 0) return false;
+
+        // Resolves broken examples for now. They expect to get the full dataset back from empty brushes
+        if (actives.length === 0) return config.data;
+
+        // test if within range
+        var within = {
+            date: function date(d, p, dimension) {
+                if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
+                    // if it is ordinal
+                    return extents[dimension][0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= extents[dimension][1];
+                } else {
+                    return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
+                }
+            },
+            number: function number(d, p, dimension) {
+                if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
+                    // if it is ordinal
+                    return extents[dimension][0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= extents[dimension][1];
+                } else {
+                    return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
+                }
+            },
+            string: function string(d, p, dimension) {
+                return extents[dimension][0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= extents[dimension][1];
+            }
+        };
+
+        return config.data.filter(function (d) {
+            switch (brushGroup.predicate) {
+                case 'AND':
+                    return actives.every(function (p, dimension) {
+                        return within[config.dimensions[p].type](d, p, dimension);
+                    });
+                case 'OR':
+                    return actives.some(function (p, dimension) {
+                        return within[config.dimensions[p].type](d, p, dimension);
+                    });
+                default:
+                    throw new Error('Unknown brush predicate ' + config.brushPredicate);
+            }
+        });
+    }
+
+    function brushExtents(extents) {
+        if (typeof extents === 'undefined') {
+            var _extents = {};
+            keys(config.dimensions).forEach(function (d) {
+                var brush$$1 = brushes[d];
+                //todo: brush check
+                if (brush$$1 !== undefined && brushSelection(brushNodes[d]) !== null) {
+                    _extents[d] = brush$$1.extent();
+                }
+            });
+            return _extents;
+        } else {
+            //first get all the brush selections
+            var brushSelections = {};
+            g.selectAll('.brush').each(function (d) {
+                brushSelections[d] = select(this);
+            });
+
+            // loop over each dimension and update appropriately (if it was passed in through extents)
+            keys(config.dimensions).forEach(function (d) {
+                if (extents[d] === undefined) {
+                    return;
+                }
+
+                var brush$$1 = brushes[d];
+                if (brush$$1 !== undefined) {
+                    //update the extent
+                    brush$$1.extent(extents[d]);
+
+                    //redraw the brush
+                    brushSelections[d].transition().duration(0).call(brush$$1);
+
+                    //fire some events
+                    brush$$1.event(brushSelections[d]);
+                }
+            });
+
+            //redraw the chart
+            pc.renderBrushed();
+
+            return pc;
+        }
+    }
+
+    function brushFor(axis, _selector) {
+        var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
+
+        var _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
+
+        _brush.on('start', function () {
+            if (event.sourceEvent !== null) {
+                events.call('brushstart', pc, config.brushed);
+                event.sourceEvent.stopPropagation();
+            }
+        }).on('brush', function () {
+            brushUpdated(selected());
+        }).on('end', function () {
+            brushUpdated(selected());
+            events.call('brushend', pc, config.brushed);
+        });
+
+        brushes[axis] = _brush;
+        brushNodes[axis] = _selector.node();
+        return _brush;
+    }
+
+    function brushReset(dimension) {
+        if (dimension === undefined) {
+            config.brushed = false;
+            if (g) {
+                g.selectAll('.brush').each(function (d) {
+                    select(this).call(brushes[d].move, null);
+                });
+                pc.renderBrushed();
+            }
+        } else {
+            if (g) {
+                g.selectAll('.brush').each(function (d) {
+                    if (d != dimension) return;
+                    select(this).call(brushes[d].move, null);
+                    brushes[d].event(select(this));
+                });
+                pc.renderBrushed();
+            }
+        }
+        return this;
+    }
+
+    function install() {
+        if (!g) g = pc.createAxes()._g;
+        // Add and store a brush for each axis.
+        var brush$$1 = g.append('svg:g').attr('class', 'brush').each(function (d) {
+            select(this).call(brushFor(d, select(this)));
+        });
+        brush$$1.selectAll('rect').style('visibility', null).attr('x', -15).attr('width', 30);
+
+        brush$$1.selectAll('rect.background').style('fill', 'transparent');
+
+        brush$$1.selectAll('rect.extent').style('fill', 'rgba(255,255,255,0.25)').style('stroke', 'rgba(0,0,0,0.6)');
+
+        brush$$1.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
+
+        pc.brushExtents = brushExtents;
+        pc.brushReset = brushReset;
+        return pc;
+    }
+
+    brushGroup.modes['1D-axes'] = {
+        install: install,
+        uninstall: function uninstall() {
+            g.selectAll('.brush').remove();
+            brushes = {};
+            delete pc.brushExtents;
+            delete pc.brushReset;
+        },
+        selected: selected,
+        brushState: brushExtents
+    };
+};
+
 var _this = undefined;
 
 //============================================================================================
@@ -8372,6 +8560,7 @@ var ParCoords = function ParCoords(config) {
     }
 
     flags.axes = true;
+    this._g = g;
     return this;
   };
 
@@ -8486,13 +8675,13 @@ var ParCoords = function ParCoords(config) {
             var html = select(this).select('.selection').nodes()[0].outerHTML;
             html = html.replace('class="selection"', 'class="selection dummy' + ' selection-' + __.brushes.length + '"');
             var dat = select(this).nodes()[0].__data__;
-            var _brush2 = {
+            var _brush = {
               id: __.brushes.length,
               extent: brushSelection(this),
               html: html,
               data: dat
             };
-            __.brushes.push(_brush2);
+            __.brushes.push(_brush);
             select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
             pc.brush();
             __.dimensions[d].brush.move(select(this, null));
@@ -8875,196 +9064,6 @@ var ParCoords = function ParCoords(config) {
     }
 
     return pc;
-  };
-
-  // brush mode: 1D-Axes
-  var install1DAxes = function install1DAxes() {
-    var brushes = {};
-    var brushNodes = {};
-
-    //https://github.com/d3/d3-brush/issues/10
-    function is_brushed(p) {
-      return brushSelection(brushNodes[p]) !== null;
-    }
-
-    // data within extents
-    function selected() {
-      var actives = keys(__.dimensions).filter(is_brushed),
-          extents = actives.map(function (p) {
-        var _brushRange = brushSelection(brushNodes[p]);
-
-        if (typeof __.dimensions[p].yscale.invert === 'function') {
-          return [__.dimensions[p].yscale.invert(_brushRange[1]), __.dimensions[p].yscale.invert(_brushRange[0])];
-        } else {
-          return _brushRange;
-        }
-      });
-      // We don't want to return the full data set when there are no axes brushed.
-      // Actually, when there are no axes brushed, by definition, no items are
-      // selected. So, let's avoid the filtering and just return false.
-      //if (actives.length === 0) return false;
-
-      // Resolves broken examples for now. They expect to get the full dataset back from empty brushes
-      if (actives.length === 0) return __.data;
-
-      // test if within range
-      var within = {
-        date: function date(d, p, dimension) {
-          if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
-            // if it is ordinal
-            return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
-          } else {
-            return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-          }
-        },
-        number: function number(d, p, dimension) {
-          if (typeof __.dimensions[p].yscale.bandwidth === 'function') {
-            // if it is ordinal
-            return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
-          } else {
-            return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-          }
-        },
-        string: function string(d, p, dimension) {
-          return extents[dimension][0] <= __.dimensions[p].yscale(d[p]) && __.dimensions[p].yscale(d[p]) <= extents[dimension][1];
-        }
-      };
-
-      return __.data.filter(function (d) {
-        switch (brush$$1.predicate) {
-          case 'AND':
-            return actives.every(function (p, dimension) {
-              return within[__.dimensions[p].type](d, p, dimension);
-            });
-          case 'OR':
-            return actives.some(function (p, dimension) {
-              return within[__.dimensions[p].type](d, p, dimension);
-            });
-          default:
-            throw new Error('Unknown brush predicate ' + __.brushPredicate);
-        }
-      });
-    }
-
-    function brushExtents(extents) {
-      if (typeof extents === 'undefined') {
-        var _extents = {};
-        keys(__.dimensions).forEach(function (d) {
-          var brush$$1 = brushes[d];
-          //todo: brush check
-          if (brush$$1 !== undefined && brushSelection(brushNodes[d]) !== null) {
-            var _extent2 = brush$$1.extent();
-            _extents[d] = _extent2;
-          }
-        });
-        return _extents;
-      } else {
-        //first get all the brush selections
-        var brushSelections = {};
-        g.selectAll('.brush').each(function (d) {
-          brushSelections[d] = select(this);
-        });
-
-        // loop over each dimension and update appropriately (if it was passed in through extents)
-        keys(__.dimensions).forEach(function (d) {
-          if (extents[d] === undefined) {
-            return;
-          }
-
-          var brush$$1 = brushes[d];
-          if (brush$$1 !== undefined) {
-            //update the extent
-            brush$$1.extent(extents[d]);
-
-            //redraw the brush
-            brushSelections[d].transition().duration(0).call(brush$$1);
-
-            //fire some events
-            brush$$1.event(brushSelections[d]);
-          }
-        });
-
-        //redraw the chart
-        pc.renderBrushed();
-
-        return pc;
-      }
-    }
-
-    function brushFor(axis, _selector) {
-      var brushRangeMax = __.dimensions[axis].type === 'string' ? __.dimensions[axis].yscale.range()[__.dimensions[axis].yscale.range().length - 1] : __.dimensions[axis].yscale.range()[0];
-
-      var _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
-
-      _brush.on('start', function () {
-        if (event.sourceEvent !== null) {
-          events.call('brushstart', pc, __.brushed);
-          event.sourceEvent.stopPropagation();
-        }
-      }).on('brush', function () {
-        brushUpdated(selected());
-      }).on('end', function () {
-        brushUpdated(selected());
-        events.call('brushend', pc, __.brushed);
-      });
-
-      brushes[axis] = _brush;
-      brushNodes[axis] = _selector.node();
-      return _brush;
-    }
-
-    function brushReset(dimension) {
-      if (dimension === undefined) {
-        __.brushed = false;
-        if (g) {
-          g.selectAll('.brush').each(function (d) {
-            select(this).call(brushes[d].move, null);
-          });
-          pc.renderBrushed();
-        }
-      } else {
-        if (g) {
-          g.selectAll('.brush').each(function (d) {
-            if (d != dimension) return;
-            select(this).call(brushes[d].move, null);
-            brushes[d].event(select(this));
-          });
-          pc.renderBrushed();
-        }
-      }
-      return this;
-    }
-
-    function install() {
-      if (!g) pc.createAxes();
-      // Add and store a brush for each axis.
-      var brush$$1 = g.append('svg:g').attr('class', 'brush').each(function (d) {
-        select(this).call(brushFor(d, select(this)));
-      });
-      brush$$1.selectAll('rect').style('visibility', null).attr('x', -15).attr('width', 30);
-
-      brush$$1.selectAll('rect.background').style('fill', 'transparent');
-
-      brush$$1.selectAll('rect.extent').style('fill', 'rgba(255,255,255,0.25)').style('stroke', 'rgba(0,0,0,0.6)');
-
-      brush$$1.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
-
-      pc.brushExtents = brushExtents;
-      pc.brushReset = brushReset;
-      return pc;
-    }
-
-    brush$$1.modes['1D-axes'] = {
-      install: install,
-      uninstall: function uninstall() {
-        g.selectAll('.brush').remove();
-        brushes = {};
-        delete pc.brushExtents;
-        delete pc.brushReset;
-      },
-      selected: selected,
-      brushState: brushExtents
-    };
   };
 
   // brush mode: 2D-strums
@@ -9930,7 +9929,7 @@ var ParCoords = function ParCoords(config) {
     img.src = src;
   };
 
-  install1DAxes();
+  install1DAxes(brush$$1, __, pc, events, brushUpdated);
   install2DStrums();
   installAngularBrush();
 

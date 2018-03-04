@@ -1,9 +1,11 @@
 import { keys } from 'd3-collection';
 import { brushSelection } from 'd3-brush';
 
-const brushExtents = (pc, g) => extents => {
+const brushExtents = (brushState, pc, g) => extents => {
+  const { brushes } =  brushState;
+
   if (typeof extents === 'undefined') {
-    const extents = keys(config.dimensions).reduce((acc, cur) => {
+    return keys(config.dimensions).reduce((acc, cur) => {
       const brush = brushes[cur];
       //todo: brush check
       if (brush !== undefined && brushSelection(brushNodes[cur]) !== null) {
@@ -12,7 +14,6 @@ const brushExtents = (pc, g) => extents => {
 
       return acc;
     }, {});
-    return extents;
   } else {
     //first get all the brush selections
     const brushSelections = g.selectAll('.brush').reduce(function(acc, cur) {
