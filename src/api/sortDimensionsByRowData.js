@@ -14,8 +14,8 @@ const sortDimensionsByRowData = config => rowdata => {
   });
   config.dimensions = {};
   positionSortedKeys.forEach((p, i) => {
-    __.dimensions[p] = copy[p];
-    __.dimensions[p].index = i;
+    config.dimensions[p] = copy[p];
+    config.dimensions[p].index = i;
   });
 };
 

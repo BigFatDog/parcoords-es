@@ -9484,15 +9484,13 @@ var sortDimensionsByRowData = function sortDimensionsByRowData(config) {
     });
     config.dimensions = {};
     positionSortedKeys.forEach(function (p, i) {
-      __.dimensions[p] = copy[p];
-      __.dimensions[p].index = i;
+      config.dimensions[p] = copy[p];
+      config.dimensions[p].index = i;
     });
   };
 };
 
 var _this = undefined;
-
-//============================================================================================
 
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
