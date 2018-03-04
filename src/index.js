@@ -43,6 +43,7 @@ import {
   renderBrushedQueue,
 } from './api/renderBrushed';
 import brushReset from './api/brushReset';
+import toType from './api/toType';
 //============================================================================================
 
 const ParCoords = config => {
@@ -251,13 +252,7 @@ const ParCoords = config => {
     });
   };
 
-  // a better "typeof" from this post: http://stackoverflow.com/questions/7390426/better-way-to-get-type-of-a-javascript-variable
-  pc.toType = function(v) {
-    return {}.toString
-      .call(v)
-      .match(/\s([a-zA-Z]+)/)[1]
-      .toLowerCase();
-  };
+  pc.toType = toType;
 
   // try to coerce to number before returning type
   pc.toTypeCoerceNumbers = function(v) {
