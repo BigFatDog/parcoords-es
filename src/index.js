@@ -47,6 +47,7 @@ import toType from './api/toType';
 import toString from './api/toString';
 import adjacentPairs from './api/adjacentPairs';
 import highlight from './api/highlight';
+import unhighlight from './api/unhighlight';
 //============================================================================================
 
 const ParCoords = config => {
@@ -227,7 +228,6 @@ const ParCoords = config => {
     return colorPath(__, position, d, ctx.foreground);
   }
 
-
   // expose the state of the chart
   pc.state = __;
   pc.flags = flags;
@@ -406,12 +406,7 @@ const ParCoords = config => {
   pc.highlight = highlight(__, pc, canvas, events, ctx, position);
 
   // clear highlighting
-  pc.unhighlight = function() {
-    __.highlighted = [];
-    pc.clear('highlight');
-    selectAll([canvas.foreground, canvas.brushed]).classed('faded', false);
-    return this;
-  };
+  pc.unhighlight = unhighlight(__, pc, canvas);
 
   // calculate 2d intersection of line a->b with line c->d
   // points are objects with x and y properties

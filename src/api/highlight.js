@@ -1,15 +1,16 @@
-import {selectAll} from "d3-selection";
-import colorPath from "../util/colorPath";
-import {_functor} from "../helper";
+import { selectAll } from 'd3-selection';
+import colorPath from '../util/colorPath';
+import { _functor } from '../helper';
 
-const pathHighlight = (config, ctx, position)=> (d, i)=> {
-    ctx.highlight.strokeStyle = _functor(config.color)(d, i);
-    return colorPath(config, position, d, ctx.highlight);
-}
+const pathHighlight = (config, ctx, position) => (d, i) => {
+  ctx.highlight.strokeStyle = _functor(config.color)(d, i);
+  return colorPath(config, position, d, ctx.highlight);
+};
 
-const highlight = (config, pc, canvas, events, ctx, position)=> function(data = null) {
+const highlight = (config, pc, canvas, events, ctx, position) =>
+  function(data = null) {
     if (data === null) {
-        return config.highlighted;
+      return config.highlighted;
     }
 
     config.highlighted = data;
@@ -18,6 +19,6 @@ const highlight = (config, pc, canvas, events, ctx, position)=> function(data = 
     data.forEach(pathHighlight(config, ctx, position));
     events.call('highlight', this, data);
     return this;
-};
+  };
 
 export default highlight;

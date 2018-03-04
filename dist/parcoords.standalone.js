@@ -9630,27 +9630,36 @@ var adjacentPairs = function adjacentPairs(arr) {
 };
 
 var pathHighlight = function pathHighlight(config, ctx, position) {
-    return function (d, i) {
-        ctx.highlight.strokeStyle = _functor(config.color)(d, i);
-        return colorPath(config, position, d, ctx.highlight);
-    };
+  return function (d, i) {
+    ctx.highlight.strokeStyle = _functor(config.color)(d, i);
+    return colorPath(config, position, d, ctx.highlight);
+  };
 };
 
 var highlight = function highlight(config, pc, canvas, events, ctx, position) {
-    return function () {
-        var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+  return function () {
+    var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-        if (data === null) {
-            return config.highlighted;
-        }
+    if (data === null) {
+      return config.highlighted;
+    }
 
-        config.highlighted = data;
-        pc.clear('highlight');
-        selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
-        data.forEach(pathHighlight(config, ctx, position));
-        events.call('highlight', this, data);
-        return this;
-    };
+    config.highlighted = data;
+    pc.clear('highlight');
+    selectAll([canvas.foreground, canvas.brushed]).classed('faded', true);
+    data.forEach(pathHighlight(config, ctx, position));
+    events.call('highlight', this, data);
+    return this;
+  };
+};
+
+var unhighlight = function unhighlight(config, pc, canvas) {
+  return function () {
+    config.highlighted = [];
+    pc.clear('highlight');
+    selectAll([canvas.foreground, canvas.brushed]).classed('faded', false);
+    return this;
+  };
 };
 
 var _this = undefined;
@@ -9963,12 +9972,7 @@ var ParCoords = function ParCoords(config) {
   pc.highlight = highlight(__, pc, canvas, events, ctx, position);
 
   // clear highlighting
-  pc.unhighlight = function () {
-    __.highlighted = [];
-    pc.clear('highlight');
-    selectAll([canvas.foreground, canvas.brushed]).classed('faded', false);
-    return this;
-  };
+  pc.unhighlight = unhighlight(__, pc, canvas);
 
   // calculate 2d intersection of line a->b with line c->d
   // points are objects with x and y properties
