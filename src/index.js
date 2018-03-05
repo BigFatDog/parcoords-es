@@ -52,6 +52,7 @@ import adjacentPairs from './api/adjacentPairs';
 import highlight from './api/highlight';
 import unhighlight from './api/unhighlight';
 import removeAxes from './api/removeAxes';
+import render from './api/render';
 
 //css
 import './parallel-coordinates.css';
@@ -299,18 +300,7 @@ const ParCoords = config => {
     return types;
   };
 
-  pc.render = function() {
-    // try to autodetect dimensions and create scales
-    if (!keys(__.dimensions).length) {
-      pc.detectDimensions();
-    }
-    pc.autoscale();
-
-    pc.render[__.mode]();
-
-    events.call('render', this);
-    return this;
-  };
+  pc.render = render(__, pc, events);
 
   pc.renderBrushed = function() {
     if (!keys(__.dimensions).length) pc.detectDimensions();

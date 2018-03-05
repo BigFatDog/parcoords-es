@@ -9694,8 +9694,27 @@ var removeAxes = function removeAxes(pc) {
     };
 };
 
+var render = function render(config, pc, events) {
+    return function () {
+        // try to autodetect dimensions and create scales
+        if (!keys(config.dimensions).length) {
+            pc.detectDimensions();
+        }
+        pc.autoscale();
+
+        pc.render[config.mode]();
+
+        events.call('render', this);
+        return this;
+    };
+};
+
 var _this = undefined;
 
+// misc
+// brush
+// api
+//css
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
 
@@ -9896,18 +9915,7 @@ var ParCoords = function ParCoords(config) {
     return types;
   };
 
-  pc.render = function () {
-    // try to autodetect dimensions and create scales
-    if (!keys(__.dimensions).length) {
-      pc.detectDimensions();
-    }
-    pc.autoscale();
-
-    pc.render[__.mode]();
-
-    events.call('render', this);
-    return this;
-  };
+  pc.render = render(__, pc, events);
 
   pc.renderBrushed = function () {
     if (!keys(__.dimensions).length) pc.detectDimensions();
