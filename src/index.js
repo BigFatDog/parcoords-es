@@ -2,8 +2,6 @@ import { select } from 'd3-selection';
 
 // misc
 import renderQueue from './util/renderQueue';
-import { _rebind } from './helper';
-import getset from './util/getset';
 import w from './util/width';
 
 // brush
@@ -54,7 +52,7 @@ import shadows from './api/shadows';
 
 import { version } from '../package.json';
 import initState from './state';
-import sideEffects from './sideEffects';
+import bindEvents from './bindEvents';
 
 //css
 import './parallel-coordinates.css';
@@ -123,34 +121,16 @@ const ParCoords = userConfig => {
       pc.clear('highlight');
     });
 
-  // side effects for setters
-  const side_effects = sideEffects(
+  bindEvents(
     __,
     ctx,
     pc,
     xscale,
     flags,
     brushedQueue,
-    foregroundQueue
-  );
-
-  // create getter/setters
-  getset(pc, __, events, side_effects);
-
-  // expose events
-  // getter/setter with event firing
-  _rebind(pc, events, 'on');
-
-  _rebind(
-    pc,
-    axis,
-    'ticks',
-    'orient',
-    'tickValues',
-    'tickSubdivide',
-    'tickSize',
-    'tickPadding',
-    'tickFormat'
+    foregroundQueue,
+    events,
+    axis
   );
 
   // expose the state of the chart

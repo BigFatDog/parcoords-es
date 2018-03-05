@@ -1045,29 +1045,8 @@ var renderQueue = function renderQueue(func) {
   return rq;
 };
 
-var without = function without(arr, items) {
-  items.forEach(function (el) {
-    delete arr[el];
-  });
-  return arr;
-};
-
-var d3_rebind = function d3_rebind(target, source, method) {
-  return function () {
-    var value = method.apply(source, arguments);
-    return value === source ? target : value;
-  };
-};
-
-var _rebind = function _rebind(target, source, method) {
-  target[method] = d3_rebind(target, source, source[method]);
-  return target;
-};
-
-var _functor = function _functor(v) {
-  return typeof v === 'function' ? v : function () {
-    return v;
-  };
+var w$1 = function w(config) {
+  return config.width - config.margin.right - config.margin.left;
 };
 
 var prefix = "$";
@@ -1212,29 +1191,6 @@ var entries = function (map) {
   for (var key in map) {
     entries.push({ key: key, value: map[key] });
   }return entries;
-};
-
-var getset = function getset(obj, state, events, side_effects) {
-  keys(state).forEach(function (key) {
-    obj[key] = function (x) {
-      if (!arguments.length) {
-        return state[key];
-      }
-      if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-        console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
-        x = pc.applyDimensionDefaults(x);
-      }
-      var old = state[key];
-      state[key] = x;
-      side_effects.call(key, obj, { value: x, previous: old });
-      events.call(key, obj, { value: x, previous: old });
-      return obj;
-    };
-  });
-};
-
-var w$1 = function w(config) {
-  return config.width - config.margin.right - config.margin.left;
 };
 
 var noop = { value: function value() {} };
@@ -9514,6 +9470,31 @@ var colorPath = function colorPath(config, position, d, ctx) {
   ctx.stroke();
 };
 
+var without = function without(arr, items) {
+  items.forEach(function (el) {
+    delete arr[el];
+  });
+  return arr;
+};
+
+var d3_rebind = function d3_rebind(target, source, method) {
+  return function () {
+    var value = method.apply(source, arguments);
+    return value === source ? target : value;
+  };
+};
+
+var _rebind = function _rebind(target, source, method) {
+  target[method] = d3_rebind(target, source, source[method]);
+  return target;
+};
+
+var _functor = function _functor(v) {
+  return typeof v === 'function' ? v : function () {
+    return v;
+  };
+};
+
 var pathBrushed = function pathBrushed(config, ctx, position) {
   return function (d, i) {
     if (config.brushedColor !== null) {
@@ -9904,6 +9885,39 @@ var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQu
   });
 };
 
+var getset = function getset(obj, state, events, side_effects) {
+  keys(state).forEach(function (key) {
+    obj[key] = function (x) {
+      if (!arguments.length) {
+        return state[key];
+      }
+      if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
+        console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
+        x = pc.applyDimensionDefaults(x);
+      }
+      var old = state[key];
+      state[key] = x;
+      side_effects.call(key, obj, { value: x, previous: old });
+      events.call(key, obj, { value: x, previous: old });
+      return obj;
+    };
+  });
+};
+
+// side effects for setters
+var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis) {
+  var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
+
+  // create getter/setters
+  getset(pc, __, events, side_effects);
+
+  // expose events
+  // getter/setter with event firing
+  _rebind(pc, events, 'on');
+
+  _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
+};
+
 // misc
 // brush
 // api
@@ -9955,17 +9969,7 @@ var ParCoords = function ParCoords(userConfig) {
     pc.clear('highlight');
   });
 
-  // side effects for setters
-  var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
-
-  // create getter/setters
-  getset(pc, __, events, side_effects);
-
-  // expose events
-  // getter/setter with event firing
-  _rebind(pc, events, 'on');
-
-  _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
+  bindEvents(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis);
 
   // expose the state of the chart
   pc.state = __;
