@@ -9754,31 +9754,27 @@ var detectDimensionTypes = function detectDimensionTypes(data) {
 
 var version = "1.0.3";
 
-var _this = undefined;
+var _this$3 = undefined;
 
-// misc
-// brush
-// api
-//css
-var ParCoords = function ParCoords(userConfig) {
-  var __ = Object.assign({}, DefaultConfig, userConfig);
+var initState = function initState(userConfig) {
+  var config = Object.assign({}, DefaultConfig, userConfig);
 
   if (userConfig && userConfig.dimensionTitles) {
-    console.warn('dimensionTitles passed in config is deprecated. Add title to dimension object.');
+    console.warn('dimensionTitles passed in userConfig is deprecated. Add title to dimension object.');
     entries(userConfig.dimensionTitles).forEach(function (d) {
-      if (__.dimensions[d.key]) {
-        __.dimensions[d.key].title = __.dimensions[d.key].title ? __.dimensions[d.key].title : d.value;
+      if (config.dimensions[d.key]) {
+        config.dimensions[d.key].title = config.dimensions[d.key].title ? config.dimensions[d.key].title : d.value;
       } else {
-        __.dimensions[d.key] = {
+        config.dimensions[d.key] = {
           title: d.value
         };
       }
     });
   }
 
-  var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(__));
+  var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(config));
 
-  var events = dispatch.apply(_this, eventTypes),
+  var events = dispatch.apply(_this$3, eventTypes),
       flags = {
     brushable: false,
     reorderable: false,
@@ -9797,7 +9793,7 @@ var ParCoords = function ParCoords(userConfig) {
       None: {
         install: function install(pc) {}, // Nothing to be done.
         uninstall: function uninstall(pc) {}, // Nothing to be done.
-        selected: function selected$$1() {
+        selected: function selected() {
           return [];
         }, // Nothing to return
         brushState: function brushState() {
@@ -9811,6 +9807,39 @@ var ParCoords = function ParCoords(userConfig) {
       return this.modes[this.mode];
     }
   };
+
+  return {
+    config: config,
+    events: events,
+    eventTypes: eventTypes,
+    flags: flags,
+    xscale: xscale,
+    dragging: dragging,
+    axis: axis,
+    ctx: ctx,
+    canvas: canvas,
+    brush: brush
+  };
+};
+
+var _this = undefined;
+
+// misc
+// brush
+// api
+//css
+var ParCoords = function ParCoords(userConfig) {
+  var state = initState(userConfig);
+  var __ = state.config,
+      events = state.events,
+      flags = state.flags,
+      xscale = state.xscale,
+      dragging = state.dragging,
+      axis = state.axis,
+      ctx = state.ctx,
+      canvas = state.canvas,
+      brush = state.brush;
+
 
   var pc = function pc(selection) {
     selection = pc.selection = select(selection);

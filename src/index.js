@@ -57,73 +57,24 @@ import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 import detectDimensionTypes from './api/detectDimensionTypes';
 
 import { version } from '../package.json';
+import initState from './state';
 
 //css
 import './parallel-coordinates.css';
 
 const ParCoords = userConfig => {
-  const __ = Object.assign({}, DefaultConfig, userConfig);
-
-  if (userConfig && userConfig.dimensionTitles) {
-    console.warn(
-      'dimensionTitles passed in config is deprecated. Add title to dimension object.'
-    );
-    entries(userConfig.dimensionTitles).forEach(d => {
-      if (__.dimensions[d.key]) {
-        __.dimensions[d.key].title = __.dimensions[d.key].title
-          ? __.dimensions[d.key].title
-          : d.value;
-      } else {
-        __.dimensions[d.key] = {
-          title: d.value,
-        };
-      }
-    });
-  }
-
-  const eventTypes = [
-    'render',
-    'resize',
-    'highlight',
-    'brush',
-    'brushend',
-    'brushstart',
-    'axesreorder',
-  ].concat(keys(__));
-
-  const events = dispatch.apply(this, eventTypes),
-    flags = {
-      brushable: false,
-      reorderable: false,
-      axes: false,
-      interactive: false,
-      debug: false,
-    },
-    xscale = scalePoint(),
-    dragging = {},
-    axis = axisLeft().ticks(5),
-    ctx = {},
-    canvas = {};
-
-  const brush = {
-    modes: {
-      None: {
-        install: function(pc) {}, // Nothing to be done.
-        uninstall: function(pc) {}, // Nothing to be done.
-        selected: function() {
-          return [];
-        }, // Nothing to return
-        brushState: function() {
-          return {};
-        },
-      },
-    },
-    mode: 'None',
-    predicate: 'AND',
-    currentMode: function() {
-      return this.modes[this.mode];
-    },
-  };
+  const state = initState(userConfig);
+  const {
+    config: __,
+    events,
+    flags,
+    xscale,
+    dragging,
+    axis,
+    ctx,
+    canvas,
+    brush,
+  } = state;
 
   const pc = function(selection) {
     selection = pc.selection = select(selection);
