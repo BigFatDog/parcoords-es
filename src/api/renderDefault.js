@@ -15,9 +15,9 @@ const renderDefault = (config, pc, ctx, position) => () => {
   config.data.forEach(pathForeground(config, ctx, position));
 };
 
-const renderDefaultQueue = (config, pc, foregroundQueue)=> ()=> {
-    pc.renderBrushed.queue();
-    foregroundQueue(config.data);
+const renderDefaultQueue = (config, pc, foregroundQueue) => () => {
+  pc.renderBrushed.queue();
+  foregroundQueue(config.data);
 };
 
 export default renderDefault;

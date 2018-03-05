@@ -2,7 +2,7 @@ import { select, selectAll } from 'd3-selection';
 
 const brushReset = config =>
   function(dimension) {
-    let brushesToKeep = [];
+    const brushesToKeep = [];
     for (let j = 0; j < config.brushes.length; j++) {
       if (config.brushes[j].data !== dimension) {
         brushesToKeep.push(config.brushes[j]);

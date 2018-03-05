@@ -3,11 +3,11 @@ import { event, select } from 'd3-selection';
 
 const brushable = (config, pc, flags) =>
   function() {
-    let g = pc.g();
     if (!g) {
       pc.createAxes();
-      g = pc.g();
     }
+
+    const g = pc.g();
 
     // Add and store a brush for each axis.
     g

@@ -41,7 +41,10 @@ import highlight from './api/highlight';
 import unhighlight from './api/unhighlight';
 import removeAxes from './api/removeAxes';
 import render from './api/render';
-import renderDefault, { pathForeground, renderDefaultQueue } from './api/renderDefault';
+import renderDefault, {
+  pathForeground,
+  renderDefaultQueue,
+} from './api/renderDefault';
 import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 import detectDimensionTypes from './api/detectDimensionTypes';
 import getOrderedDimensionKeys from './api/getOrderedDimensionKeys';

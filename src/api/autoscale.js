@@ -8,11 +8,9 @@ import h from '../util/height';
 const autoscale = (config, pc, xscale, ctx) =>
   function() {
     // yscale
-    let defaultScales = {
+    const defaultScales = {
       date: function(k) {
-        let _extent = extent(config.data, function(d) {
-          return d[k] ? d[k].getTime() : null;
-        });
+        let _extent = extent(config.data, d => (d[k] ? d[k].getTime() : null));
         // special case if single value
         if (_extent[0] === _extent[1]) {
           return scalePoint()
@@ -20,20 +18,14 @@ const autoscale = (config, pc, xscale, ctx) =>
             .range(getRange(config));
         }
         if (config.flipAxes.includes(k)) {
-          let tempDate = [];
-          _extent.forEach(function(val) {
-            tempDate.unshift(val);
-          });
-          _extent = tempDate;
+          _extent = _extent.map(val => tempDate.unshift(val));
         }
         return scaleTime()
           .domain(_extent)
           .range(getRange(config));
       },
       number: function(k) {
-        let _extent = extent(config.data, function(d) {
-          return +d[k];
-        });
+        let _extent = extent(config.data, d => +d[k]);
         // special case if single value
         if (_extent[0] === _extent[1]) {
           return scalePoint()
@@ -41,11 +33,7 @@ const autoscale = (config, pc, xscale, ctx) =>
             .range(getRange(config));
         }
         if (config.flipAxes.includes(k)) {
-          let temp = [];
-          _extent.forEach(function(val) {
-            temp.unshift(val);
-          });
-          _extent = temp;
+          _extent = _extent.map(val => tempDate.unshift(val));
         }
         return scaleLinear()
           .domain(_extent)
@@ -56,9 +44,9 @@ const autoscale = (config, pc, xscale, ctx) =>
           domain = [];
         // Let's get the count for each value so that we can sort the domain based
         // on the number of items for each value.
-        config.data.map(function(p) {
+        config.data.map(p => {
           if (p[k] === undefined && config.nullValueSeparator !== 'undefined') {
-            return; // null values will be drawn beyond the horizontal null value separator!
+            return null; // null values will be drawn beyond the horizontal null value separator!
           }
           if (counts[p[k]] === undefined) {
             counts[p[k]] = 1;
@@ -101,7 +89,7 @@ const autoscale = (config, pc, xscale, ctx) =>
     // xscale
     xscale.range([0, w(config)], 1);
     // Retina display, etc.
-    let devicePixelRatio = window.devicePixelRatio || 1;
+    const devicePixelRatio = window.devicePixelRatio || 1;
 
     // canvas sizes
     pc.selection
