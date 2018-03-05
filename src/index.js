@@ -1,14 +1,10 @@
 import { select } from 'd3-selection';
-import { keys } from 'd3-collection';
-import { dispatch } from 'd3-dispatch';
-import { ascending } from 'd3-array';
 
 // misc
 import renderQueue from './util/renderQueue';
-import { _rebind, without } from './helper';
+import { _rebind } from './helper';
 import getset from './util/getset';
 import w from './util/width';
-import computeClusterCentroids from './util/computeClusterCentroids';
 
 // brush
 import install1DAxes from './brush/install1DAxes';
@@ -56,7 +52,7 @@ import getOrderedDimensionKeys from './api/getOrderedDimensionKeys';
 
 import { version } from '../package.json';
 import initState from './state';
-
+import sideEffects from './sideEffects';
 //css
 import './parallel-coordinates.css';
 
@@ -105,10 +101,6 @@ const ParCoords = userConfig => {
     return pc;
   };
 
-  const brushedQueue = renderQueue(pathBrushed(__, ctx, position))
-    .rate(50)
-    .clear(() => pc.clear('brushed'));
-
   function position(d) {
     if (xscale.range().length === 0) {
       xscale.range([0, w(__)], 1);
@@ -116,6 +108,10 @@ const ParCoords = userConfig => {
     let v = dragging[d];
     return v == null ? xscale(d) : v;
   }
+
+  const brushedQueue = renderQueue(pathBrushed(__, ctx, position))
+    .rate(50)
+    .clear(() => pc.clear('brushed'));
 
   const foregroundQueue = renderQueue(pathForeground(__, ctx, position))
     .rate(50)
@@ -125,70 +121,15 @@ const ParCoords = userConfig => {
     });
 
   // side effects for setters
-  const side_effects = dispatch
-    .apply(this, keys(__))
-    .on('composite', function(d) {
-      ctx.foreground.globalCompositeOperation = d.value;
-      ctx.brushed.globalCompositeOperation = d.value;
-    })
-    .on('alpha', function(d) {
-      ctx.foreground.globalAlpha = d.value;
-      ctx.brushed.globalAlpha = d.value;
-    })
-    .on('brushedColor', function(d) {
-      ctx.brushed.strokeStyle = d.value;
-    })
-    .on('width', function(d) {
-      pc.resize();
-    })
-    .on('height', function(d) {
-      pc.resize();
-    })
-    .on('margin', function(d) {
-      pc.resize();
-    })
-    .on('rate', function(d) {
-      brushedQueue.rate(d.value);
-      foregroundQueue.rate(d.value);
-    })
-    .on('dimensions', function(d) {
-      __.dimensions = pc.applyDimensionDefaults(keys(d.value));
-      xscale.domain(pc.getOrderedDimensionKeys());
-      pc.sortDimensions();
-      if (flags.interactive) {
-        pc.render().updateAxes();
-      }
-    })
-    .on('bundleDimension', function(d) {
-      if (!keys(__.dimensions).length) pc.detectDimensions();
-      pc.autoscale();
-      if (typeof d.value === 'number') {
-        if (d.value < keys(__.dimensions).length) {
-          __.bundleDimension = __.dimensions[d.value];
-        } else if (d.value < __.hideAxis.length) {
-          __.bundleDimension = __.hideAxis[d.value];
-        }
-      } else {
-        __.bundleDimension = d.value;
-      }
-
-      __.clusterCentroids = computeClusterCentroids(__, __.bundleDimension);
-      if (flags.interactive) {
-        pc.render();
-      }
-    })
-    .on('hideAxis', function(d) {
-      pc.dimensions(pc.applyDimensionDefaults());
-      pc.dimensions(without(__.dimensions, d.value));
-    })
-    .on('flipAxes', function(d) {
-      if (d.value && d.value.length) {
-        d.value.forEach(function(axis) {
-          flipAxisAndUpdatePCP(__, pc, axis);
-        });
-        pc.updateAxes(0);
-      }
-    });
+  const side_effects = sideEffects(
+    __,
+    ctx,
+    pc,
+    xscale,
+    flags,
+    brushedQueue,
+    foregroundQueue
+  );
 
   // expose the state of the chart
   pc.state = __;

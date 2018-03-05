@@ -914,456 +914,6 @@ var touch = function (node, touches, identifier) {
   return null;
 };
 
-var prefix = "$";
-
-function Map() {}
-
-Map.prototype = map.prototype = {
-  constructor: Map,
-  has: function has(key) {
-    return prefix + key in this;
-  },
-  get: function get(key) {
-    return this[prefix + key];
-  },
-  set: function set(key, value) {
-    this[prefix + key] = value;
-    return this;
-  },
-  remove: function remove(key) {
-    var property = prefix + key;
-    return property in this && delete this[property];
-  },
-  clear: function clear() {
-    for (var property in this) {
-      if (property[0] === prefix) delete this[property];
-    }
-  },
-  keys: function keys() {
-    var keys = [];
-    for (var property in this) {
-      if (property[0] === prefix) keys.push(property.slice(1));
-    }return keys;
-  },
-  values: function values() {
-    var values = [];
-    for (var property in this) {
-      if (property[0] === prefix) values.push(this[property]);
-    }return values;
-  },
-  entries: function entries() {
-    var entries = [];
-    for (var property in this) {
-      if (property[0] === prefix) entries.push({ key: property.slice(1), value: this[property] });
-    }return entries;
-  },
-  size: function size() {
-    var size = 0;
-    for (var property in this) {
-      if (property[0] === prefix) ++size;
-    }return size;
-  },
-  empty: function empty() {
-    for (var property in this) {
-      if (property[0] === prefix) return false;
-    }return true;
-  },
-  each: function each(f) {
-    for (var property in this) {
-      if (property[0] === prefix) f(this[property], property.slice(1), this);
-    }
-  }
-};
-
-function map(object, f) {
-  var map = new Map();
-
-  // Copy constructor.
-  if (object instanceof Map) object.each(function (value, key) {
-    map.set(key, value);
-  });
-
-  // Index array by numeric index or specified key function.
-  else if (Array.isArray(object)) {
-      var i = -1,
-          n = object.length,
-          o;
-
-      if (f == null) while (++i < n) {
-        map.set(i, object[i]);
-      } else while (++i < n) {
-        map.set(f(o = object[i], i, object), o);
-      }
-    }
-
-    // Convert object to map.
-    else if (object) for (var key in object) {
-        map.set(key, object[key]);
-      }return map;
-}
-
-function Set() {}
-
-var proto = map.prototype;
-
-Set.prototype = set.prototype = {
-  constructor: Set,
-  has: proto.has,
-  add: function add(value) {
-    value += "";
-    this[prefix + value] = value;
-    return this;
-  },
-  remove: proto.remove,
-  clear: proto.clear,
-  values: proto.keys,
-  size: proto.size,
-  empty: proto.empty,
-  each: proto.each
-};
-
-function set(object, f) {
-  var set = new Set();
-
-  // Copy constructor.
-  if (object instanceof Set) object.each(function (value) {
-    set.add(value);
-  });
-
-  // Otherwise, assume it’s an array.
-  else if (object) {
-      var i = -1,
-          n = object.length;
-      if (f == null) while (++i < n) {
-        set.add(object[i]);
-      } else while (++i < n) {
-        set.add(f(object[i], i, object));
-      }
-    }
-
-  return set;
-}
-
-var keys = function (map) {
-  var keys = [];
-  for (var key in map) {
-    keys.push(key);
-  }return keys;
-};
-
-var entries = function (map) {
-  var entries = [];
-  for (var key in map) {
-    entries.push({ key: key, value: map[key] });
-  }return entries;
-};
-
-var noop = { value: function value() {} };
-
-function dispatch() {
-  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
-    if (!(t = arguments[i] + "") || t in _) throw new Error("illegal type: " + t);
-    _[t] = [];
-  }
-  return new Dispatch(_);
-}
-
-function Dispatch(_) {
-  this._ = _;
-}
-
-function parseTypenames$1(typenames, types) {
-  return typenames.trim().split(/^|\s+/).map(function (t) {
-    var name = "",
-        i = t.indexOf(".");
-    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-    if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
-    return { type: t, name: name };
-  });
-}
-
-Dispatch.prototype = dispatch.prototype = {
-  constructor: Dispatch,
-  on: function on(typename, callback) {
-    var _ = this._,
-        T = parseTypenames$1(typename + "", _),
-        t,
-        i = -1,
-        n = T.length;
-
-    // If no callback was specified, return the callback of the given type and name.
-    if (arguments.length < 2) {
-      while (++i < n) {
-        if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name))) return t;
-      }return;
-    }
-
-    // If a type was specified, set the callback for the given type and name.
-    // Otherwise, if a null callback was specified, remove callbacks of the given name.
-    if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
-    while (++i < n) {
-      if (t = (typename = T[i]).type) _[t] = set$2(_[t], typename.name, callback);else if (callback == null) for (t in _) {
-        _[t] = set$2(_[t], typename.name, null);
-      }
-    }
-
-    return this;
-  },
-  copy: function copy() {
-    var copy = {},
-        _ = this._;
-    for (var t in _) {
-      copy[t] = _[t].slice();
-    }return new Dispatch(copy);
-  },
-  call: function call(type, that) {
-    if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) {
-      args[i] = arguments[i + 2];
-    }if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (t = this._[type], i = 0, n = t.length; i < n; ++i) {
-      t[i].value.apply(that, args);
-    }
-  },
-  apply: function apply(type, that, args) {
-    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (var t = this._[type], i = 0, n = t.length; i < n; ++i) {
-      t[i].value.apply(that, args);
-    }
-  }
-};
-
-function get(type, name) {
-  for (var i = 0, n = type.length, c; i < n; ++i) {
-    if ((c = type[i]).name === name) {
-      return c.value;
-    }
-  }
-}
-
-function set$2(type, name, callback) {
-  for (var i = 0, n = type.length; i < n; ++i) {
-    if (type[i].name === name) {
-      type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
-      break;
-    }
-  }
-  if (callback != null) type.push({ name: name, value: callback });
-  return type;
-}
-
-var ascending$1 = function (a, b) {
-  return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
-};
-
-var bisector = function (compare) {
-  if (compare.length === 1) compare = ascendingComparator(compare);
-  return {
-    left: function left(a, x, lo, hi) {
-      if (lo == null) lo = 0;
-      if (hi == null) hi = a.length;
-      while (lo < hi) {
-        var mid = lo + hi >>> 1;
-        if (compare(a[mid], x) < 0) lo = mid + 1;else hi = mid;
-      }
-      return lo;
-    },
-    right: function right(a, x, lo, hi) {
-      if (lo == null) lo = 0;
-      if (hi == null) hi = a.length;
-      while (lo < hi) {
-        var mid = lo + hi >>> 1;
-        if (compare(a[mid], x) > 0) hi = mid;else lo = mid + 1;
-      }
-      return lo;
-    }
-  };
-};
-
-function ascendingComparator(f) {
-  return function (d, x) {
-    return ascending$1(f(d), x);
-  };
-}
-
-var ascendingBisect = bisector(ascending$1);
-var bisectRight = ascendingBisect.right;
-
-function pair(a, b) {
-  return [a, b];
-}
-
-var number = function (x) {
-  return x === null ? NaN : +x;
-};
-
-var extent = function (values, valueof) {
-  var n = values.length,
-      i = -1,
-      value,
-      min,
-      max;
-
-  if (valueof == null) {
-    while (++i < n) {
-      // Find the first comparable value.
-      if ((value = values[i]) != null && value >= value) {
-        min = max = value;
-        while (++i < n) {
-          // Compare the remaining values.
-          if ((value = values[i]) != null) {
-            if (min > value) min = value;
-            if (max < value) max = value;
-          }
-        }
-      }
-    }
-  } else {
-    while (++i < n) {
-      // Find the first comparable value.
-      if ((value = valueof(values[i], i, values)) != null && value >= value) {
-        min = max = value;
-        while (++i < n) {
-          // Compare the remaining values.
-          if ((value = valueof(values[i], i, values)) != null) {
-            if (min > value) min = value;
-            if (max < value) max = value;
-          }
-        }
-      }
-    }
-  }
-
-  return [min, max];
-};
-
-var identity = function (x) {
-  return x;
-};
-
-var sequence = function (start, stop, step) {
-  start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
-
-  var i = -1,
-      n = Math.max(0, Math.ceil((stop - start) / step)) | 0,
-      range = new Array(n);
-
-  while (++i < n) {
-    range[i] = start + i * step;
-  }
-
-  return range;
-};
-
-var e10 = Math.sqrt(50);
-var e5 = Math.sqrt(10);
-var e2 = Math.sqrt(2);
-
-var ticks = function (start, stop, count) {
-    var reverse,
-        i = -1,
-        n,
-        ticks,
-        step;
-
-    stop = +stop, start = +start, count = +count;
-    if (start === stop && count > 0) return [start];
-    if (reverse = stop < start) n = start, start = stop, stop = n;
-    if ((step = tickIncrement(start, stop, count)) === 0 || !isFinite(step)) return [];
-
-    if (step > 0) {
-        start = Math.ceil(start / step);
-        stop = Math.floor(stop / step);
-        ticks = new Array(n = Math.ceil(stop - start + 1));
-        while (++i < n) {
-            ticks[i] = (start + i) * step;
-        }
-    } else {
-        start = Math.floor(start * step);
-        stop = Math.ceil(stop * step);
-        ticks = new Array(n = Math.ceil(start - stop + 1));
-        while (++i < n) {
-            ticks[i] = (start - i) / step;
-        }
-    }
-
-    if (reverse) ticks.reverse();
-
-    return ticks;
-};
-
-function tickIncrement(start, stop, count) {
-    var step = (stop - start) / Math.max(0, count),
-        power = Math.floor(Math.log(step) / Math.LN10),
-        error = step / Math.pow(10, power);
-    return power >= 0 ? (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1) * Math.pow(10, power) : -Math.pow(10, -power) / (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1);
-}
-
-function tickStep(start, stop, count) {
-    var step0 = Math.abs(stop - start) / Math.max(0, count),
-        step1 = Math.pow(10, Math.floor(Math.log(step0) / Math.LN10)),
-        error = step0 / step1;
-    if (error >= e10) step1 *= 10;else if (error >= e5) step1 *= 5;else if (error >= e2) step1 *= 2;
-    return stop < start ? -step1 : step1;
-}
-
-var sturges = function (values) {
-  return Math.ceil(Math.log(values.length) / Math.LN2) + 1;
-};
-
-var threshold = function (values, p, valueof) {
-  if (valueof == null) valueof = number;
-  if (!(n = values.length)) return;
-  if ((p = +p) <= 0 || n < 2) return +valueof(values[0], 0, values);
-  if (p >= 1) return +valueof(values[n - 1], n - 1, values);
-  var n,
-      i = (n - 1) * p,
-      i0 = Math.floor(i),
-      value0 = +valueof(values[i0], i0, values),
-      value1 = +valueof(values[i0 + 1], i0 + 1, values);
-  return value0 + (value1 - value0) * (i - i0);
-};
-
-var min = function (values, valueof) {
-  var n = values.length,
-      i = -1,
-      value,
-      min;
-
-  if (valueof == null) {
-    while (++i < n) {
-      // Find the first comparable value.
-      if ((value = values[i]) != null && value >= value) {
-        min = value;
-        while (++i < n) {
-          // Compare the remaining values.
-          if ((value = values[i]) != null && min > value) {
-            min = value;
-          }
-        }
-      }
-    }
-  } else {
-    while (++i < n) {
-      // Find the first comparable value.
-      if ((value = valueof(values[i], i, values)) != null && value >= value) {
-        min = value;
-        while (++i < n) {
-          // Compare the remaining values.
-          if ((value = valueof(values[i], i, values)) != null && min > value) {
-            min = value;
-          }
-        }
-      }
-    }
-  }
-
-  return min;
-};
-
-function length(d) {
-  return d.length;
-}
-
 /**
  * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
  * Available via the MIT license.
@@ -1520,6 +1070,150 @@ var _functor = function _functor(v) {
   };
 };
 
+var prefix = "$";
+
+function Map() {}
+
+Map.prototype = map.prototype = {
+  constructor: Map,
+  has: function has(key) {
+    return prefix + key in this;
+  },
+  get: function get(key) {
+    return this[prefix + key];
+  },
+  set: function set(key, value) {
+    this[prefix + key] = value;
+    return this;
+  },
+  remove: function remove(key) {
+    var property = prefix + key;
+    return property in this && delete this[property];
+  },
+  clear: function clear() {
+    for (var property in this) {
+      if (property[0] === prefix) delete this[property];
+    }
+  },
+  keys: function keys() {
+    var keys = [];
+    for (var property in this) {
+      if (property[0] === prefix) keys.push(property.slice(1));
+    }return keys;
+  },
+  values: function values() {
+    var values = [];
+    for (var property in this) {
+      if (property[0] === prefix) values.push(this[property]);
+    }return values;
+  },
+  entries: function entries() {
+    var entries = [];
+    for (var property in this) {
+      if (property[0] === prefix) entries.push({ key: property.slice(1), value: this[property] });
+    }return entries;
+  },
+  size: function size() {
+    var size = 0;
+    for (var property in this) {
+      if (property[0] === prefix) ++size;
+    }return size;
+  },
+  empty: function empty() {
+    for (var property in this) {
+      if (property[0] === prefix) return false;
+    }return true;
+  },
+  each: function each(f) {
+    for (var property in this) {
+      if (property[0] === prefix) f(this[property], property.slice(1), this);
+    }
+  }
+};
+
+function map(object, f) {
+  var map = new Map();
+
+  // Copy constructor.
+  if (object instanceof Map) object.each(function (value, key) {
+    map.set(key, value);
+  });
+
+  // Index array by numeric index or specified key function.
+  else if (Array.isArray(object)) {
+      var i = -1,
+          n = object.length,
+          o;
+
+      if (f == null) while (++i < n) {
+        map.set(i, object[i]);
+      } else while (++i < n) {
+        map.set(f(o = object[i], i, object), o);
+      }
+    }
+
+    // Convert object to map.
+    else if (object) for (var key in object) {
+        map.set(key, object[key]);
+      }return map;
+}
+
+function Set() {}
+
+var proto = map.prototype;
+
+Set.prototype = set.prototype = {
+  constructor: Set,
+  has: proto.has,
+  add: function add(value) {
+    value += "";
+    this[prefix + value] = value;
+    return this;
+  },
+  remove: proto.remove,
+  clear: proto.clear,
+  values: proto.keys,
+  size: proto.size,
+  empty: proto.empty,
+  each: proto.each
+};
+
+function set(object, f) {
+  var set = new Set();
+
+  // Copy constructor.
+  if (object instanceof Set) object.each(function (value) {
+    set.add(value);
+  });
+
+  // Otherwise, assume it’s an array.
+  else if (object) {
+      var i = -1,
+          n = object.length;
+      if (f == null) while (++i < n) {
+        set.add(object[i]);
+      } else while (++i < n) {
+        set.add(f(object[i], i, object));
+      }
+    }
+
+  return set;
+}
+
+var keys = function (map) {
+  var keys = [];
+  for (var key in map) {
+    keys.push(key);
+  }return keys;
+};
+
+var entries = function (map) {
+  var entries = [];
+  for (var key in map) {
+    entries.push({ key: key, value: map[key] });
+  }return entries;
+};
+
 var getset = function getset(obj, state, events, side_effects) {
   keys(state).forEach(function (key) {
     obj[key] = function (x) {
@@ -1543,37 +1237,98 @@ var w$1 = function w(config) {
   return config.width - config.margin.right - config.margin.left;
 };
 
-var computeClusterCentroids = function computeClusterCentroids(config, d) {
-  var clusterCentroids = map();
-  var clusterCounts = map();
-  // determine clusterCounts
-  config.data.forEach(function (row) {
-    var scaled = config.dimensions[d].yscale(row[d]);
-    if (!clusterCounts.has(scaled)) {
-      clusterCounts.set(scaled, 0);
+var noop = { value: function value() {} };
+
+function dispatch() {
+  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
+    if (!(t = arguments[i] + "") || t in _) throw new Error("illegal type: " + t);
+    _[t] = [];
+  }
+  return new Dispatch(_);
+}
+
+function Dispatch(_) {
+  this._ = _;
+}
+
+function parseTypenames$1(typenames, types) {
+  return typenames.trim().split(/^|\s+/).map(function (t) {
+    var name = "",
+        i = t.indexOf(".");
+    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+    if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
+    return { type: t, name: name };
+  });
+}
+
+Dispatch.prototype = dispatch.prototype = {
+  constructor: Dispatch,
+  on: function on(typename, callback) {
+    var _ = this._,
+        T = parseTypenames$1(typename + "", _),
+        t,
+        i = -1,
+        n = T.length;
+
+    // If no callback was specified, return the callback of the given type and name.
+    if (arguments.length < 2) {
+      while (++i < n) {
+        if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name))) return t;
+      }return;
     }
-    var count = clusterCounts.get(scaled);
-    clusterCounts.set(scaled, count + 1);
-  });
 
-  config.data.forEach(function (row) {
-    keys(config.dimensions).map(function (p, i) {
-      var scaled = config.dimensions[d].yscale(row[d]);
-      if (!clusterCentroids.has(scaled)) {
-        var _map = map();
-        clusterCentroids.set(scaled, _map);
+    // If a type was specified, set the callback for the given type and name.
+    // Otherwise, if a null callback was specified, remove callbacks of the given name.
+    if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
+    while (++i < n) {
+      if (t = (typename = T[i]).type) _[t] = set$2(_[t], typename.name, callback);else if (callback == null) for (t in _) {
+        _[t] = set$2(_[t], typename.name, null);
       }
-      if (!clusterCentroids.get(scaled).has(p)) {
-        clusterCentroids.get(scaled).set(p, 0);
-      }
-      var value = clusterCentroids.get(scaled).get(p);
-      value += config.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
-      clusterCentroids.get(scaled).set(p, value);
-    });
-  });
+    }
 
-  return clusterCentroids;
+    return this;
+  },
+  copy: function copy() {
+    var copy = {},
+        _ = this._;
+    for (var t in _) {
+      copy[t] = _[t].slice();
+    }return new Dispatch(copy);
+  },
+  call: function call(type, that) {
+    if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) {
+      args[i] = arguments[i + 2];
+    }if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+    for (t = this._[type], i = 0, n = t.length; i < n; ++i) {
+      t[i].value.apply(that, args);
+    }
+  },
+  apply: function apply(type, that, args) {
+    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+    for (var t = this._[type], i = 0, n = t.length; i < n; ++i) {
+      t[i].value.apply(that, args);
+    }
+  }
 };
+
+function get(type, name) {
+  for (var i = 0, n = type.length, c; i < n; ++i) {
+    if ((c = type[i]).name === name) {
+      return c.value;
+    }
+  }
+}
+
+function set$2(type, name, callback) {
+  for (var i = 0, n = type.length; i < n; ++i) {
+    if (type[i].name === name) {
+      type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
+      break;
+    }
+  }
+  if (callback != null) type.push({ name: name, value: callback });
+  return type;
+}
 
 function nopropagation() {
   event.stopImmediatePropagation();
@@ -1612,7 +1367,7 @@ function yesdrag(view, noclick) {
   }
 }
 
-var constant$2 = function (x) {
+var constant$1 = function (x) {
   return function () {
     return x;
   };
@@ -1778,19 +1533,19 @@ var drag = function () {
   }
 
   drag.filter = function (_) {
-    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$2(!!_), drag) : filter;
+    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$1(!!_), drag) : filter;
   };
 
   drag.container = function (_) {
-    return arguments.length ? (container = typeof _ === "function" ? _ : constant$2(_), drag) : container;
+    return arguments.length ? (container = typeof _ === "function" ? _ : constant$1(_), drag) : container;
   };
 
   drag.subject = function (_) {
-    return arguments.length ? (subject = typeof _ === "function" ? _ : constant$2(_), drag) : subject;
+    return arguments.length ? (subject = typeof _ === "function" ? _ : constant$1(_), drag) : subject;
   };
 
   drag.touchable = function (_) {
-    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$2(!!_), drag) : touchable;
+    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$1(!!_), drag) : touchable;
   };
 
   drag.on = function () {
@@ -2287,7 +2042,7 @@ function basis(t1, v0, v1, v2, v3) {
   return ((1 - 3 * t1 + 3 * t2 - t3) * v0 + (4 - 6 * t2 + 3 * t3) * v1 + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2 + t3 * v3) / 6;
 }
 
-var constant$3 = function (x) {
+var constant$2 = function (x) {
   return function () {
     return x;
   };
@@ -2307,18 +2062,18 @@ function exponential(a, b, y) {
 
 function hue(a, b) {
   var d = b - a;
-  return d ? linear(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$3(isNaN(a) ? b : a);
+  return d ? linear(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$2(isNaN(a) ? b : a);
 }
 
 function gamma(y) {
   return (y = +y) === 1 ? nogamma : function (a, b) {
-    return b - a ? exponential(a, b, y) : constant$3(isNaN(a) ? b : a);
+    return b - a ? exponential(a, b, y) : constant$2(isNaN(a) ? b : a);
   };
 }
 
 function nogamma(a, b) {
   var d = b - a;
-  return d ? linear(a, d) : constant$3(isNaN(a) ? b : a);
+  return d ? linear(a, d) : constant$2(isNaN(a) ? b : a);
 }
 
 var interpolateRgb = (function rgbGamma(y) {
@@ -2343,7 +2098,7 @@ var interpolateRgb = (function rgbGamma(y) {
   return rgb$$1;
 })(1);
 
-var array$1 = function (a, b) {
+var array = function (a, b) {
   var nb = b ? b.length : 0,
       na = a ? Math.min(nb, a.length) : 0,
       x = new Array(na),
@@ -2475,7 +2230,7 @@ var interpolateString = function (a, b) {
 var interpolateValue = function (a, b) {
     var t = typeof b === "undefined" ? "undefined" : _typeof(b),
         c;
-    return b == null || t === "boolean" ? constant$3(b) : (t === "number" ? reinterpolate : t === "string" ? (c = color(b)) ? (b = c, interpolateRgb) : interpolateString : b instanceof color ? interpolateRgb : b instanceof Date ? date : Array.isArray(b) ? array$1 : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object : reinterpolate)(a, b);
+    return b == null || t === "boolean" ? constant$2(b) : (t === "number" ? reinterpolate : t === "string" ? (c = color(b)) ? (b = c, interpolateRgb) : interpolateString : b instanceof color ? interpolateRgb : b instanceof Date ? date : Array.isArray(b) ? array : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object : reinterpolate)(a, b);
 };
 
 var interpolateRound = function (a, b) {
@@ -2486,7 +2241,7 @@ var interpolateRound = function (a, b) {
 
 var degrees = 180 / Math.PI;
 
-var identity$1 = {
+var identity = {
   translateX: 0,
   translateY: 0,
   rotate: 0,
@@ -2517,7 +2272,7 @@ var cssView;
 var svgNode;
 
 function parseCss(value) {
-  if (value === "none") return identity$1;
+  if (value === "none") return identity;
   if (!cssNode) cssNode = document.createElement("DIV"), cssRoot = document.documentElement, cssView = document.defaultView;
   cssNode.style.transform = value;
   value = cssView.getComputedStyle(cssRoot.appendChild(cssNode), null).getPropertyValue("transform");
@@ -2527,10 +2282,10 @@ function parseCss(value) {
 }
 
 function parseSvg(value) {
-  if (value == null) return identity$1;
+  if (value == null) return identity;
   if (!svgNode) svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g");
   svgNode.setAttribute("transform", value);
-  if (!(value = svgNode.transform.baseVal.consolidate())) return identity$1;
+  if (!(value = svgNode.transform.baseVal.consolidate())) return identity;
   value = value.matrix;
   return decompose(value.a, value.b, value.c, value.d, value.e, value.f);
 }
@@ -4078,7 +3833,7 @@ var selection_transition = function (name) {
 selection.prototype.interrupt = selection_interrupt;
 selection.prototype.transition = selection_transition;
 
-var constant$4 = function (x) {
+var constant$3 = function (x) {
   return function () {
     return x;
   };
@@ -4597,11 +4352,11 @@ function brush$1(dim) {
   }
 
   brush.extent = function (_) {
-    return arguments.length ? (extent = typeof _ === "function" ? _ : constant$4([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), brush) : extent;
+    return arguments.length ? (extent = typeof _ === "function" ? _ : constant$3([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), brush) : extent;
   };
 
   brush.filter = function (_) {
-    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$4(!!_), brush) : filter;
+    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$3(!!_), brush) : filter;
   };
 
   brush.handleSize = function (_) {
@@ -5265,7 +5020,7 @@ Path.prototype = path.prototype = {
   }
 };
 
-var constant$5 = function (x) {
+var constant$4 = function (x) {
   return function constant() {
     return x;
   };
@@ -5274,8 +5029,8 @@ var constant$5 = function (x) {
 var abs = Math.abs;
 var atan2 = Math.atan2;
 var cos = Math.cos;
-var max$1 = Math.max;
-var min$1 = Math.min;
+var max = Math.max;
+var min = Math.min;
 var sin = Math.sin;
 var sqrt = Math.sqrt;
 
@@ -5340,7 +5095,7 @@ function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
       d2 = dx * dx + dy * dy,
       r = r1 - rc,
       D = x11 * y10 - x10 * y11,
-      d = (dy < 0 ? -1 : 1) * sqrt(max$1(0, r * r * d2 - D * D)),
+      d = (dy < 0 ? -1 : 1) * sqrt(max(0, r * r * d2 - D * D)),
       cx0 = (D * dy - dx * d) / d2,
       cy0 = (-D * dx - dy * d) / d2,
       cx1 = (D * dy + dx * d) / d2,
@@ -5367,7 +5122,7 @@ function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
 var d3Arc = function () {
   var innerRadius = arcInnerRadius,
       outerRadius = arcOuterRadius,
-      cornerRadius = constant$5(0),
+      cornerRadius = constant$4(0),
       padRadius = null,
       startAngle = arcStartAngle,
       endAngle = arcEndAngle,
@@ -5412,7 +5167,7 @@ var d3Arc = function () {
               da1 = da,
               ap = padAngle.apply(this, arguments) / 2,
               rp = ap > epsilon$1 && (padRadius ? +padRadius.apply(this, arguments) : sqrt(r0 * r0 + r1 * r1)),
-              rc = min$1(abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments)),
+              rc = min(abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments)),
               rc0 = rc,
               rc1 = rc,
               t0,
@@ -5447,8 +5202,8 @@ var d3Arc = function () {
                   by = y11 - oc[1],
                   kc = 1 / sin(acos((ax * bx + ay * by) / (sqrt(ax * ax + ay * ay) * sqrt(bx * bx + by * by))) / 2),
                   lc = sqrt(oc[0] * oc[0] + oc[1] * oc[1]);
-              rc0 = min$1(rc, (r0 - lc) / (kc - 1));
-              rc1 = min$1(rc, (r1 - lc) / (kc + 1));
+              rc0 = min(rc, (r0 - lc) / (kc - 1));
+              rc1 = min(rc, (r1 - lc) / (kc + 1));
             }
           }
 
@@ -5514,31 +5269,31 @@ var d3Arc = function () {
   };
 
   arc.innerRadius = function (_) {
-    return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant$5(+_), arc) : innerRadius;
+    return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant$4(+_), arc) : innerRadius;
   };
 
   arc.outerRadius = function (_) {
-    return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant$5(+_), arc) : outerRadius;
+    return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant$4(+_), arc) : outerRadius;
   };
 
   arc.cornerRadius = function (_) {
-    return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant$5(+_), arc) : cornerRadius;
+    return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant$4(+_), arc) : cornerRadius;
   };
 
   arc.padRadius = function (_) {
-    return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant$5(+_), arc) : padRadius;
+    return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant$4(+_), arc) : padRadius;
   };
 
   arc.startAngle = function (_) {
-    return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$5(+_), arc) : startAngle;
+    return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$4(+_), arc) : startAngle;
   };
 
   arc.endAngle = function (_) {
-    return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$5(+_), arc) : endAngle;
+    return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$4(+_), arc) : endAngle;
   };
 
   arc.padAngle = function (_) {
-    return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$5(+_), arc) : padAngle;
+    return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$4(+_), arc) : padAngle;
   };
 
   arc.context = function (_) {
@@ -6414,7 +6169,7 @@ var dimensionLabels = function dimensionLabels(config) {
   };
 };
 
-var flipAxisAndUpdatePCP$1 = function flipAxisAndUpdatePCP(config, pc, axis) {
+var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
   return function (dimension) {
     pc.flip(dimension);
     pc.brushReset(dimension);
@@ -6435,7 +6190,7 @@ var rotateLabels = function rotateLabels(config, pc) {
   event.preventDefault();
 };
 
-var _this$1 = undefined;
+var _this = undefined;
 
 var updateAxes = function updateAxes(config, pc, position, axis, flags) {
   return function () {
@@ -6461,7 +6216,7 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
       transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
       x: 0,
       class: 'label'
-    }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP$1(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+    }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
     // Update
     g_data.attr('opacity', 0);
@@ -6489,9 +6244,222 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
       pc.brushMode('None');
       pc.brushMode(mode);
     }
-    return _this$1;
+    return _this;
   };
 };
+
+var ascending$2 = function (a, b) {
+  return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+};
+
+var bisector = function (compare) {
+  if (compare.length === 1) compare = ascendingComparator(compare);
+  return {
+    left: function left(a, x, lo, hi) {
+      if (lo == null) lo = 0;
+      if (hi == null) hi = a.length;
+      while (lo < hi) {
+        var mid = lo + hi >>> 1;
+        if (compare(a[mid], x) < 0) lo = mid + 1;else hi = mid;
+      }
+      return lo;
+    },
+    right: function right(a, x, lo, hi) {
+      if (lo == null) lo = 0;
+      if (hi == null) hi = a.length;
+      while (lo < hi) {
+        var mid = lo + hi >>> 1;
+        if (compare(a[mid], x) > 0) hi = mid;else lo = mid + 1;
+      }
+      return lo;
+    }
+  };
+};
+
+function ascendingComparator(f) {
+  return function (d, x) {
+    return ascending$2(f(d), x);
+  };
+}
+
+var ascendingBisect = bisector(ascending$2);
+var bisectRight = ascendingBisect.right;
+
+function pair(a, b) {
+  return [a, b];
+}
+
+var number = function (x) {
+  return x === null ? NaN : +x;
+};
+
+var extent = function (values, valueof) {
+  var n = values.length,
+      i = -1,
+      value,
+      min,
+      max;
+
+  if (valueof == null) {
+    while (++i < n) {
+      // Find the first comparable value.
+      if ((value = values[i]) != null && value >= value) {
+        min = max = value;
+        while (++i < n) {
+          // Compare the remaining values.
+          if ((value = values[i]) != null) {
+            if (min > value) min = value;
+            if (max < value) max = value;
+          }
+        }
+      }
+    }
+  } else {
+    while (++i < n) {
+      // Find the first comparable value.
+      if ((value = valueof(values[i], i, values)) != null && value >= value) {
+        min = max = value;
+        while (++i < n) {
+          // Compare the remaining values.
+          if ((value = valueof(values[i], i, values)) != null) {
+            if (min > value) min = value;
+            if (max < value) max = value;
+          }
+        }
+      }
+    }
+  }
+
+  return [min, max];
+};
+
+var identity$2 = function (x) {
+  return x;
+};
+
+var range = function (start, stop, step) {
+  start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
+
+  var i = -1,
+      n = Math.max(0, Math.ceil((stop - start) / step)) | 0,
+      range = new Array(n);
+
+  while (++i < n) {
+    range[i] = start + i * step;
+  }
+
+  return range;
+};
+
+var e10 = Math.sqrt(50);
+var e5 = Math.sqrt(10);
+var e2 = Math.sqrt(2);
+
+var ticks = function (start, stop, count) {
+    var reverse,
+        i = -1,
+        n,
+        ticks,
+        step;
+
+    stop = +stop, start = +start, count = +count;
+    if (start === stop && count > 0) return [start];
+    if (reverse = stop < start) n = start, start = stop, stop = n;
+    if ((step = tickIncrement(start, stop, count)) === 0 || !isFinite(step)) return [];
+
+    if (step > 0) {
+        start = Math.ceil(start / step);
+        stop = Math.floor(stop / step);
+        ticks = new Array(n = Math.ceil(stop - start + 1));
+        while (++i < n) {
+            ticks[i] = (start + i) * step;
+        }
+    } else {
+        start = Math.floor(start * step);
+        stop = Math.ceil(stop * step);
+        ticks = new Array(n = Math.ceil(start - stop + 1));
+        while (++i < n) {
+            ticks[i] = (start - i) / step;
+        }
+    }
+
+    if (reverse) ticks.reverse();
+
+    return ticks;
+};
+
+function tickIncrement(start, stop, count) {
+    var step = (stop - start) / Math.max(0, count),
+        power = Math.floor(Math.log(step) / Math.LN10),
+        error = step / Math.pow(10, power);
+    return power >= 0 ? (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1) * Math.pow(10, power) : -Math.pow(10, -power) / (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1);
+}
+
+function tickStep(start, stop, count) {
+    var step0 = Math.abs(stop - start) / Math.max(0, count),
+        step1 = Math.pow(10, Math.floor(Math.log(step0) / Math.LN10)),
+        error = step0 / step1;
+    if (error >= e10) step1 *= 10;else if (error >= e5) step1 *= 5;else if (error >= e2) step1 *= 2;
+    return stop < start ? -step1 : step1;
+}
+
+var sturges = function (values) {
+  return Math.ceil(Math.log(values.length) / Math.LN2) + 1;
+};
+
+var threshold = function (values, p, valueof) {
+  if (valueof == null) valueof = number;
+  if (!(n = values.length)) return;
+  if ((p = +p) <= 0 || n < 2) return +valueof(values[0], 0, values);
+  if (p >= 1) return +valueof(values[n - 1], n - 1, values);
+  var n,
+      i = (n - 1) * p,
+      i0 = Math.floor(i),
+      value0 = +valueof(values[i0], i0, values),
+      value1 = +valueof(values[i0 + 1], i0 + 1, values);
+  return value0 + (value1 - value0) * (i - i0);
+};
+
+var min$1 = function (values, valueof) {
+  var n = values.length,
+      i = -1,
+      value,
+      min;
+
+  if (valueof == null) {
+    while (++i < n) {
+      // Find the first comparable value.
+      if ((value = values[i]) != null && value >= value) {
+        min = value;
+        while (++i < n) {
+          // Compare the remaining values.
+          if ((value = values[i]) != null && min > value) {
+            min = value;
+          }
+        }
+      }
+    }
+  } else {
+    while (++i < n) {
+      // Find the first comparable value.
+      if ((value = valueof(values[i], i, values)) != null && value >= value) {
+        min = value;
+        while (++i < n) {
+          // Compare the remaining values.
+          if ((value = valueof(values[i], i, values)) != null && min > value) {
+            min = value;
+          }
+        }
+      }
+    }
+  }
+
+  return min;
+};
+
+function length(d) {
+  return d.length;
+}
 
 var array$2 = Array.prototype;
 
@@ -6548,7 +6516,7 @@ function band() {
   var scale = ordinal().unknown(undefined),
       domain = scale.domain,
       ordinalRange = scale.range,
-      range = [0, 1],
+      range$$1 = [0, 1],
       step,
       bandwidth,
       round = false,
@@ -6560,15 +6528,15 @@ function band() {
 
   function rescale() {
     var n = domain().length,
-        reverse = range[1] < range[0],
-        start = range[reverse - 0],
-        stop = range[1 - reverse];
+        reverse = range$$1[1] < range$$1[0],
+        start = range$$1[reverse - 0],
+        stop = range$$1[1 - reverse];
     step = (stop - start) / Math.max(1, n - paddingInner + paddingOuter * 2);
     if (round) step = Math.floor(step);
     start += (stop - start - step * (n - paddingInner)) * align;
     bandwidth = step * (1 - paddingInner);
     if (round) start = Math.round(start), bandwidth = Math.round(bandwidth);
-    var values = sequence(n).map(function (i) {
+    var values = range(n).map(function (i) {
       return start + step * i;
     });
     return ordinalRange(reverse ? values.reverse() : values);
@@ -6579,11 +6547,11 @@ function band() {
   };
 
   scale.range = function (_) {
-    return arguments.length ? (range = [+_[0], +_[1]], rescale()) : range.slice();
+    return arguments.length ? (range$$1 = [+_[0], +_[1]], rescale()) : range$$1.slice();
   };
 
   scale.rangeRound = function (_) {
-    return range = [+_[0], +_[1]], round = true, rescale();
+    return range$$1 = [+_[0], +_[1]], round = true, rescale();
   };
 
   scale.bandwidth = function () {
@@ -6615,7 +6583,7 @@ function band() {
   };
 
   scale.copy = function () {
-    return band().domain(domain()).range(range).round(round).paddingInner(paddingInner).paddingOuter(paddingOuter).align(align);
+    return band().domain(domain()).range(range$$1).round(round).paddingInner(paddingInner).paddingOuter(paddingOuter).align(align);
   };
 
   return rescale();
@@ -6675,19 +6643,19 @@ function reinterpolateClamp(reinterpolate$$1) {
   };
 }
 
-function bimap(domain, range, deinterpolate, reinterpolate$$1) {
+function bimap(domain, range$$1, deinterpolate, reinterpolate$$1) {
   var d0 = domain[0],
       d1 = domain[1],
-      r0 = range[0],
-      r1 = range[1];
+      r0 = range$$1[0],
+      r1 = range$$1[1];
   if (d1 < d0) d0 = deinterpolate(d1, d0), r0 = reinterpolate$$1(r1, r0);else d0 = deinterpolate(d0, d1), r0 = reinterpolate$$1(r0, r1);
   return function (x) {
     return r0(d0(x));
   };
 }
 
-function polymap(domain, range, deinterpolate, reinterpolate$$1) {
-  var j = Math.min(domain.length, range.length) - 1,
+function polymap(domain, range$$1, deinterpolate, reinterpolate$$1) {
+  var j = Math.min(domain.length, range$$1.length) - 1,
       d = new Array(j),
       r = new Array(j),
       i = -1;
@@ -6695,12 +6663,12 @@ function polymap(domain, range, deinterpolate, reinterpolate$$1) {
   // Reverse descending domains.
   if (domain[j] < domain[0]) {
     domain = domain.slice().reverse();
-    range = range.slice().reverse();
+    range$$1 = range$$1.slice().reverse();
   }
 
   while (++i < j) {
     d[i] = deinterpolate(domain[i], domain[i + 1]);
-    r[i] = reinterpolate$$1(range[i], range[i + 1]);
+    r[i] = reinterpolate$$1(range$$1[i], range$$1[i + 1]);
   }
 
   return function (x) {
@@ -6717,7 +6685,7 @@ function copy(source, target) {
 // reinterpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding domain value x in [a,b].
 function continuous(deinterpolate, reinterpolate$$1) {
   var domain = unit,
-      range = unit,
+      range$$1 = unit,
       interpolate = interpolateValue,
       clamp = false,
       piecewise,
@@ -6725,17 +6693,17 @@ function continuous(deinterpolate, reinterpolate$$1) {
       input;
 
   function rescale() {
-    piecewise = Math.min(domain.length, range.length) > 2 ? polymap : bimap;
+    piecewise = Math.min(domain.length, range$$1.length) > 2 ? polymap : bimap;
     output = input = null;
     return scale;
   }
 
   function scale(x) {
-    return (output || (output = piecewise(domain, range, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate)))(+x);
+    return (output || (output = piecewise(domain, range$$1, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate)))(+x);
   }
 
   scale.invert = function (y) {
-    return (input || (input = piecewise(range, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate$$1) : reinterpolate$$1)))(+y);
+    return (input || (input = piecewise(range$$1, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate$$1) : reinterpolate$$1)))(+y);
   };
 
   scale.domain = function (_) {
@@ -6743,11 +6711,11 @@ function continuous(deinterpolate, reinterpolate$$1) {
   };
 
   scale.range = function (_) {
-    return arguments.length ? (range = slice$2.call(_), rescale()) : range.slice();
+    return arguments.length ? (range$$1 = slice$2.call(_), rescale()) : range$$1.slice();
   };
 
   scale.rangeRound = function (_) {
-    return range = slice$2.call(_), interpolate = interpolateRound, rescale();
+    return range$$1 = slice$2.call(_), interpolate = interpolateRound, rescale();
   };
 
   scale.clamp = function (_) {
@@ -9071,7 +9039,7 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
       axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
       axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-    }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP$1(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+    }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
     if (config.nullValueSeparator == 'top') {
       pc.svg.append('line').attr('x1', 0).attr('y1', 1 + config.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + config.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
@@ -9084,7 +9052,7 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
   };
 };
 
-var _this$2 = undefined;
+var _this$1 = undefined;
 
 var axisDots = function axisDots(config, pc, position) {
   return function (_r) {
@@ -9092,7 +9060,7 @@ var axisDots = function axisDots(config, pc, position) {
     var ctx = pc.ctx.marks;
     var startAngle = 0;
     var endAngle = 2 * Math.PI;
-    ctx.globalAlpha = min([1 / Math.pow(config.data.length, 1 / 2), 1]);
+    ctx.globalAlpha = min$1([1 / Math.pow(config.data.length, 1 / 2), 1]);
     config.data.forEach(function (d) {
       entries(config.dimensions).forEach(function (p, i) {
         ctx.beginPath();
@@ -9101,7 +9069,7 @@ var axisDots = function axisDots(config, pc, position) {
         ctx.fill();
       });
     });
-    return _this$2;
+    return _this$1;
   };
 };
 
@@ -9726,7 +9694,7 @@ var detectDimensionTypes = function detectDimensionTypes(data) {
 var getOrderedDimensionKeys = function getOrderedDimensionKeys(config) {
   return function () {
     return keys(config.dimensions).sort(function (x, y) {
-      return ascending$1(config.dimensions[x].index, config.dimensions[y].index);
+      return ascending$2(config.dimensions[x].index, config.dimensions[y].index);
     });
   };
 };
@@ -9762,7 +9730,7 @@ var DefaultConfig = {
   rotateLabels: false
 };
 
-var _this$3 = undefined;
+var _this$2 = undefined;
 
 var initState = function initState(userConfig) {
   var config = Object.assign({}, DefaultConfig, userConfig);
@@ -9782,7 +9750,7 @@ var initState = function initState(userConfig) {
 
   var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(config));
 
-  var events = dispatch.apply(_this$3, eventTypes),
+  var events = dispatch.apply(_this$2, eventTypes),
       flags = {
     brushable: false,
     reorderable: false,
@@ -9830,7 +9798,95 @@ var initState = function initState(userConfig) {
   };
 };
 
-var _this = undefined;
+var computeClusterCentroids = function computeClusterCentroids(config, d) {
+  var clusterCentroids = map();
+  var clusterCounts = map();
+  // determine clusterCounts
+  config.data.forEach(function (row) {
+    var scaled = config.dimensions[d].yscale(row[d]);
+    if (!clusterCounts.has(scaled)) {
+      clusterCounts.set(scaled, 0);
+    }
+    var count = clusterCounts.get(scaled);
+    clusterCounts.set(scaled, count + 1);
+  });
+
+  config.data.forEach(function (row) {
+    keys(config.dimensions).map(function (p, i) {
+      var scaled = config.dimensions[d].yscale(row[d]);
+      if (!clusterCentroids.has(scaled)) {
+        var _map = map();
+        clusterCentroids.set(scaled, _map);
+      }
+      if (!clusterCentroids.get(scaled).has(p)) {
+        clusterCentroids.get(scaled).set(p, 0);
+      }
+      var value = clusterCentroids.get(scaled).get(p);
+      value += config.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
+      clusterCentroids.get(scaled).set(p, value);
+    });
+  });
+
+  return clusterCentroids;
+};
+
+var _this$3 = undefined;
+
+// side effects for setters
+var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue) {
+  return dispatch.apply(_this$3, keys(config)).on('composite', function (d) {
+    ctx.foreground.globalCompositeOperation = d.value;
+    ctx.brushed.globalCompositeOperation = d.value;
+  }).on('alpha', function (d) {
+    ctx.foreground.globalAlpha = d.value;
+    ctx.brushed.globalAlpha = d.value;
+  }).on('brushedColor', function (d) {
+    ctx.brushed.strokeStyle = d.value;
+  }).on('width', function (d) {
+    return pc.resize();
+  }).on('height', function (d) {
+    return pc.resize();
+  }).on('margin', function (d) {
+    return pc.resize();
+  }).on('rate', function (d) {
+    brushedQueue.rate(d.value);
+    foregroundQueue.rate(d.value);
+  }).on('dimensions', function (d) {
+    config.dimensions = pc.applyDimensionDefaults(keys(d.value));
+    xscale.domain(pc.getOrderedDimensionKeys());
+    pc.sortDimensions();
+    if (flags.interactive) {
+      pc.render().updateAxes();
+    }
+  }).on('bundleDimension', function (d) {
+    if (!keys(config.dimensions).length) pc.detectDimensions();
+    pc.autoscale();
+    if (typeof d.value === 'number') {
+      if (d.value < keys(config.dimensions).length) {
+        config.bundleDimension = config.dimensions[d.value];
+      } else if (d.value < config.hideAxis.length) {
+        config.bundleDimension = config.hideAxis[d.value];
+      }
+    } else {
+      config.bundleDimension = d.value;
+    }
+
+    config.clusterCentroids = computeClusterCentroids(config, config.bundleDimension);
+    if (flags.interactive) {
+      pc.render();
+    }
+  }).on('hideAxis', function (d) {
+    pc.dimensions(pc.applyDimensionDefaults());
+    pc.dimensions(without(config.dimensions, d.value));
+  }).on('flipAxes', function (d) {
+    if (d.value && d.value.length) {
+      d.value.forEach(function (axis) {
+        flipAxisAndUpdatePCP(config, pc, axis);
+      });
+      pc.updateAxes(0);
+    }
+  });
+};
 
 // misc
 // brush
@@ -9866,10 +9922,6 @@ var ParCoords = function ParCoords(userConfig) {
     return pc;
   };
 
-  var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
-    return pc.clear('brushed');
-  });
-
   function position(d) {
     if (xscale.range().length === 0) {
       xscale.range([0, w$1(__)], 1);
@@ -9878,64 +9930,17 @@ var ParCoords = function ParCoords(userConfig) {
     return v == null ? xscale(d) : v;
   }
 
+  var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
+    return pc.clear('brushed');
+  });
+
   var foregroundQueue = renderQueue(pathForeground(__, ctx, position)).rate(50).clear(function () {
     pc.clear('foreground');
     pc.clear('highlight');
   });
 
   // side effects for setters
-  var side_effects = dispatch.apply(_this, keys(__)).on('composite', function (d) {
-    ctx.foreground.globalCompositeOperation = d.value;
-    ctx.brushed.globalCompositeOperation = d.value;
-  }).on('alpha', function (d) {
-    ctx.foreground.globalAlpha = d.value;
-    ctx.brushed.globalAlpha = d.value;
-  }).on('brushedColor', function (d) {
-    ctx.brushed.strokeStyle = d.value;
-  }).on('width', function (d) {
-    pc.resize();
-  }).on('height', function (d) {
-    pc.resize();
-  }).on('margin', function (d) {
-    pc.resize();
-  }).on('rate', function (d) {
-    brushedQueue.rate(d.value);
-    foregroundQueue.rate(d.value);
-  }).on('dimensions', function (d) {
-    __.dimensions = pc.applyDimensionDefaults(keys(d.value));
-    xscale.domain(pc.getOrderedDimensionKeys());
-    pc.sortDimensions();
-    if (flags.interactive) {
-      pc.render().updateAxes();
-    }
-  }).on('bundleDimension', function (d) {
-    if (!keys(__.dimensions).length) pc.detectDimensions();
-    pc.autoscale();
-    if (typeof d.value === 'number') {
-      if (d.value < keys(__.dimensions).length) {
-        __.bundleDimension = __.dimensions[d.value];
-      } else if (d.value < __.hideAxis.length) {
-        __.bundleDimension = __.hideAxis[d.value];
-      }
-    } else {
-      __.bundleDimension = d.value;
-    }
-
-    __.clusterCentroids = computeClusterCentroids(__, __.bundleDimension);
-    if (flags.interactive) {
-      pc.render();
-    }
-  }).on('hideAxis', function (d) {
-    pc.dimensions(pc.applyDimensionDefaults());
-    pc.dimensions(without(__.dimensions, d.value));
-  }).on('flipAxes', function (d) {
-    if (d.value && d.value.length) {
-      d.value.forEach(function (axis) {
-        flipAxisAndUpdatePCP(__, pc, axis);
-      });
-      pc.updateAxes(0);
-    }
-  });
+  var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
 
   // expose the state of the chart
   pc.state = __;
