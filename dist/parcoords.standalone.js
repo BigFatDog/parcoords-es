@@ -2576,7 +2576,6 @@ var formatTypes = {
   }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4948,7 +4947,6 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7108,11 +7106,6 @@ function brush$1(dim) {
 }
 
 // brush mode: 1D-Axes
-// This function can be used for 'live' updates of brushes. That is, during the
-// specification of a brush, this method can be called to update the view.
-//
-// @param newSelection - The new set of data items that is currently contained
-//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -9329,7 +9322,6 @@ var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   return axisCfg;
 };
 
-// Jason Davies, http://bl.ocks.org/1341281
 var reorderable = function reorderable(config, pc, xscale, position, dragging, flags) {
   return function () {
     if (pc.g() === undefined) pc.createAxes();
@@ -9745,15 +9737,12 @@ var renderDefault = function renderDefault(config, pc, ctx, position) {
   };
 };
 
-// try to coerce to number before returning type
 var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
   if (parseFloat(v) == v && v != null) {
     return 'number';
   }
   return toType(v);
 };
-
-// attempt to determine types of each dimension based on first row of data
 
 var detectDimensionTypes = function detectDimensionTypes(data) {
   var types = {};
@@ -9771,20 +9760,12 @@ var _this = undefined;
 // brush
 // api
 //css
-var ParCoords = function ParCoords(config) {
-  var f = function f() {
-    console.log(f);
-    f.a = '1';
-  };
+var ParCoords = function ParCoords(userConfig) {
+  var __ = Object.assign({}, DefaultConfig, userConfig);
 
-  f();
-  console.log(f.a);
-
-  var __ = Object.assign({}, DefaultConfig, config);
-
-  if (config && config.dimensionTitles) {
+  if (userConfig && userConfig.dimensionTitles) {
     console.warn('dimensionTitles passed in config is deprecated. Add title to dimension object.');
-    entries(config.dimensionTitles).forEach(function (d) {
+    entries(userConfig.dimensionTitles).forEach(function (d) {
       if (__.dimensions[d.key]) {
         __.dimensions[d.key].title = __.dimensions[d.key].title ? __.dimensions[d.key].title : d.value;
       } else {

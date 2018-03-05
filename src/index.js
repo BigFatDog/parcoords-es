@@ -61,23 +61,14 @@ import { version } from '../package.json';
 //css
 import './parallel-coordinates.css';
 
-const ParCoords = config => {
-    const f = ()=> {
-        console.log(f);
-        f.a = '1';
-    }
+const ParCoords = userConfig => {
+  const __ = Object.assign({}, DefaultConfig, userConfig);
 
-    f();
-    console.log(f.a);
-
-
-  const __ = Object.assign({}, DefaultConfig, config);
-
-  if (config && config.dimensionTitles) {
+  if (userConfig && userConfig.dimensionTitles) {
     console.warn(
       'dimensionTitles passed in config is deprecated. Add title to dimension object.'
     );
-    entries(config.dimensionTitles).forEach(d => {
+    entries(userConfig.dimensionTitles).forEach(d => {
       if (__.dimensions[d.key]) {
         __.dimensions[d.key].title = __.dimensions[d.key].title
           ? __.dimensions[d.key].title
