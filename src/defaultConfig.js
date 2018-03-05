@@ -1,4 +1,4 @@
-const InitialState = {
+const DefaultConfig = {
   data: [],
   highlighted: [],
   dimensions: {},
@@ -27,4 +27,4 @@ const InitialState = {
   rotateLabels: false,
 };
 
-export default InitialState;
+export default DefaultConfig;

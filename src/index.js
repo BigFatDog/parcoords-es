@@ -8,7 +8,7 @@ import { axisLeft } from 'd3-axis';
 // misc
 import renderQueue from './renderQueue';
 import { _rebind, without } from './helper';
-import InitialState from './initialState';
+import DefaultConfig from './defaultConfig';
 import getset from './util/getset';
 import w from './util/width';
 import computeClusterCentroids from './util/computeClusterCentroids';
@@ -62,7 +62,7 @@ import { version } from '../package';
 import './parallel-coordinates.css';
 
 const ParCoords = config => {
-  const __ = Object.assign({}, InitialState, config);
+  const __ = Object.assign({}, DefaultConfig, config);
 
   if (config && config.dimensionTitles) {
     console.warn(
