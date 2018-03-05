@@ -1,5 +1,3 @@
-import { select } from 'd3-selection';
-
 // misc
 import renderQueue from './util/renderQueue';
 import w from './util/width';
@@ -49,6 +47,7 @@ import detectDimensionTypes from './api/detectDimensionTypes';
 import getOrderedDimensionKeys from './api/getOrderedDimensionKeys';
 import interactive from './api/interactive';
 import shadows from './api/shadows';
+import init from './api/init';
 
 import { version } from '../package.json';
 import initState from './state';
@@ -71,36 +70,7 @@ const ParCoords = userConfig => {
     brush,
   } = state;
 
-  const pc = function(selection) {
-    selection = pc.selection = select(selection);
-
-    __.width = selection.node().clientWidth;
-    __.height = selection.node().clientHeight;
-    // canvas data layers
-    ['marks', 'foreground', 'brushed', 'highlight'].forEach(function(layer) {
-      canvas[layer] = selection
-        .append('canvas')
-        .attr('class', layer)
-        .node();
-      ctx[layer] = canvas[layer].getContext('2d');
-    });
-
-    // svg tick and brush layers
-    pc.svg = selection
-      .append('svg')
-      .attr('width', __.width)
-      .attr('height', __.height)
-      .style('font', '14px sans-serif')
-      .style('position', 'absolute')
-
-      .append('svg:g')
-      .attr(
-        'transform',
-        'translate(' + __.margin.left + ',' + __.margin.top + ')'
-      );
-
-    return pc;
-  };
+  const pc = init(__, canvas, ctx);
 
   const position = d => {
     if (xscale.range().length === 0) {

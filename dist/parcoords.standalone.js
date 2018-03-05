@@ -5,6 +5,378 @@ document.write('<script src="http://' + (location.host || 'localhost').split(':'
 	(global.ParCoords = factory());
 }(this, (function () { 'use strict';
 
+/**
+ * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
+ * Available via the MIT license.
+ * see: http://github.com/cagosta/requestAnimationFrame for details
+ *
+ * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+ * http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
+ * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
+ * MIT license
+ *
+ */
+
+(function (global) {
+
+    (function () {
+
+        if (global.requestAnimationFrame) {
+
+            return;
+        }
+
+        if (global.webkitRequestAnimationFrame) {
+            // Chrome <= 23, Safari <= 6.1, Blackberry 10
+
+            global.requestAnimationFrame = global['webkitRequestAnimationFrame'];
+            global.cancelAnimationFrame = global['webkitCancelAnimationFrame'] || global['webkitCancelRequestAnimationFrame'];
+            return;
+        }
+
+        // IE <= 9, Android <= 4.3, very old/rare browsers
+
+        var lastTime = 0;
+
+        global.requestAnimationFrame = function (callback) {
+
+            var currTime = new Date().getTime();
+
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+
+            var id = global.setTimeout(function () {
+
+                callback(currTime + timeToCall);
+            }, timeToCall);
+
+            lastTime = currTime + timeToCall;
+
+            return id; // return the id for cancellation capabilities
+        };
+
+        global.cancelAnimationFrame = function (id) {
+
+            clearTimeout(id);
+        };
+    })();
+
+    if (typeof define === 'function') {
+
+        define(function () {
+
+            return global.requestAnimationFrame;
+        });
+    }
+})(window);
+
+var renderQueue = function renderQueue(func) {
+  var _queue = [],
+      // data to be rendered
+  _rate = 1000,
+      // number of calls per frame
+  _invalidate = function _invalidate() {},
+      // invalidate last render queue
+  _clear = function _clear() {}; // clearing function
+
+  var rq = function rq(data) {
+    if (data) rq.data(data);
+    _invalidate();
+    _clear();
+    rq.render();
+  };
+
+  rq.render = function () {
+    var valid = true;
+    _invalidate = rq.invalidate = function () {
+      valid = false;
+    };
+
+    function doFrame() {
+      if (!valid) return true;
+      var chunk = _queue.splice(0, _rate);
+      chunk.map(func);
+      requestAnimationFrame(doFrame);
+    }
+
+    doFrame();
+  };
+
+  rq.data = function (data) {
+    _invalidate();
+    _queue = data.slice(0); // creates a copy of the data
+    return rq;
+  };
+
+  rq.add = function (data) {
+    _queue = _queue.concat(data);
+  };
+
+  rq.rate = function (value) {
+    if (!arguments.length) return _rate;
+    _rate = value;
+    return rq;
+  };
+
+  rq.remaining = function () {
+    return _queue.length;
+  };
+
+  // clear the canvas
+  rq.clear = function (func) {
+    if (!arguments.length) {
+      _clear();
+      return rq;
+    }
+    _clear = func;
+    return rq;
+  };
+
+  rq.invalidate = _invalidate;
+
+  return rq;
+};
+
+var w$1 = function w(config) {
+  return config.width - config.margin.right - config.margin.left;
+};
+
+var prefix = "$";
+
+function Map() {}
+
+Map.prototype = map.prototype = {
+  constructor: Map,
+  has: function has(key) {
+    return prefix + key in this;
+  },
+  get: function get(key) {
+    return this[prefix + key];
+  },
+  set: function set(key, value) {
+    this[prefix + key] = value;
+    return this;
+  },
+  remove: function remove(key) {
+    var property = prefix + key;
+    return property in this && delete this[property];
+  },
+  clear: function clear() {
+    for (var property in this) {
+      if (property[0] === prefix) delete this[property];
+    }
+  },
+  keys: function keys() {
+    var keys = [];
+    for (var property in this) {
+      if (property[0] === prefix) keys.push(property.slice(1));
+    }return keys;
+  },
+  values: function values() {
+    var values = [];
+    for (var property in this) {
+      if (property[0] === prefix) values.push(this[property]);
+    }return values;
+  },
+  entries: function entries() {
+    var entries = [];
+    for (var property in this) {
+      if (property[0] === prefix) entries.push({ key: property.slice(1), value: this[property] });
+    }return entries;
+  },
+  size: function size() {
+    var size = 0;
+    for (var property in this) {
+      if (property[0] === prefix) ++size;
+    }return size;
+  },
+  empty: function empty() {
+    for (var property in this) {
+      if (property[0] === prefix) return false;
+    }return true;
+  },
+  each: function each(f) {
+    for (var property in this) {
+      if (property[0] === prefix) f(this[property], property.slice(1), this);
+    }
+  }
+};
+
+function map(object, f) {
+  var map = new Map();
+
+  // Copy constructor.
+  if (object instanceof Map) object.each(function (value, key) {
+    map.set(key, value);
+  });
+
+  // Index array by numeric index or specified key function.
+  else if (Array.isArray(object)) {
+      var i = -1,
+          n = object.length,
+          o;
+
+      if (f == null) while (++i < n) {
+        map.set(i, object[i]);
+      } else while (++i < n) {
+        map.set(f(o = object[i], i, object), o);
+      }
+    }
+
+    // Convert object to map.
+    else if (object) for (var key in object) {
+        map.set(key, object[key]);
+      }return map;
+}
+
+function Set() {}
+
+var proto = map.prototype;
+
+Set.prototype = set.prototype = {
+  constructor: Set,
+  has: proto.has,
+  add: function add(value) {
+    value += "";
+    this[prefix + value] = value;
+    return this;
+  },
+  remove: proto.remove,
+  clear: proto.clear,
+  values: proto.keys,
+  size: proto.size,
+  empty: proto.empty,
+  each: proto.each
+};
+
+function set(object, f) {
+  var set = new Set();
+
+  // Copy constructor.
+  if (object instanceof Set) object.each(function (value) {
+    set.add(value);
+  });
+
+  // Otherwise, assume it’s an array.
+  else if (object) {
+      var i = -1,
+          n = object.length;
+      if (f == null) while (++i < n) {
+        set.add(object[i]);
+      } else while (++i < n) {
+        set.add(f(object[i], i, object));
+      }
+    }
+
+  return set;
+}
+
+var keys = function (map) {
+  var keys = [];
+  for (var key in map) {
+    keys.push(key);
+  }return keys;
+};
+
+var entries = function (map) {
+  var entries = [];
+  for (var key in map) {
+    entries.push({ key: key, value: map[key] });
+  }return entries;
+};
+
+var noop = { value: function value() {} };
+
+function dispatch() {
+  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
+    if (!(t = arguments[i] + "") || t in _) throw new Error("illegal type: " + t);
+    _[t] = [];
+  }
+  return new Dispatch(_);
+}
+
+function Dispatch(_) {
+  this._ = _;
+}
+
+function parseTypenames(typenames, types) {
+  return typenames.trim().split(/^|\s+/).map(function (t) {
+    var name = "",
+        i = t.indexOf(".");
+    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+    if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
+    return { type: t, name: name };
+  });
+}
+
+Dispatch.prototype = dispatch.prototype = {
+  constructor: Dispatch,
+  on: function on(typename, callback) {
+    var _ = this._,
+        T = parseTypenames(typename + "", _),
+        t,
+        i = -1,
+        n = T.length;
+
+    // If no callback was specified, return the callback of the given type and name.
+    if (arguments.length < 2) {
+      while (++i < n) {
+        if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name))) return t;
+      }return;
+    }
+
+    // If a type was specified, set the callback for the given type and name.
+    // Otherwise, if a null callback was specified, remove callbacks of the given name.
+    if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
+    while (++i < n) {
+      if (t = (typename = T[i]).type) _[t] = set$2(_[t], typename.name, callback);else if (callback == null) for (t in _) {
+        _[t] = set$2(_[t], typename.name, null);
+      }
+    }
+
+    return this;
+  },
+  copy: function copy() {
+    var copy = {},
+        _ = this._;
+    for (var t in _) {
+      copy[t] = _[t].slice();
+    }return new Dispatch(copy);
+  },
+  call: function call(type, that) {
+    if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) {
+      args[i] = arguments[i + 2];
+    }if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+    for (t = this._[type], i = 0, n = t.length; i < n; ++i) {
+      t[i].value.apply(that, args);
+    }
+  },
+  apply: function apply(type, that, args) {
+    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+    for (var t = this._[type], i = 0, n = t.length; i < n; ++i) {
+      t[i].value.apply(that, args);
+    }
+  }
+};
+
+function get(type, name) {
+  for (var i = 0, n = type.length, c; i < n; ++i) {
+    if ((c = type[i]).name === name) {
+      return c.value;
+    }
+  }
+}
+
+function set$2(type, name, callback) {
+  for (var i = 0, n = type.length; i < n; ++i) {
+    if (type[i].name === name) {
+      type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
+      break;
+    }
+  }
+  if (callback != null) type.push({ name: name, value: callback });
+  return type;
+}
+
 var xhtml = "http://www.w3.org/1999/xhtml";
 
 var namespaces = {
@@ -64,12 +436,12 @@ var selection_select = function (select) {
   return new Selection(subgroups, this._parents);
 };
 
-function empty() {
+function empty$1() {
   return [];
 }
 
 var selectorAll = function (selector) {
-  return selector == null ? empty : function () {
+  return selector == null ? empty$1 : function () {
     return this.querySelectorAll(selector);
   };
 };
@@ -711,7 +1083,7 @@ function contextListener(listener, index, group) {
   };
 }
 
-function parseTypenames(typenames) {
+function parseTypenames$1(typenames) {
   return typenames.trim().split(/^|\s+/).map(function (t) {
     var name = "",
         i = t.indexOf(".");
@@ -756,7 +1128,7 @@ function onAdd(typename, value, capture) {
 }
 
 var selection_on = function (typename, value, capture) {
-  var typenames = parseTypenames(typename + ""),
+  var typenames = parseTypenames$1(typename + ""),
       i,
       n = typenames.length,
       t;
@@ -914,378 +1286,6 @@ var touch = function (node, touches, identifier) {
   return null;
 };
 
-/**
- * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
- * Available via the MIT license.
- * see: http://github.com/cagosta/requestAnimationFrame for details
- *
- * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
- * http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
- * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
- * MIT license
- *
- */
-
-(function (global) {
-
-    (function () {
-
-        if (global.requestAnimationFrame) {
-
-            return;
-        }
-
-        if (global.webkitRequestAnimationFrame) {
-            // Chrome <= 23, Safari <= 6.1, Blackberry 10
-
-            global.requestAnimationFrame = global['webkitRequestAnimationFrame'];
-            global.cancelAnimationFrame = global['webkitCancelAnimationFrame'] || global['webkitCancelRequestAnimationFrame'];
-            return;
-        }
-
-        // IE <= 9, Android <= 4.3, very old/rare browsers
-
-        var lastTime = 0;
-
-        global.requestAnimationFrame = function (callback) {
-
-            var currTime = new Date().getTime();
-
-            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-
-            var id = global.setTimeout(function () {
-
-                callback(currTime + timeToCall);
-            }, timeToCall);
-
-            lastTime = currTime + timeToCall;
-
-            return id; // return the id for cancellation capabilities
-        };
-
-        global.cancelAnimationFrame = function (id) {
-
-            clearTimeout(id);
-        };
-    })();
-
-    if (typeof define === 'function') {
-
-        define(function () {
-
-            return global.requestAnimationFrame;
-        });
-    }
-})(window);
-
-var renderQueue = function renderQueue(func) {
-  var _queue = [],
-      // data to be rendered
-  _rate = 1000,
-      // number of calls per frame
-  _invalidate = function _invalidate() {},
-      // invalidate last render queue
-  _clear = function _clear() {}; // clearing function
-
-  var rq = function rq(data) {
-    if (data) rq.data(data);
-    _invalidate();
-    _clear();
-    rq.render();
-  };
-
-  rq.render = function () {
-    var valid = true;
-    _invalidate = rq.invalidate = function () {
-      valid = false;
-    };
-
-    function doFrame() {
-      if (!valid) return true;
-      var chunk = _queue.splice(0, _rate);
-      chunk.map(func);
-      requestAnimationFrame(doFrame);
-    }
-
-    doFrame();
-  };
-
-  rq.data = function (data) {
-    _invalidate();
-    _queue = data.slice(0); // creates a copy of the data
-    return rq;
-  };
-
-  rq.add = function (data) {
-    _queue = _queue.concat(data);
-  };
-
-  rq.rate = function (value) {
-    if (!arguments.length) return _rate;
-    _rate = value;
-    return rq;
-  };
-
-  rq.remaining = function () {
-    return _queue.length;
-  };
-
-  // clear the canvas
-  rq.clear = function (func) {
-    if (!arguments.length) {
-      _clear();
-      return rq;
-    }
-    _clear = func;
-    return rq;
-  };
-
-  rq.invalidate = _invalidate;
-
-  return rq;
-};
-
-var w$1 = function w(config) {
-  return config.width - config.margin.right - config.margin.left;
-};
-
-var prefix = "$";
-
-function Map() {}
-
-Map.prototype = map.prototype = {
-  constructor: Map,
-  has: function has(key) {
-    return prefix + key in this;
-  },
-  get: function get(key) {
-    return this[prefix + key];
-  },
-  set: function set(key, value) {
-    this[prefix + key] = value;
-    return this;
-  },
-  remove: function remove(key) {
-    var property = prefix + key;
-    return property in this && delete this[property];
-  },
-  clear: function clear() {
-    for (var property in this) {
-      if (property[0] === prefix) delete this[property];
-    }
-  },
-  keys: function keys() {
-    var keys = [];
-    for (var property in this) {
-      if (property[0] === prefix) keys.push(property.slice(1));
-    }return keys;
-  },
-  values: function values() {
-    var values = [];
-    for (var property in this) {
-      if (property[0] === prefix) values.push(this[property]);
-    }return values;
-  },
-  entries: function entries() {
-    var entries = [];
-    for (var property in this) {
-      if (property[0] === prefix) entries.push({ key: property.slice(1), value: this[property] });
-    }return entries;
-  },
-  size: function size() {
-    var size = 0;
-    for (var property in this) {
-      if (property[0] === prefix) ++size;
-    }return size;
-  },
-  empty: function empty() {
-    for (var property in this) {
-      if (property[0] === prefix) return false;
-    }return true;
-  },
-  each: function each(f) {
-    for (var property in this) {
-      if (property[0] === prefix) f(this[property], property.slice(1), this);
-    }
-  }
-};
-
-function map(object, f) {
-  var map = new Map();
-
-  // Copy constructor.
-  if (object instanceof Map) object.each(function (value, key) {
-    map.set(key, value);
-  });
-
-  // Index array by numeric index or specified key function.
-  else if (Array.isArray(object)) {
-      var i = -1,
-          n = object.length,
-          o;
-
-      if (f == null) while (++i < n) {
-        map.set(i, object[i]);
-      } else while (++i < n) {
-        map.set(f(o = object[i], i, object), o);
-      }
-    }
-
-    // Convert object to map.
-    else if (object) for (var key in object) {
-        map.set(key, object[key]);
-      }return map;
-}
-
-function Set() {}
-
-var proto = map.prototype;
-
-Set.prototype = set.prototype = {
-  constructor: Set,
-  has: proto.has,
-  add: function add(value) {
-    value += "";
-    this[prefix + value] = value;
-    return this;
-  },
-  remove: proto.remove,
-  clear: proto.clear,
-  values: proto.keys,
-  size: proto.size,
-  empty: proto.empty,
-  each: proto.each
-};
-
-function set(object, f) {
-  var set = new Set();
-
-  // Copy constructor.
-  if (object instanceof Set) object.each(function (value) {
-    set.add(value);
-  });
-
-  // Otherwise, assume it’s an array.
-  else if (object) {
-      var i = -1,
-          n = object.length;
-      if (f == null) while (++i < n) {
-        set.add(object[i]);
-      } else while (++i < n) {
-        set.add(f(object[i], i, object));
-      }
-    }
-
-  return set;
-}
-
-var keys = function (map) {
-  var keys = [];
-  for (var key in map) {
-    keys.push(key);
-  }return keys;
-};
-
-var entries = function (map) {
-  var entries = [];
-  for (var key in map) {
-    entries.push({ key: key, value: map[key] });
-  }return entries;
-};
-
-var noop = { value: function value() {} };
-
-function dispatch() {
-  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
-    if (!(t = arguments[i] + "") || t in _) throw new Error("illegal type: " + t);
-    _[t] = [];
-  }
-  return new Dispatch(_);
-}
-
-function Dispatch(_) {
-  this._ = _;
-}
-
-function parseTypenames$1(typenames, types) {
-  return typenames.trim().split(/^|\s+/).map(function (t) {
-    var name = "",
-        i = t.indexOf(".");
-    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-    if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
-    return { type: t, name: name };
-  });
-}
-
-Dispatch.prototype = dispatch.prototype = {
-  constructor: Dispatch,
-  on: function on(typename, callback) {
-    var _ = this._,
-        T = parseTypenames$1(typename + "", _),
-        t,
-        i = -1,
-        n = T.length;
-
-    // If no callback was specified, return the callback of the given type and name.
-    if (arguments.length < 2) {
-      while (++i < n) {
-        if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name))) return t;
-      }return;
-    }
-
-    // If a type was specified, set the callback for the given type and name.
-    // Otherwise, if a null callback was specified, remove callbacks of the given name.
-    if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
-    while (++i < n) {
-      if (t = (typename = T[i]).type) _[t] = set$2(_[t], typename.name, callback);else if (callback == null) for (t in _) {
-        _[t] = set$2(_[t], typename.name, null);
-      }
-    }
-
-    return this;
-  },
-  copy: function copy() {
-    var copy = {},
-        _ = this._;
-    for (var t in _) {
-      copy[t] = _[t].slice();
-    }return new Dispatch(copy);
-  },
-  call: function call(type, that) {
-    if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) {
-      args[i] = arguments[i + 2];
-    }if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (t = this._[type], i = 0, n = t.length; i < n; ++i) {
-      t[i].value.apply(that, args);
-    }
-  },
-  apply: function apply(type, that, args) {
-    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (var t = this._[type], i = 0, n = t.length; i < n; ++i) {
-      t[i].value.apply(that, args);
-    }
-  }
-};
-
-function get(type, name) {
-  for (var i = 0, n = type.length, c; i < n; ++i) {
-    if ((c = type[i]).name === name) {
-      return c.value;
-    }
-  }
-}
-
-function set$2(type, name, callback) {
-  for (var i = 0, n = type.length; i < n; ++i) {
-    if (type[i].name === name) {
-      type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
-      break;
-    }
-  }
-  if (callback != null) type.push({ name: name, value: callback });
-  return type;
-}
-
 function nopropagation() {
   event.stopImmediatePropagation();
 }
@@ -1377,8 +1377,8 @@ var drag = function () {
       touchending,
       clickDistance2 = 0;
 
-  function drag(selection$$1) {
-    selection$$1.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
+  function drag(selection) {
+    selection.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
 
   function mousedowned() {
@@ -3920,13 +3920,13 @@ function defaultExtent() {
 }
 
 // Like d3.local, but with the name “__brush” rather than auto-generated.
-function local$1(node) {
+function local$$1(node) {
   while (!node.__brush) {
     if (!(node = node.parentNode)) return;
   }return node.__brush;
 }
 
-function empty$1(extent) {
+function empty(extent) {
   return extent[0][0] === extent[1][0] || extent[0][1] === extent[1][1];
 }
 
@@ -3952,7 +3952,7 @@ function brush$1(dim) {
     var overlay = group.property("__brush", initialize).selectAll(".overlay").data([type("overlay")]);
 
     overlay.enter().append("rect").attr("class", "overlay").attr("pointer-events", "all").attr("cursor", cursors.overlay).merge(overlay).each(function () {
-      var extent = local$1(this).extent;
+      var extent = local$$1(this).extent;
       select(this).attr("x", extent[0][0]).attr("y", extent[0][1]).attr("width", extent[1][0] - extent[0][0]).attr("height", extent[1][1] - extent[0][1]);
     });
 
@@ -3973,7 +3973,7 @@ function brush$1(dim) {
     group.each(redraw).attr("fill", "none").attr("pointer-events", "all").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)").on("mousedown.brush touchstart.brush", started);
   }
 
-  brush.move = function (group, selection$$1) {
+  brush.move = function (group, selection) {
     if (group.selection) {
       group.on("start.brush", function () {
         emitter(this, arguments).beforestart().start();
@@ -3984,11 +3984,11 @@ function brush$1(dim) {
             state = that.__brush,
             emit = emitter(that, arguments),
             selection0 = state.selection,
-            selection1 = dim.input(typeof selection$$1 === "function" ? selection$$1.apply(this, arguments) : selection$$1, state.extent),
+            selection1 = dim.input(typeof selection === "function" ? selection.apply(this, arguments) : selection, state.extent),
             i = interpolateValue(selection0, selection1);
 
         function tween(t) {
-          state.selection = t === 1 && empty$1(selection1) ? null : i(t);
+          state.selection = t === 1 && empty(selection1) ? null : i(t);
           redraw.call(that);
           emit.brush();
         }
@@ -4000,11 +4000,11 @@ function brush$1(dim) {
         var that = this,
             args = arguments,
             state = that.__brush,
-            selection1 = dim.input(typeof selection$$1 === "function" ? selection$$1.apply(that, args) : selection$$1, state.extent),
+            selection1 = dim.input(typeof selection === "function" ? selection.apply(that, args) : selection, state.extent),
             emit = emitter(that, args).beforestart();
 
         interrupt(that);
-        state.selection = selection1 == null || empty$1(selection1) ? null : selection1;
+        state.selection = selection1 == null || empty(selection1) ? null : selection1;
         redraw.call(that);
         emit.start().brush().end();
       });
@@ -4013,19 +4013,19 @@ function brush$1(dim) {
 
   function redraw() {
     var group = select(this),
-        selection$$1 = local$1(this).selection;
+        selection = local$$1(this).selection;
 
-    if (selection$$1) {
-      group.selectAll(".selection").style("display", null).attr("x", selection$$1[0][0]).attr("y", selection$$1[0][1]).attr("width", selection$$1[1][0] - selection$$1[0][0]).attr("height", selection$$1[1][1] - selection$$1[0][1]);
+    if (selection) {
+      group.selectAll(".selection").style("display", null).attr("x", selection[0][0]).attr("y", selection[0][1]).attr("width", selection[1][0] - selection[0][0]).attr("height", selection[1][1] - selection[0][1]);
 
       group.selectAll(".handle").style("display", null).attr("x", function (d) {
-        return d.type[d.type.length - 1] === "e" ? selection$$1[1][0] - handleSize / 2 : selection$$1[0][0] - handleSize / 2;
+        return d.type[d.type.length - 1] === "e" ? selection[1][0] - handleSize / 2 : selection[0][0] - handleSize / 2;
       }).attr("y", function (d) {
-        return d.type[0] === "s" ? selection$$1[1][1] - handleSize / 2 : selection$$1[0][1] - handleSize / 2;
+        return d.type[0] === "s" ? selection[1][1] - handleSize / 2 : selection[0][1] - handleSize / 2;
       }).attr("width", function (d) {
-        return d.type === "n" || d.type === "s" ? selection$$1[1][0] - selection$$1[0][0] + handleSize : handleSize;
+        return d.type === "n" || d.type === "s" ? selection[1][0] - selection[0][0] + handleSize : handleSize;
       }).attr("height", function (d) {
-        return d.type === "e" || d.type === "w" ? selection$$1[1][1] - selection$$1[0][1] + handleSize : handleSize;
+        return d.type === "e" || d.type === "w" ? selection[1][1] - selection[0][1] + handleSize : handleSize;
       });
     } else {
       group.selectAll(".selection,.handle").style("display", "none").attr("x", null).attr("y", null).attr("width", null).attr("height", null);
@@ -4076,9 +4076,9 @@ function brush$1(dim) {
         mode = (event.metaKey ? type = "overlay" : type) === "selection" ? MODE_DRAG : event.altKey ? MODE_CENTER : MODE_HANDLE,
         signX = dim === Y ? null : signsX[type],
         signY = dim === X ? null : signsY[type],
-        state = local$1(that),
+        state = local$$1(that),
         extent = state.extent,
-        selection$$1 = state.selection,
+        selection = state.selection,
         W = extent[0][0],
         w0,
         w1,
@@ -4102,12 +4102,12 @@ function brush$1(dim) {
         emit = emitter(that, arguments).beforestart();
 
     if (type === "overlay") {
-      state.selection = selection$$1 = [[w0 = dim === Y ? W : point0[0], n0 = dim === X ? N : point0[1]], [e0 = dim === Y ? E : w0, s0 = dim === X ? S : n0]];
+      state.selection = selection = [[w0 = dim === Y ? W : point0[0], n0 = dim === X ? N : point0[1]], [e0 = dim === Y ? E : w0, s0 = dim === X ? S : n0]];
     } else {
-      w0 = selection$$1[0][0];
-      n0 = selection$$1[0][1];
-      e0 = selection$$1[1][0];
-      s0 = selection$$1[1][1];
+      w0 = selection[0][0];
+      n0 = selection[0][1];
+      e0 = selection[1][0];
+      s0 = selection[1][1];
     }
 
     w1 = w0;
@@ -4185,11 +4185,11 @@ function brush$1(dim) {
         if (type in flipY) overlay.attr("cursor", cursors[type = flipY[type]]);
       }
 
-      if (state.selection) selection$$1 = state.selection; // May be set by brush.move!
-      if (lockX) w1 = selection$$1[0][0], e1 = selection$$1[1][0];
-      if (lockY) n1 = selection$$1[0][1], s1 = selection$$1[1][1];
+      if (state.selection) selection = state.selection; // May be set by brush.move!
+      if (lockX) w1 = selection[0][0], e1 = selection[1][0];
+      if (lockY) n1 = selection[0][1], s1 = selection[1][1];
 
-      if (selection$$1[0][0] !== w1 || selection$$1[0][1] !== n1 || selection$$1[1][0] !== e1 || selection$$1[1][1] !== s1) {
+      if (selection[0][0] !== w1 || selection[0][1] !== n1 || selection[1][0] !== e1 || selection[1][1] !== s1) {
         state.selection = [[w1, n1], [e1, s1]];
         redraw.call(that);
         emit.brush();
@@ -4211,8 +4211,8 @@ function brush$1(dim) {
       }
       group.attr("pointer-events", "all");
       overlay.attr("cursor", cursors.overlay);
-      if (state.selection) selection$$1 = state.selection; // May be set by brush.move (on start)!
-      if (empty$1(selection$$1)) state.selection = null, redraw.call(that);
+      if (state.selection) selection = state.selection; // May be set by brush.move (on start)!
+      if (empty(selection)) state.selection = null, redraw.call(that);
       emit.end();
     }
 
@@ -9696,6 +9696,26 @@ var shadows = function shadows(flags, pc) {
   };
 };
 
+var init$1 = function init(config, canvas, ctx) {
+  var pc = function pc(selection$$1) {
+    selection$$1 = pc.selection = select(selection$$1);
+
+    config.width = selection$$1.node().clientWidth;
+    config.height = selection$$1.node().clientHeight;
+    // canvas data layers
+    ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
+      canvas[layer] = selection$$1.append('canvas').attr('class', layer).node();
+      ctx[layer] = canvas[layer].getContext('2d');
+    });
+
+    // svg tick and brush layers
+    pc.svg = selection$$1.append('svg').attr('width', config.width).attr('height', config.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
+    return pc;
+  };
+
+  return pc;
+};
+
 var version = "1.0.3";
 
 var DefaultConfig = {
@@ -9919,9 +9939,6 @@ var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, f
 };
 
 // misc
-// brush
-// api
-//css
 var ParCoords = function ParCoords(userConfig) {
   var state = initState(userConfig);
   var __ = state.config,
@@ -9935,22 +9952,7 @@ var ParCoords = function ParCoords(userConfig) {
       brush = state.brush;
 
 
-  var pc = function pc(selection) {
-    selection = pc.selection = select(selection);
-
-    __.width = selection.node().clientWidth;
-    __.height = selection.node().clientHeight;
-    // canvas data layers
-    ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
-      canvas[layer] = selection.append('canvas').attr('class', layer).node();
-      ctx[layer] = canvas[layer].getContext('2d');
-    });
-
-    // svg tick and brush layers
-    pc.svg = selection.append('svg').attr('width', __.width).attr('height', __.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + __.margin.left + ',' + __.margin.top + ')');
-
-    return pc;
-  };
+  var pc = init$1(__, canvas, ctx);
 
   var position = function position(d) {
     if (xscale.range().length === 0) {
