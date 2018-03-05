@@ -7,10 +7,9 @@ import { axisLeft } from 'd3-axis';
 
 // misc
 import renderQueue from './renderQueue';
-import { _functor, _rebind, without } from './helper';
+import { _rebind, without } from './helper';
 import InitialState from './initialState';
 import getset from './util/getset';
-import colorPath from './util/colorPath';
 import w from './util/width';
 import computeClusterCentroids from './util/computeClusterCentroids';
 
@@ -55,9 +54,12 @@ import removeAxes from './api/removeAxes';
 import render from './api/render';
 import renderDefault, { pathForeground } from './api/renderDefault';
 import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
+import detectDimensionTypes from './api/detectDimensionTypes';
+
+import { version } from '../package';
+
 //css
 import './parallel-coordinates.css';
-import detectDimensionTypes from './api/detectDimensionTypes';
 
 const ParCoords = config => {
   const __ = Object.assign({}, InitialState, config);
@@ -374,7 +376,7 @@ const ParCoords = config => {
   install2DStrums(brush, __, pc, events, xscale);
   installAngularBrush(brush, __, pc, events, xscale);
 
-  pc.version = '1.0.3';
+  pc.version = version;
   // this descriptive text should live with other introspective methods
   pc.toString = toString(__);
 
