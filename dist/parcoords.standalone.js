@@ -9744,6 +9744,14 @@ var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
   return toType(v);
 };
 
+var detectDimensionTypes = function detectDimensionTypes(data) {
+  var types = {};
+  keys(data[0]).forEach(function (col) {
+    types[isNaN(Number(col)) ? col : parseInt(col)] = toTypeCoerceNumbers(data[0][col]);
+  });
+  return types;
+};
+
 var _this = undefined;
 
 // misc
@@ -9936,13 +9944,7 @@ var ParCoords = function ParCoords(config) {
   // try to coerce to number before returning type
   pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
   // attempt to determine types of each dimension based on first row of data
-  pc.detectDimensionTypes = function (data) {
-    var types = {};
-    keys(data[0]).forEach(function (col) {
-      types[isNaN(Number(col)) ? col : parseInt(col)] = pc.toTypeCoerceNumbers(data[0][col]);
-    });
-    return types;
-  };
+  pc.detectDimensionTypes = detectDimensionTypes;
 
   pc.render = render(__, pc, events);
   pc.renderBrushed = renderBrushed(__, pc, events);

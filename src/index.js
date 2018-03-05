@@ -57,6 +57,7 @@ import renderDefault, { pathForeground } from './api/renderDefault';
 import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 //css
 import './parallel-coordinates.css';
+import detectDimensionTypes from './api/detectDimensionTypes';
 
 const ParCoords = config => {
   const __ = Object.assign({}, InitialState, config);
@@ -284,15 +285,7 @@ const ParCoords = config => {
   // try to coerce to number before returning type
   pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
   // attempt to determine types of each dimension based on first row of data
-  pc.detectDimensionTypes = function(data) {
-    let types = {};
-    keys(data[0]).forEach(function(col) {
-      types[isNaN(Number(col)) ? col : parseInt(col)] = pc.toTypeCoerceNumbers(
-        data[0][col]
-      );
-    });
-    return types;
-  };
+  pc.detectDimensionTypes = detectDimensionTypes;
 
   pc.render = render(__, pc, events);
   pc.renderBrushed = renderBrushed(__, pc, events);
