@@ -6,7 +6,7 @@ import { scalePoint } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 
 // misc
-import renderQueue from './renderQueue';
+import renderQueue from './util/renderQueue';
 import { _rebind, without } from './helper';
 import DefaultConfig from './defaultConfig';
 import getset from './util/getset';
