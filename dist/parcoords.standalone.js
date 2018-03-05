@@ -9723,6 +9723,14 @@ var detectDimensionTypes = function detectDimensionTypes(data) {
   return types;
 };
 
+var getOrderedDimensionKeys = function getOrderedDimensionKeys(config) {
+  return function () {
+    return keys(config.dimensions).sort(function (x, y) {
+      return ascending$1(config.dimensions[x].index, config.dimensions[y].index);
+    });
+  };
+};
+
 var version = "1.0.3";
 
 var DefaultConfig = {
@@ -9963,12 +9971,7 @@ var ParCoords = function ParCoords(userConfig) {
   };
 
   pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
-
-  pc.getOrderedDimensionKeys = function () {
-    return keys(__.dimensions).sort(function (x, y) {
-      return ascending$1(__.dimensions[x].index, __.dimensions[y].index);
-    });
-  };
+  pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
 
   pc.toType = toType;
 
@@ -10006,9 +10009,7 @@ var ParCoords = function ParCoords(userConfig) {
   _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
-
   pc.removeAxes = removeAxes(pc);
-
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
   pc.applyAxisConfig = applyAxisConfig;
   pc.brushable = brushable(__, pc, flags);

@@ -52,6 +52,7 @@ import render from './api/render';
 import renderDefault, { pathForeground } from './api/renderDefault';
 import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 import detectDimensionTypes from './api/detectDimensionTypes';
+import getOrderedDimensionKeys from './api/getOrderedDimensionKeys';
 
 import { version } from '../package.json';
 import initState from './state';
@@ -223,12 +224,7 @@ const ParCoords = userConfig => {
   };
 
   pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
-
-  pc.getOrderedDimensionKeys = function() {
-    return keys(__.dimensions).sort(function(x, y) {
-      return ascending(__.dimensions[x].index, __.dimensions[y].index);
-    });
-  };
+  pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
 
   pc.toType = toType;
 
@@ -276,9 +272,7 @@ const ParCoords = userConfig => {
   );
 
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
-
   pc.removeAxes = removeAxes(pc);
-
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
   pc.applyAxisConfig = applyAxisConfig;
   pc.brushable = brushable(__, pc, flags);
