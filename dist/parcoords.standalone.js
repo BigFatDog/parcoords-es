@@ -2576,6 +2576,7 @@ var formatTypes = {
   }
 };
 
+// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -4802,7 +4803,7 @@ var _functor = function _functor(v) {
   };
 };
 
-var InitialState = {
+var DefaultConfig = {
   data: [],
   highlighted: [],
   dimensions: {},
@@ -4848,113 +4849,6 @@ var getset = function getset(obj, state, events, side_effects) {
       return obj;
     };
   });
-};
-
-var computeCentroids = function computeCentroids(config, position, row) {
-  var centroids = [];
-
-  var p = keys(config.dimensions);
-  var cols = p.length;
-  var a = 0.5; // center between axes
-  for (var i = 0; i < cols; ++i) {
-    // centroids on 'real' axes
-    var x = position(p[i]);
-    var y = config.dimensions[p[i]].yscale(row[p[i]]);
-    centroids.push($V([x, y]));
-
-    // centroids on 'virtual' axes
-    if (i < cols - 1) {
-      var cx = x + a * (position(p[i + 1]) - x);
-      var cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
-      if (config.bundleDimension !== null) {
-        var leftCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i]);
-        var rightCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i + 1]);
-        var centroid = 0.5 * (leftCentroid + rightCentroid);
-        cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
-      }
-      centroids.push($V([cx, cy]));
-    }
-  }
-
-  return centroids;
-};
-
-var computeControlPoints = function computeControlPoints(smoothness, centroids) {
-  var cols = centroids.length;
-  var a = smoothness;
-  var cps = [];
-
-  cps.push(centroids[0]);
-  cps.push($V([centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)), centroids[0].e(2)]));
-  for (var col = 1; col < cols - 1; ++col) {
-    var mid = centroids[col];
-    var left = centroids[col - 1];
-    var right = centroids[col + 1];
-
-    var diff = left.subtract(right);
-    cps.push(mid.add(diff.x(a)));
-    cps.push(mid);
-    cps.push(mid.subtract(diff.x(a)));
-  }
-  cps.push($V([centroids[cols - 1].e(1) + a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)), centroids[cols - 1].e(2)]));
-  cps.push(centroids[cols - 1]);
-
-  return cps;
-};
-
-var h$1 = function h(config) {
-  return config.height - config.margin.top - config.margin.bottom;
-};
-
-// draw single cubic bezier curve
-var singleCurve = function singleCurve(config, position, d, ctx) {
-  var centroids = computeCentroids(config, position, d);
-  var cps = computeControlPoints(config.smoothness, centroids);
-
-  ctx.moveTo(cps[0].e(1), cps[0].e(2));
-
-  for (var i = 1; i < cps.length; i += 3) {
-    if (config.showControlPoints) {
-      for (var j = 0; j < 3; j++) {
-        ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
-      }
-    }
-    ctx.bezierCurveTo(cps[i].e(1), cps[i].e(2), cps[i + 1].e(1), cps[i + 1].e(2), cps[i + 2].e(1), cps[i + 2].e(2));
-  }
-};
-
-// returns the y-position just beyond the separating null value line
-var getNullPosition = function getNullPosition(config) {
-  if (config.nullValueSeparator == 'bottom') {
-    return h$1(config) + 1;
-  } else if (config.nullValueSeparator == 'top') {
-    return 1;
-  } else {
-    console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
-  }
-  return h$1(config) + 1;
-};
-
-var singlePath = function singlePath(config, position, d, ctx) {
-  entries(config.dimensions).forEach(function (p, i) {
-    //p isn't really p
-    if (i == 0) {
-      ctx.moveTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-    } else {
-      ctx.lineTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-    }
-  });
-};
-
-// draw single polyline
-var colorPath = function colorPath(config, position, d, ctx) {
-  ctx.beginPath();
-  if (config.bundleDimension !== null && config.bundlingStrength > 0 || config.smoothness > 0) {
-    singleCurve(config, position, d, ctx);
-  } else {
-    singlePath(config, position, d, ctx);
-  }
-  ctx.stroke();
 };
 
 var w$1 = function w(config) {
@@ -5054,6 +4948,7 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
+// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -7213,6 +7108,11 @@ function brush$1(dim) {
 }
 
 // brush mode: 1D-Axes
+// This function can be used for 'live' updates of brushes. That is, during the
+// specification of a brush, this method can be called to update the view.
+//
+// @param newSelection - The new set of data items that is currently contained
+//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -7413,6 +7313,10 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
     selected: selected,
     brushState: brushExtents
   };
+};
+
+var h$1 = function h(config) {
+  return config.height - config.margin.top - config.margin.bottom;
 };
 
 // brush mode: 2D-strums
@@ -9425,6 +9329,7 @@ var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   return axisCfg;
 };
 
+// Jason Davies, http://bl.ocks.org/1341281
 var reorderable = function reorderable(config, pc, xscale, position, dragging, flags) {
   return function () {
     if (pc.g() === undefined) pc.createAxes();
@@ -9573,6 +9478,109 @@ var clear = function clear(config, pc, ctx, brushGroup) {
     }
     return this;
   };
+};
+
+var computeCentroids = function computeCentroids(config, position, row) {
+  var centroids = [];
+
+  var p = keys(config.dimensions);
+  var cols = p.length;
+  var a = 0.5; // center between axes
+  for (var i = 0; i < cols; ++i) {
+    // centroids on 'real' axes
+    var x = position(p[i]);
+    var y = config.dimensions[p[i]].yscale(row[p[i]]);
+    centroids.push($V([x, y]));
+
+    // centroids on 'virtual' axes
+    if (i < cols - 1) {
+      var cx = x + a * (position(p[i + 1]) - x);
+      var cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
+      if (config.bundleDimension !== null) {
+        var leftCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i]);
+        var rightCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i + 1]);
+        var centroid = 0.5 * (leftCentroid + rightCentroid);
+        cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
+      }
+      centroids.push($V([cx, cy]));
+    }
+  }
+
+  return centroids;
+};
+
+var computeControlPoints = function computeControlPoints(smoothness, centroids) {
+  var cols = centroids.length;
+  var a = smoothness;
+  var cps = [];
+
+  cps.push(centroids[0]);
+  cps.push($V([centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)), centroids[0].e(2)]));
+  for (var col = 1; col < cols - 1; ++col) {
+    var mid = centroids[col];
+    var left = centroids[col - 1];
+    var right = centroids[col + 1];
+
+    var diff = left.subtract(right);
+    cps.push(mid.add(diff.x(a)));
+    cps.push(mid);
+    cps.push(mid.subtract(diff.x(a)));
+  }
+  cps.push($V([centroids[cols - 1].e(1) + a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)), centroids[cols - 1].e(2)]));
+  cps.push(centroids[cols - 1]);
+
+  return cps;
+};
+
+// draw single cubic bezier curve
+var singleCurve = function singleCurve(config, position, d, ctx) {
+  var centroids = computeCentroids(config, position, d);
+  var cps = computeControlPoints(config.smoothness, centroids);
+
+  ctx.moveTo(cps[0].e(1), cps[0].e(2));
+
+  for (var i = 1; i < cps.length; i += 3) {
+    if (config.showControlPoints) {
+      for (var j = 0; j < 3; j++) {
+        ctx.fillRect(cps[i + j].e(1), cps[i + j].e(2), 2, 2);
+      }
+    }
+    ctx.bezierCurveTo(cps[i].e(1), cps[i].e(2), cps[i + 1].e(1), cps[i + 1].e(2), cps[i + 2].e(1), cps[i + 2].e(2));
+  }
+};
+
+// returns the y-position just beyond the separating null value line
+var getNullPosition = function getNullPosition(config) {
+  if (config.nullValueSeparator == 'bottom') {
+    return h$1(config) + 1;
+  } else if (config.nullValueSeparator == 'top') {
+    return 1;
+  } else {
+    console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
+  }
+  return h$1(config) + 1;
+};
+
+var singlePath = function singlePath(config, position, d, ctx) {
+  entries(config.dimensions).forEach(function (p, i) {
+    //p isn't really p
+    if (i == 0) {
+      ctx.moveTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
+    } else {
+      ctx.lineTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
+    }
+  });
+};
+
+// draw single polyline
+var colorPath = function colorPath(config, position, d, ctx) {
+  ctx.beginPath();
+  if (config.bundleDimension !== null && config.bundlingStrength > 0 || config.smoothness > 0) {
+    singleCurve(config, position, d, ctx);
+  } else {
+    singlePath(config, position, d, ctx);
+  }
+  ctx.stroke();
 };
 
 var pathBrushed = function pathBrushed(config, ctx, position) {
@@ -9737,12 +9745,15 @@ var renderDefault = function renderDefault(config, pc, ctx, position) {
   };
 };
 
+// try to coerce to number before returning type
 var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
   if (parseFloat(v) == v && v != null) {
     return 'number';
   }
   return toType(v);
 };
+
+// attempt to determine types of each dimension based on first row of data
 
 var detectDimensionTypes = function detectDimensionTypes(data) {
   var types = {};
@@ -9752,6 +9763,8 @@ var detectDimensionTypes = function detectDimensionTypes(data) {
   return types;
 };
 
+var version = "1.0.3";
+
 var _this = undefined;
 
 // misc
@@ -9759,7 +9772,15 @@ var _this = undefined;
 // api
 //css
 var ParCoords = function ParCoords(config) {
-  var __ = Object.assign({}, InitialState, config);
+  var f = function f() {
+    console.log(f);
+    f.a = '1';
+  };
+
+  f();
+  console.log(f.a);
+
+  var __ = Object.assign({}, DefaultConfig, config);
 
   if (config && config.dimensionTitles) {
     console.warn('dimensionTitles passed in config is deprecated. Add title to dimension object.');
@@ -10027,7 +10048,7 @@ var ParCoords = function ParCoords(config) {
   install2DStrums(brush, __, pc, events, xscale);
   installAngularBrush(brush, __, pc, events, xscale);
 
-  pc.version = '1.0.3';
+  pc.version = version;
   // this descriptive text should live with other introspective methods
   pc.toString = toString(__);
 

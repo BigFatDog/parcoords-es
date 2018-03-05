@@ -56,12 +56,21 @@ import renderDefault, { pathForeground } from './api/renderDefault';
 import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 import detectDimensionTypes from './api/detectDimensionTypes';
 
-import { version } from '../package';
+import { version } from '../package.json';
 
 //css
 import './parallel-coordinates.css';
 
 const ParCoords = config => {
+    const f = ()=> {
+        console.log(f);
+        f.a = '1';
+    }
+
+    f();
+    console.log(f.a);
+
+
   const __ = Object.assign({}, DefaultConfig, config);
 
   if (config && config.dimensionTitles) {
