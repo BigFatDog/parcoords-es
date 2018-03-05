@@ -1,7 +1,7 @@
 const computeControlPoints = (smoothness, centroids) => {
-  let cols = centroids.length;
-  let a = smoothness;
-  let cps = [];
+  const cols = centroids.length;
+  const a = smoothness;
+  const cps = [];
 
   cps.push(centroids[0]);
   cps.push(

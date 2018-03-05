@@ -95,11 +95,11 @@ const selected = config => {
         );
       },
     };
-    return config.data.filter(function(d) {
-      return actives.every(function(p, dimension) {
-        return within[config.dimensions[p].type](d, p, dimension);
-      });
-    });
+    return config.data.filter(d =>
+      actives.every((p, dimension) =>
+        within[config.dimensions[p].type](d, p, dimension)
+      )
+    );
   } else {
     // need to get data from each brush instead of each axis
     // first must find active axes by iterating through all brushes
@@ -189,11 +189,11 @@ const selected = config => {
       // filter data, but instead of returning it now,
       // put it into multiBrush data which is returned after
       // all brushes are iterated through.
-      let filtered = config.data.filter(function(d) {
-        return actives.every(function(p, dimension) {
-          return within[config.dimensions[p].type](d, p, dimension);
-        });
-      });
+      let filtered = config.data.filter(d =>
+        actives.every((p, dimension) =>
+          within[config.dimensions[p].type](d, p, dimension)
+        )
+      );
       for (let z = 0; z < filtered.length; z++) {
         multiBrushData.push(filtered[z]);
       }

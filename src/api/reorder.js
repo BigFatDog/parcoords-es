@@ -8,7 +8,7 @@ const reorder = (config, pc, xscale) => rowdata => {
   // NOTE: this is relatively cheap given that:
   // number of dimensions < number of data items
   // Thus we check equality of order to prevent rerendering when this is the case.
-  let reordered = firstDim !== pc.getOrderedDimensionKeys()[0];
+  const reordered = firstDim !== pc.getOrderedDimensionKeys()[0];
 
   if (reordered) {
     xscale.domain(pc.getOrderedDimensionKeys());

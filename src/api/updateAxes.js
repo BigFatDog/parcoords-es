@@ -79,9 +79,7 @@ const updateAxes = (config, pc, position, axis, flags) => (
   g
     .transition()
     .duration(animationTime)
-    .attr('transform', function(p) {
-      return 'translate(' + position(p) + ')';
-    })
+    .attr('transform', p => 'translate(' + position(p) + ')')
     .style('opacity', 1);
 
   pc.svg

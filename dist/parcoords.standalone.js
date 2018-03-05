@@ -2092,6 +2092,40 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];
+
+    for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }
+
+  return target;
+};
+
 var object = function (a, b) {
   var i = {},
       c = {},
@@ -4500,11 +4534,11 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
   }
 
   function install() {
-    g = pc.g();
-    if (!g) {
+    if (!pc.g()) {
       pc.createAxes();
-      g = pc.g();
     }
+
+    g = pc.g();
 
     // Add and store a brush for each axis.
     var brush$$1 = g.append('svg:g').attr('class', 'brush').each(function (d) {
@@ -4769,11 +4803,11 @@ var install2DStrums = function install2DStrums(brushGroup, config, pc, events, x
   }
 
   function install() {
-    g = pc.g();
-    if (!g) {
+    if (!pc.g()) {
       pc.createAxes();
-      g = pc.g();
     }
+
+    g = pc.g();
 
     var _drag = drag();
 
@@ -5722,11 +5756,11 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
   }
 
   function install() {
-    g = pc.g();
-    if (!g) {
+    if (!pc.g()) {
       pc.createAxes();
-      g = pc.g();
     }
+
+    g = pc.g();
 
     var _drag = drag();
 
@@ -8747,11 +8781,9 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
           return point$1().domain(_extent).range(getRange(config));
         }
         if (config.flipAxes.includes(k)) {
-          var tempDate = [];
-          _extent.forEach(function (val) {
-            tempDate.unshift(val);
+          _extent = _extent.map(function (val) {
+            return tempDate.unshift(val);
           });
-          _extent = tempDate;
         }
         return scaleTime().domain(_extent).range(getRange(config));
       },
@@ -8764,11 +8796,9 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
           return point$1().domain(_extent).range(getRange(config));
         }
         if (config.flipAxes.includes(k)) {
-          var temp = [];
-          _extent.forEach(function (val) {
-            temp.unshift(val);
+          _extent = _extent.map(function (val) {
+            return tempDate.unshift(val);
           });
-          _extent = temp;
         }
         return linear$2().domain(_extent).range(getRange(config));
       },
@@ -8779,7 +8809,7 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
         // on the number of items for each value.
         config.data.map(function (p) {
           if (p[k] === undefined && config.nullValueSeparator !== 'undefined') {
-            return; // null values will be drawn beyond the horizontal null value separator!
+            return null; // null values will be drawn beyond the horizontal null value separator!
           }
           if (counts[p[k]] === undefined) {
             counts[p[k]] = 1;
@@ -8844,11 +8874,11 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
 
 var brushable = function brushable(config, pc, flags) {
   return function () {
-    var g = pc.g();
     if (!g) {
       pc.createAxes();
-      g = pc.g();
     }
+
+    var g = pc.g();
 
     // Add and store a brush for each axis.
     g.append('svg:g').attr('class', 'brush').each(function (d) {
@@ -8917,10 +8947,10 @@ var commonScale = function commonScale(config, pc) {
     });
 
     if (global) {
-      var _extent = extent(scales.map(function (d, i) {
+      var _extent = extent(scales.map(function (d) {
         return config.dimensions[d].yscale.domain();
-      }).reduce(function (a, b) {
-        return a.concat(b);
+      }).reduce(function (cur, acc) {
+        return cur.concat(acc);
       }));
 
       scales.forEach(function (d) {
@@ -8945,19 +8975,11 @@ var commonScale = function commonScale(config, pc) {
 
 var computeRealCentroids = function computeRealCentroids(dimensions, position) {
   return function (row) {
-    var realCentroids = [];
-
-    var p = keys(dimensions);
-    var cols = p.length;
-    var a = 0.5;
-
-    for (var i = 0; i < cols; ++i) {
-      var x = position(p[i]);
-      var y = dimensions[p[i]].yscale(row[p[i]]);
-      realCentroids.push([x, y]);
-    }
-
-    return realCentroids;
+    return keys(dimensions).map(function (d) {
+      var x = position(d);
+      var y = dimensions[d].yscale(row[d]);
+      return [x, y];
+    });
   };
 };
 
@@ -8965,22 +8987,22 @@ var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
   return function (dims) {
     var types = pc.detectDimensionTypes(config.data);
     dims = dims ? dims : keys(types);
-    var newDims = {};
-    var currIndex = 0;
-    dims.forEach(function (k) {
-      newDims[k] = config.dimensions[k] ? config.dimensions[k] : {};
-      //Set up defaults
-      newDims[k].orient = newDims[k].orient ? newDims[k].orient : 'left';
-      newDims[k].ticks = newDims[k].ticks != null ? newDims[k].ticks : 5;
-      newDims[k].innerTickSize = newDims[k].innerTickSize != null ? newDims[k].innerTickSize : 6;
-      newDims[k].outerTickSize = newDims[k].outerTickSize != null ? newDims[k].outerTickSize : 0;
-      newDims[k].tickPadding = newDims[k].tickPadding != null ? newDims[k].tickPadding : 3;
-      newDims[k].type = newDims[k].type ? newDims[k].type : types[k];
 
-      newDims[k].index = newDims[k].index != null ? newDims[k].index : currIndex;
-      currIndex++;
-    });
-    return newDims;
+    return dims.reduce(function (acc, cur, i) {
+      var k = config.dimensions[cur] ? config.dimensions[cur] : {};
+
+      acc[cur] = _extends({}, k, {
+        orient: k.orient ? k.orient : 'left',
+        ticks: k.ticks != null ? k.ticks : 5,
+        innerTickSize: k.innerTickSize != null ? k.innerTickSize : 6,
+        outerTickSize: k.outerTickSize != null ? k.outerTickSize : 0,
+        tickPadding: k.tickPadding != null ? k.tickPadding : 3,
+        type: k.type ? k.type : types[cur],
+        index: k.index != null ? k.index : i
+      });
+
+      return acc;
+    }, {});
   };
 };
 
@@ -9674,20 +9696,18 @@ var renderDefaultQueue = function renderDefaultQueue(config, pc, foregroundQueue
 
 // try to coerce to number before returning type
 var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
-  if (parseFloat(v) == v && v != null) {
-    return 'number';
-  }
-  return toType(v);
+  return parseFloat(v) == v && v != null ? 'number' : toType(v);
 };
 
 // attempt to determine types of each dimension based on first row of data
 
 var detectDimensionTypes = function detectDimensionTypes(data) {
-  var types = {};
-  keys(data[0]).forEach(function (col) {
-    types[isNaN(Number(col)) ? col : parseInt(col)] = toTypeCoerceNumbers(data[0][col]);
-  });
-  return types;
+  return keys(data[0]).reduce(function (acc, cur) {
+    var key = isNaN(Number(cur)) ? cur : parseInt(cur);
+    acc[key] = toTypeCoerceNumbers(data[0][cur]);
+
+    return acc;
+  }, {});
 };
 
 var getOrderedDimensionKeys = function getOrderedDimensionKeys(config) {
@@ -9744,18 +9764,18 @@ var flip = function flip(config) {
 };
 
 var detectDimensions = function detectDimensions(pc) {
-    return function () {
-        pc.dimensions(pc.applyDimensionDefaults());
-        return this;
-    };
+  return function () {
+    pc.dimensions(pc.applyDimensionDefaults());
+    return this;
+  };
 };
 
 var scale = function scale(config) {
-    return function (d, domain) {
-        config.dimensions[d].yscale.domain(domain);
+  return function (d, domain) {
+    config.dimensions[d].yscale.domain(domain);
 
-        return this;
-    };
+    return this;
+  };
 };
 
 var version = "1.0.3";
@@ -9871,7 +9891,7 @@ var computeClusterCentroids = function computeClusterCentroids(config, d) {
   });
 
   config.data.forEach(function (row) {
-    keys(config.dimensions).map(function (p, i) {
+    keys(config.dimensions).map(function (p) {
       var scaled = config.dimensions[d].yscale(row[d]);
       if (!clusterCentroids.has(scaled)) {
         var _map = map();
