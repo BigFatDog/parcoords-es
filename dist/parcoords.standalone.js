@@ -1364,151 +1364,446 @@ function length(d) {
   return d.length;
 }
 
-var array$1 = Array.prototype;
+/**
+ * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
+ * Available via the MIT license.
+ * see: http://github.com/cagosta/requestAnimationFrame for details
+ *
+ * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+ * http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
+ * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
+ * MIT license
+ *
+ */
 
-var map$3 = array$1.map;
-var slice$1 = array$1.slice;
+(function (global) {
 
-var implicit = { name: "implicit" };
+    (function () {
 
-function ordinal(range) {
-  var index = map(),
-      domain = [],
-      unknown = implicit;
+        if (global.requestAnimationFrame) {
 
-  range = range == null ? [] : slice$1.call(range);
+            return;
+        }
 
-  function scale(d) {
-    var key = d + "",
-        i = index.get(key);
-    if (!i) {
-      if (unknown !== implicit) return unknown;
-      index.set(key, i = domain.push(d));
+        if (global.webkitRequestAnimationFrame) {
+            // Chrome <= 23, Safari <= 6.1, Blackberry 10
+
+            global.requestAnimationFrame = global['webkitRequestAnimationFrame'];
+            global.cancelAnimationFrame = global['webkitCancelAnimationFrame'] || global['webkitCancelRequestAnimationFrame'];
+            return;
+        }
+
+        // IE <= 9, Android <= 4.3, very old/rare browsers
+
+        var lastTime = 0;
+
+        global.requestAnimationFrame = function (callback) {
+
+            var currTime = new Date().getTime();
+
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+
+            var id = global.setTimeout(function () {
+
+                callback(currTime + timeToCall);
+            }, timeToCall);
+
+            lastTime = currTime + timeToCall;
+
+            return id; // return the id for cancellation capabilities
+        };
+
+        global.cancelAnimationFrame = function (id) {
+
+            clearTimeout(id);
+        };
+    })();
+
+    if (typeof define === 'function') {
+
+        define(function () {
+
+            return global.requestAnimationFrame;
+        });
     }
-    return range[(i - 1) % range.length];
-  }
+})(window);
 
-  scale.domain = function (_) {
-    if (!arguments.length) return domain.slice();
-    domain = [], index = map();
-    var i = -1,
-        n = _.length,
-        d,
-        key;
-    while (++i < n) {
-      if (!index.has(key = (d = _[i]) + "")) index.set(key, domain.push(d));
-    }return scale;
+var renderQueue = function renderQueue(func) {
+  var _queue = [],
+      // data to be rendered
+  _rate = 1000,
+      // number of calls per frame
+  _invalidate = function _invalidate() {},
+      // invalidate last render queue
+  _clear = function _clear() {}; // clearing function
+
+  var rq = function rq(data) {
+    if (data) rq.data(data);
+    _invalidate();
+    _clear();
+    rq.render();
   };
 
-  scale.range = function (_) {
-    return arguments.length ? (range = slice$1.call(_), scale) : range.slice();
+  rq.render = function () {
+    var valid = true;
+    _invalidate = rq.invalidate = function () {
+      valid = false;
+    };
+
+    function doFrame() {
+      if (!valid) return true;
+      var chunk = _queue.splice(0, _rate);
+      chunk.map(func);
+      requestAnimationFrame(doFrame);
+    }
+
+    doFrame();
   };
 
-  scale.unknown = function (_) {
-    return arguments.length ? (unknown = _, scale) : unknown;
+  rq.data = function (data) {
+    _invalidate();
+    _queue = data.slice(0); // creates a copy of the data
+    return rq;
   };
 
-  scale.copy = function () {
-    return ordinal().domain(domain).range(range).unknown(unknown);
+  rq.add = function (data) {
+    _queue = _queue.concat(data);
   };
 
-  return scale;
-}
+  rq.rate = function (value) {
+    if (!arguments.length) return _rate;
+    _rate = value;
+    return rq;
+  };
 
-function band() {
-  var scale = ordinal().unknown(undefined),
-      domain = scale.domain,
-      ordinalRange = scale.range,
-      range = [0, 1],
-      step,
-      bandwidth,
-      round = false,
-      paddingInner = 0,
-      paddingOuter = 0,
-      align = 0.5;
+  rq.remaining = function () {
+    return _queue.length;
+  };
 
-  delete scale.unknown;
+  // clear the canvas
+  rq.clear = function (func) {
+    if (!arguments.length) {
+      _clear();
+      return rq;
+    }
+    _clear = func;
+    return rq;
+  };
 
-  function rescale() {
-    var n = domain().length,
-        reverse = range[1] < range[0],
-        start = range[reverse - 0],
-        stop = range[1 - reverse];
-    step = (stop - start) / Math.max(1, n - paddingInner + paddingOuter * 2);
-    if (round) step = Math.floor(step);
-    start += (stop - start - step * (n - paddingInner)) * align;
-    bandwidth = step * (1 - paddingInner);
-    if (round) start = Math.round(start), bandwidth = Math.round(bandwidth);
-    var values = sequence(n).map(function (i) {
-      return start + step * i;
+  rq.invalidate = _invalidate;
+
+  return rq;
+};
+
+var without = function without(arr, items) {
+  items.forEach(function (el) {
+    delete arr[el];
+  });
+  return arr;
+};
+
+var d3_rebind = function d3_rebind(target, source, method) {
+  return function () {
+    var value = method.apply(source, arguments);
+    return value === source ? target : value;
+  };
+};
+
+var _rebind = function _rebind(target, source, method) {
+  target[method] = d3_rebind(target, source, source[method]);
+  return target;
+};
+
+var _functor = function _functor(v) {
+  return typeof v === 'function' ? v : function () {
+    return v;
+  };
+};
+
+var getset = function getset(obj, state, events, side_effects) {
+  keys(state).forEach(function (key) {
+    obj[key] = function (x) {
+      if (!arguments.length) {
+        return state[key];
+      }
+      if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
+        console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
+        x = pc.applyDimensionDefaults(x);
+      }
+      var old = state[key];
+      state[key] = x;
+      side_effects.call(key, obj, { value: x, previous: old });
+      events.call(key, obj, { value: x, previous: old });
+      return obj;
+    };
+  });
+};
+
+var w$1 = function w(config) {
+  return config.width - config.margin.right - config.margin.left;
+};
+
+var computeClusterCentroids = function computeClusterCentroids(config, d) {
+  var clusterCentroids = map();
+  var clusterCounts = map();
+  // determine clusterCounts
+  config.data.forEach(function (row) {
+    var scaled = config.dimensions[d].yscale(row[d]);
+    if (!clusterCounts.has(scaled)) {
+      clusterCounts.set(scaled, 0);
+    }
+    var count = clusterCounts.get(scaled);
+    clusterCounts.set(scaled, count + 1);
+  });
+
+  config.data.forEach(function (row) {
+    keys(config.dimensions).map(function (p, i) {
+      var scaled = config.dimensions[d].yscale(row[d]);
+      if (!clusterCentroids.has(scaled)) {
+        var _map = map();
+        clusterCentroids.set(scaled, _map);
+      }
+      if (!clusterCentroids.get(scaled).has(p)) {
+        clusterCentroids.get(scaled).set(p, 0);
+      }
+      var value = clusterCentroids.get(scaled).get(p);
+      value += config.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
+      clusterCentroids.get(scaled).set(p, value);
     });
-    return ordinalRange(reverse ? values.reverse() : values);
+  });
+
+  return clusterCentroids;
+};
+
+function nopropagation() {
+  event.stopImmediatePropagation();
+}
+
+var noevent = function () {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+};
+
+var nodrag = function (view) {
+  var root = view.document.documentElement,
+      selection$$1 = select(view).on("dragstart.drag", noevent, true);
+  if ("onselectstart" in root) {
+    selection$$1.on("selectstart.drag", noevent, true);
+  } else {
+    root.__noselect = root.style.MozUserSelect;
+    root.style.MozUserSelect = "none";
+  }
+};
+
+function yesdrag(view, noclick) {
+  var root = view.document.documentElement,
+      selection$$1 = select(view).on("dragstart.drag", null);
+  if (noclick) {
+    selection$$1.on("click.drag", noevent, true);
+    setTimeout(function () {
+      selection$$1.on("click.drag", null);
+    }, 0);
+  }
+  if ("onselectstart" in root) {
+    selection$$1.on("selectstart.drag", null);
+  } else {
+    root.style.MozUserSelect = root.__noselect;
+    delete root.__noselect;
+  }
+}
+
+var constant$2 = function (x) {
+  return function () {
+    return x;
+  };
+};
+
+function DragEvent(target, type, subject, id, active, x, y, dx, dy, dispatch) {
+  this.target = target;
+  this.type = type;
+  this.subject = subject;
+  this.identifier = id;
+  this.active = active;
+  this.x = x;
+  this.y = y;
+  this.dx = dx;
+  this.dy = dy;
+  this._ = dispatch;
+}
+
+DragEvent.prototype.on = function () {
+  var value = this._.on.apply(this._, arguments);
+  return value === this._ ? this : value;
+};
+
+function defaultFilter$1() {
+  return !event.button;
+}
+
+function defaultContainer() {
+  return this.parentNode;
+}
+
+function defaultSubject(d) {
+  return d == null ? { x: event.x, y: event.y } : d;
+}
+
+function defaultTouchable() {
+  return "ontouchstart" in this;
+}
+
+var drag = function () {
+  var filter = defaultFilter$1,
+      container = defaultContainer,
+      subject = defaultSubject,
+      touchable = defaultTouchable,
+      gestures = {},
+      listeners = dispatch("start", "drag", "end"),
+      active = 0,
+      mousedownx,
+      mousedowny,
+      mousemoving,
+      touchending,
+      clickDistance2 = 0;
+
+  function drag(selection$$1) {
+    selection$$1.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
 
-  scale.domain = function (_) {
-    return arguments.length ? (domain(_), rescale()) : domain();
+  function mousedowned() {
+    if (touchending || !filter.apply(this, arguments)) return;
+    var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
+    if (!gesture) return;
+    select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
+    nodrag(event.view);
+    nopropagation();
+    mousemoving = false;
+    mousedownx = event.clientX;
+    mousedowny = event.clientY;
+    gesture("start");
+  }
+
+  function mousemoved() {
+    noevent();
+    if (!mousemoving) {
+      var dx = event.clientX - mousedownx,
+          dy = event.clientY - mousedowny;
+      mousemoving = dx * dx + dy * dy > clickDistance2;
+    }
+    gestures.mouse("drag");
+  }
+
+  function mouseupped() {
+    select(event.view).on("mousemove.drag mouseup.drag", null);
+    yesdrag(event.view, mousemoving);
+    noevent();
+    gestures.mouse("end");
+  }
+
+  function touchstarted() {
+    if (!filter.apply(this, arguments)) return;
+    var touches$$1 = event.changedTouches,
+        c = container.apply(this, arguments),
+        n = touches$$1.length,
+        i,
+        gesture;
+
+    for (i = 0; i < n; ++i) {
+      if (gesture = beforestart(touches$$1[i].identifier, c, touch, this, arguments)) {
+        nopropagation();
+        gesture("start");
+      }
+    }
+  }
+
+  function touchmoved() {
+    var touches$$1 = event.changedTouches,
+        n = touches$$1.length,
+        i,
+        gesture;
+
+    for (i = 0; i < n; ++i) {
+      if (gesture = gestures[touches$$1[i].identifier]) {
+        noevent();
+        gesture("drag");
+      }
+    }
+  }
+
+  function touchended() {
+    var touches$$1 = event.changedTouches,
+        n = touches$$1.length,
+        i,
+        gesture;
+
+    if (touchending) clearTimeout(touchending);
+    touchending = setTimeout(function () {
+      touchending = null;
+    }, 500); // Ghost clicks are delayed!
+    for (i = 0; i < n; ++i) {
+      if (gesture = gestures[touches$$1[i].identifier]) {
+        nopropagation();
+        gesture("end");
+      }
+    }
+  }
+
+  function beforestart(id, container, point$$1, that, args) {
+    var p = point$$1(container, id),
+        s,
+        dx,
+        dy,
+        sublisteners = listeners.copy();
+
+    if (!customEvent(new DragEvent(drag, "beforestart", s, id, active, p[0], p[1], 0, 0, sublisteners), function () {
+      if ((event.subject = s = subject.apply(that, args)) == null) return false;
+      dx = s.x - p[0] || 0;
+      dy = s.y - p[1] || 0;
+      return true;
+    })) return;
+
+    return function gesture(type) {
+      var p0 = p,
+          n;
+      switch (type) {
+        case "start":
+          gestures[id] = gesture, n = active++;break;
+        case "end":
+          delete gestures[id], --active; // nobreak
+        case "drag":
+          p = point$$1(container, id), n = active;break;
+      }
+      customEvent(new DragEvent(drag, type, s, id, n, p[0] + dx, p[1] + dy, p[0] - p0[0], p[1] - p0[1], sublisteners), sublisteners.apply, sublisteners, [type, that, args]);
+    };
+  }
+
+  drag.filter = function (_) {
+    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$2(!!_), drag) : filter;
   };
 
-  scale.range = function (_) {
-    return arguments.length ? (range = [+_[0], +_[1]], rescale()) : range.slice();
+  drag.container = function (_) {
+    return arguments.length ? (container = typeof _ === "function" ? _ : constant$2(_), drag) : container;
   };
 
-  scale.rangeRound = function (_) {
-    return range = [+_[0], +_[1]], round = true, rescale();
+  drag.subject = function (_) {
+    return arguments.length ? (subject = typeof _ === "function" ? _ : constant$2(_), drag) : subject;
   };
 
-  scale.bandwidth = function () {
-    return bandwidth;
+  drag.touchable = function (_) {
+    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$2(!!_), drag) : touchable;
   };
 
-  scale.step = function () {
-    return step;
+  drag.on = function () {
+    var value = listeners.on.apply(listeners, arguments);
+    return value === listeners ? drag : value;
   };
 
-  scale.round = function (_) {
-    return arguments.length ? (round = !!_, rescale()) : round;
+  drag.clickDistance = function (_) {
+    return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
   };
 
-  scale.padding = function (_) {
-    return arguments.length ? (paddingInner = paddingOuter = Math.max(0, Math.min(1, _)), rescale()) : paddingInner;
-  };
-
-  scale.paddingInner = function (_) {
-    return arguments.length ? (paddingInner = Math.max(0, Math.min(1, _)), rescale()) : paddingInner;
-  };
-
-  scale.paddingOuter = function (_) {
-    return arguments.length ? (paddingOuter = Math.max(0, Math.min(1, _)), rescale()) : paddingOuter;
-  };
-
-  scale.align = function (_) {
-    return arguments.length ? (align = Math.max(0, Math.min(1, _)), rescale()) : align;
-  };
-
-  scale.copy = function () {
-    return band().domain(domain()).range(range).round(round).paddingInner(paddingInner).paddingOuter(paddingOuter).align(align);
-  };
-
-  return rescale();
-}
-
-function pointish(scale) {
-  var copy = scale.copy;
-
-  scale.padding = scale.paddingOuter;
-  delete scale.paddingInner;
-  delete scale.paddingOuter;
-
-  scale.copy = function () {
-    return pointish(copy());
-  };
-
-  return scale;
-}
-
-function point$1() {
-  return pointish(band().paddingInner(1));
-}
+  return drag;
+};
 
 var define$1 = function (constructor, factory, prototype) {
   constructor.prototype = factory.prototype = prototype;
@@ -1992,13 +2287,13 @@ function basis(t1, v0, v1, v2, v3) {
   return ((1 - 3 * t1 + 3 * t2 - t3) * v0 + (4 - 6 * t2 + 3 * t3) * v1 + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2 + t3 * v3) / 6;
 }
 
-var constant$2 = function (x) {
+var constant$3 = function (x) {
   return function () {
     return x;
   };
 };
 
-function linear$1(a, d) {
+function linear(a, d) {
   return function (t) {
     return a + t * d;
   };
@@ -2012,18 +2307,18 @@ function exponential(a, b, y) {
 
 function hue(a, b) {
   var d = b - a;
-  return d ? linear$1(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$2(isNaN(a) ? b : a);
+  return d ? linear(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$3(isNaN(a) ? b : a);
 }
 
 function gamma(y) {
   return (y = +y) === 1 ? nogamma : function (a, b) {
-    return b - a ? exponential(a, b, y) : constant$2(isNaN(a) ? b : a);
+    return b - a ? exponential(a, b, y) : constant$3(isNaN(a) ? b : a);
   };
 }
 
 function nogamma(a, b) {
   var d = b - a;
-  return d ? linear$1(a, d) : constant$2(isNaN(a) ? b : a);
+  return d ? linear(a, d) : constant$3(isNaN(a) ? b : a);
 }
 
 var interpolateRgb = (function rgbGamma(y) {
@@ -2048,7 +2343,7 @@ var interpolateRgb = (function rgbGamma(y) {
   return rgb$$1;
 })(1);
 
-var array$2 = function (a, b) {
+var array$1 = function (a, b) {
   var nb = b ? b.length : 0,
       na = a ? Math.min(nb, a.length) : 0,
       x = new Array(na),
@@ -2056,7 +2351,7 @@ var array$2 = function (a, b) {
       i;
 
   for (i = 0; i < na; ++i) {
-    x[i] = interpolate(a[i], b[i]);
+    x[i] = interpolateValue(a[i], b[i]);
   }for (; i < nb; ++i) {
     c[i] = b[i];
   }return function (t) {
@@ -2073,7 +2368,7 @@ var date = function (a, b) {
   };
 };
 
-var interpolateNumber = function (a, b) {
+var reinterpolate = function (a, b) {
   return a = +a, b -= a, function (t) {
     return a + b * t;
   };
@@ -2095,7 +2390,7 @@ var object = function (a, b) {
 
   for (k in b) {
     if (k in a) {
-      i[k] = interpolate(a[k], b[k]);
+      i[k] = interpolateValue(a[k], b[k]);
     } else {
       c[k] = b[k];
     }
@@ -2156,7 +2451,7 @@ var interpolateString = function (a, b) {
     } else {
       // interpolate non-matching numbers
       s[++i] = null;
-      q.push({ i: i, x: interpolateNumber(am, bm) });
+      q.push({ i: i, x: reinterpolate(am, bm) });
     }
     bi = reB.lastIndex;
   }
@@ -2177,10 +2472,10 @@ var interpolateString = function (a, b) {
   });
 };
 
-var interpolate = function (a, b) {
+var interpolateValue = function (a, b) {
     var t = typeof b === "undefined" ? "undefined" : _typeof(b),
         c;
-    return b == null || t === "boolean" ? constant$2(b) : (t === "number" ? interpolateNumber : t === "string" ? (c = color(b)) ? (b = c, interpolateRgb) : interpolateString : b instanceof color ? interpolateRgb : b instanceof Date ? date : Array.isArray(b) ? array$2 : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object : interpolateNumber)(a, b);
+    return b == null || t === "boolean" ? constant$3(b) : (t === "number" ? reinterpolate : t === "string" ? (c = color(b)) ? (b = c, interpolateRgb) : interpolateString : b instanceof color ? interpolateRgb : b instanceof Date ? date : Array.isArray(b) ? array$1 : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object : reinterpolate)(a, b);
 };
 
 var interpolateRound = function (a, b) {
@@ -2191,7 +2486,7 @@ var interpolateRound = function (a, b) {
 
 var degrees = 180 / Math.PI;
 
-var identity$2 = {
+var identity$1 = {
   translateX: 0,
   translateY: 0,
   rotate: 0,
@@ -2222,7 +2517,7 @@ var cssView;
 var svgNode;
 
 function parseCss(value) {
-  if (value === "none") return identity$2;
+  if (value === "none") return identity$1;
   if (!cssNode) cssNode = document.createElement("DIV"), cssRoot = document.documentElement, cssView = document.defaultView;
   cssNode.style.transform = value;
   value = cssView.getComputedStyle(cssRoot.appendChild(cssNode), null).getPropertyValue("transform");
@@ -2232,10 +2527,10 @@ function parseCss(value) {
 }
 
 function parseSvg(value) {
-  if (value == null) return identity$2;
+  if (value == null) return identity$1;
   if (!svgNode) svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g");
   svgNode.setAttribute("transform", value);
-  if (!(value = svgNode.transform.baseVal.consolidate())) return identity$2;
+  if (!(value = svgNode.transform.baseVal.consolidate())) return identity$1;
   value = value.matrix;
   return decompose(value.a, value.b, value.c, value.d, value.e, value.f);
 }
@@ -2249,7 +2544,7 @@ function interpolateTransform(parse, pxComma, pxParen, degParen) {
   function translate(xa, ya, xb, yb, s, q) {
     if (xa !== xb || ya !== yb) {
       var i = s.push("translate(", null, pxComma, null, pxParen);
-      q.push({ i: i - 4, x: interpolateNumber(xa, xb) }, { i: i - 2, x: interpolateNumber(ya, yb) });
+      q.push({ i: i - 4, x: reinterpolate(xa, xb) }, { i: i - 2, x: reinterpolate(ya, yb) });
     } else if (xb || yb) {
       s.push("translate(" + xb + pxComma + yb + pxParen);
     }
@@ -2258,7 +2553,7 @@ function interpolateTransform(parse, pxComma, pxParen, degParen) {
   function rotate(a, b, s, q) {
     if (a !== b) {
       if (a - b > 180) b += 360;else if (b - a > 180) a += 360; // shortest path
-      q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: interpolateNumber(a, b) });
+      q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: reinterpolate(a, b) });
     } else if (b) {
       s.push(pop(s) + "rotate(" + b + degParen);
     }
@@ -2266,7 +2561,7 @@ function interpolateTransform(parse, pxComma, pxParen, degParen) {
 
   function skewX(a, b, s, q) {
     if (a !== b) {
-      q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: interpolateNumber(a, b) });
+      q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: reinterpolate(a, b) });
     } else if (b) {
       s.push(pop(s) + "skewX(" + b + degParen);
     }
@@ -2275,7 +2570,7 @@ function interpolateTransform(parse, pxComma, pxParen, degParen) {
   function scale(xa, ya, xb, yb, s, q) {
     if (xa !== xb || ya !== yb) {
       var i = s.push(pop(s) + "scale(", null, ",", null, ")");
-      q.push({ i: i - 4, x: interpolateNumber(xa, xb) }, { i: i - 2, x: interpolateNumber(ya, yb) });
+      q.push({ i: i - 4, x: reinterpolate(xa, xb) }, { i: i - 2, x: reinterpolate(ya, yb) });
     } else if (xb !== 1 || yb !== 1) {
       s.push(pop(s) + "scale(" + xb + "," + yb + ")");
     }
@@ -2331,2790 +2626,6 @@ function cubehelix$1(hue$$1) {
 
 cubehelix$1(hue);
 var cubehelixLong = cubehelix$1(nogamma);
-
-var constant$3 = function (x) {
-  return function () {
-    return x;
-  };
-};
-
-var number$1 = function (x) {
-  return +x;
-};
-
-var unit = [0, 1];
-
-function deinterpolateLinear(a, b) {
-  return (b -= a = +a) ? function (x) {
-    return (x - a) / b;
-  } : constant$3(b);
-}
-
-function deinterpolateClamp(deinterpolate) {
-  return function (a, b) {
-    var d = deinterpolate(a = +a, b = +b);
-    return function (x) {
-      return x <= a ? 0 : x >= b ? 1 : d(x);
-    };
-  };
-}
-
-function reinterpolateClamp(reinterpolate) {
-  return function (a, b) {
-    var r = reinterpolate(a = +a, b = +b);
-    return function (t) {
-      return t <= 0 ? a : t >= 1 ? b : r(t);
-    };
-  };
-}
-
-function bimap(domain, range, deinterpolate, reinterpolate) {
-  var d0 = domain[0],
-      d1 = domain[1],
-      r0 = range[0],
-      r1 = range[1];
-  if (d1 < d0) d0 = deinterpolate(d1, d0), r0 = reinterpolate(r1, r0);else d0 = deinterpolate(d0, d1), r0 = reinterpolate(r0, r1);
-  return function (x) {
-    return r0(d0(x));
-  };
-}
-
-function polymap(domain, range, deinterpolate, reinterpolate) {
-  var j = Math.min(domain.length, range.length) - 1,
-      d = new Array(j),
-      r = new Array(j),
-      i = -1;
-
-  // Reverse descending domains.
-  if (domain[j] < domain[0]) {
-    domain = domain.slice().reverse();
-    range = range.slice().reverse();
-  }
-
-  while (++i < j) {
-    d[i] = deinterpolate(domain[i], domain[i + 1]);
-    r[i] = reinterpolate(range[i], range[i + 1]);
-  }
-
-  return function (x) {
-    var i = bisectRight(domain, x, 1, j) - 1;
-    return r[i](d[i](x));
-  };
-}
-
-function copy(source, target) {
-  return target.domain(source.domain()).range(source.range()).interpolate(source.interpolate()).clamp(source.clamp());
-}
-
-// deinterpolate(a, b)(x) takes a domain value x in [a,b] and returns the corresponding parameter t in [0,1].
-// reinterpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding domain value x in [a,b].
-function continuous(deinterpolate, reinterpolate) {
-  var domain = unit,
-      range = unit,
-      interpolate$$1 = interpolate,
-      clamp = false,
-      piecewise,
-      output,
-      input;
-
-  function rescale() {
-    piecewise = Math.min(domain.length, range.length) > 2 ? polymap : bimap;
-    output = input = null;
-    return scale;
-  }
-
-  function scale(x) {
-    return (output || (output = piecewise(domain, range, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate$$1)))(+x);
-  }
-
-  scale.invert = function (y) {
-    return (input || (input = piecewise(range, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate) : reinterpolate)))(+y);
-  };
-
-  scale.domain = function (_) {
-    return arguments.length ? (domain = map$3.call(_, number$1), rescale()) : domain.slice();
-  };
-
-  scale.range = function (_) {
-    return arguments.length ? (range = slice$1.call(_), rescale()) : range.slice();
-  };
-
-  scale.rangeRound = function (_) {
-    return range = slice$1.call(_), interpolate$$1 = interpolateRound, rescale();
-  };
-
-  scale.clamp = function (_) {
-    return arguments.length ? (clamp = !!_, rescale()) : clamp;
-  };
-
-  scale.interpolate = function (_) {
-    return arguments.length ? (interpolate$$1 = _, rescale()) : interpolate$$1;
-  };
-
-  return rescale();
-}
-
-// Computes the decimal coefficient and exponent of the specified number x with
-// significant digits p, where x is positive and p is in [1, 21] or undefined.
-// For example, formatDecimal(1.23) returns ["123", 0].
-var formatDecimal = function (x, p) {
-  if ((i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e")) < 0) return null; // NaN, ±Infinity
-  var i,
-      coefficient = x.slice(0, i);
-
-  // The string returned by toExponential either has the form \d\.\d+e[-+]\d+
-  // (e.g., 1.2e+3) or the form \de[-+]\d+ (e.g., 1e+3).
-  return [coefficient.length > 1 ? coefficient[0] + coefficient.slice(2) : coefficient, +x.slice(i + 1)];
-};
-
-var exponent = function (x) {
-  return x = formatDecimal(Math.abs(x)), x ? x[1] : NaN;
-};
-
-var formatGroup = function (grouping, thousands) {
-  return function (value, width) {
-    var i = value.length,
-        t = [],
-        j = 0,
-        g = grouping[0],
-        length = 0;
-
-    while (i > 0 && g > 0) {
-      if (length + g + 1 > width) g = Math.max(1, width - length);
-      t.push(value.substring(i -= g, i + g));
-      if ((length += g + 1) > width) break;
-      g = grouping[j = (j + 1) % grouping.length];
-    }
-
-    return t.reverse().join(thousands);
-  };
-};
-
-var formatNumerals = function (numerals) {
-  return function (value) {
-    return value.replace(/[0-9]/g, function (i) {
-      return numerals[+i];
-    });
-  };
-};
-
-var formatDefault = function (x, p) {
-  x = x.toPrecision(p);
-
-  out: for (var n = x.length, i = 1, i0 = -1, i1; i < n; ++i) {
-    switch (x[i]) {
-      case ".":
-        i0 = i1 = i;break;
-      case "0":
-        if (i0 === 0) i0 = i;i1 = i;break;
-      case "e":
-        break out;
-      default:
-        if (i0 > 0) i0 = 0;break;
-    }
-  }
-
-  return i0 > 0 ? x.slice(0, i0) + x.slice(i1 + 1) : x;
-};
-
-var prefixExponent;
-
-var formatPrefixAuto = function (x, p) {
-    var d = formatDecimal(x, p);
-    if (!d) return x + "";
-    var coefficient = d[0],
-        exponent = d[1],
-        i = exponent - (prefixExponent = Math.max(-8, Math.min(8, Math.floor(exponent / 3))) * 3) + 1,
-        n = coefficient.length;
-    return i === n ? coefficient : i > n ? coefficient + new Array(i - n + 1).join("0") : i > 0 ? coefficient.slice(0, i) + "." + coefficient.slice(i) : "0." + new Array(1 - i).join("0") + formatDecimal(x, Math.max(0, p + i - 1))[0]; // less than 1y!
-};
-
-var formatRounded = function (x, p) {
-    var d = formatDecimal(x, p);
-    if (!d) return x + "";
-    var coefficient = d[0],
-        exponent = d[1];
-    return exponent < 0 ? "0." + new Array(-exponent).join("0") + coefficient : coefficient.length > exponent + 1 ? coefficient.slice(0, exponent + 1) + "." + coefficient.slice(exponent + 1) : coefficient + new Array(exponent - coefficient.length + 2).join("0");
-};
-
-var formatTypes = {
-  "": formatDefault,
-  "%": function _(x, p) {
-    return (x * 100).toFixed(p);
-  },
-  "b": function b(x) {
-    return Math.round(x).toString(2);
-  },
-  "c": function c(x) {
-    return x + "";
-  },
-  "d": function d(x) {
-    return Math.round(x).toString(10);
-  },
-  "e": function e(x, p) {
-    return x.toExponential(p);
-  },
-  "f": function f(x, p) {
-    return x.toFixed(p);
-  },
-  "g": function g(x, p) {
-    return x.toPrecision(p);
-  },
-  "o": function o(x) {
-    return Math.round(x).toString(8);
-  },
-  "p": function p(x, _p) {
-    return formatRounded(x * 100, _p);
-  },
-  "r": formatRounded,
-  "s": formatPrefixAuto,
-  "X": function X(x) {
-    return Math.round(x).toString(16).toUpperCase();
-  },
-  "x": function x(_x) {
-    return Math.round(_x).toString(16);
-  }
-};
-
-var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
-
-function formatSpecifier(specifier) {
-  return new FormatSpecifier(specifier);
-}
-
-formatSpecifier.prototype = FormatSpecifier.prototype; // instanceof
-
-function FormatSpecifier(specifier) {
-  if (!(match = re.exec(specifier))) throw new Error("invalid format: " + specifier);
-
-  var match,
-      fill = match[1] || " ",
-      align = match[2] || ">",
-      sign = match[3] || "-",
-      symbol = match[4] || "",
-      zero = !!match[5],
-      width = match[6] && +match[6],
-      comma = !!match[7],
-      precision = match[8] && +match[8].slice(1),
-      type = match[9] || "";
-
-  // The "n" type is an alias for ",g".
-  if (type === "n") comma = true, type = "g";
-
-  // Map invalid types to the default format.
-  else if (!formatTypes[type]) type = "";
-
-  // If zero fill is specified, padding goes after sign and before digits.
-  if (zero || fill === "0" && align === "=") zero = true, fill = "0", align = "=";
-
-  this.fill = fill;
-  this.align = align;
-  this.sign = sign;
-  this.symbol = symbol;
-  this.zero = zero;
-  this.width = width;
-  this.comma = comma;
-  this.precision = precision;
-  this.type = type;
-}
-
-FormatSpecifier.prototype.toString = function () {
-  return this.fill + this.align + this.sign + this.symbol + (this.zero ? "0" : "") + (this.width == null ? "" : Math.max(1, this.width | 0)) + (this.comma ? "," : "") + (this.precision == null ? "" : "." + Math.max(0, this.precision | 0)) + this.type;
-};
-
-var identity$3 = function (x) {
-  return x;
-};
-
-var prefixes = ["y", "z", "a", "f", "p", "n", "µ", "m", "", "k", "M", "G", "T", "P", "E", "Z", "Y"];
-
-var formatLocale = function (locale) {
-  var group = locale.grouping && locale.thousands ? formatGroup(locale.grouping, locale.thousands) : identity$3,
-      currency = locale.currency,
-      decimal = locale.decimal,
-      numerals = locale.numerals ? formatNumerals(locale.numerals) : identity$3,
-      percent = locale.percent || "%";
-
-  function newFormat(specifier) {
-    specifier = formatSpecifier(specifier);
-
-    var fill = specifier.fill,
-        align = specifier.align,
-        sign = specifier.sign,
-        symbol = specifier.symbol,
-        zero = specifier.zero,
-        width = specifier.width,
-        comma = specifier.comma,
-        precision = specifier.precision,
-        type = specifier.type;
-
-    // Compute the prefix and suffix.
-    // For SI-prefix, the suffix is lazily computed.
-    var prefix = symbol === "$" ? currency[0] : symbol === "#" && /[boxX]/.test(type) ? "0" + type.toLowerCase() : "",
-        suffix = symbol === "$" ? currency[1] : /[%p]/.test(type) ? percent : "";
-
-    // What format function should we use?
-    // Is this an integer type?
-    // Can this type generate exponential notation?
-    var formatType = formatTypes[type],
-        maybeSuffix = !type || /[defgprs%]/.test(type);
-
-    // Set the default precision if not specified,
-    // or clamp the specified precision to the supported range.
-    // For significant precision, it must be in [1, 21].
-    // For fixed precision, it must be in [0, 20].
-    precision = precision == null ? type ? 6 : 12 : /[gprs]/.test(type) ? Math.max(1, Math.min(21, precision)) : Math.max(0, Math.min(20, precision));
-
-    function format(value) {
-      var valuePrefix = prefix,
-          valueSuffix = suffix,
-          i,
-          n,
-          c;
-
-      if (type === "c") {
-        valueSuffix = formatType(value) + valueSuffix;
-        value = "";
-      } else {
-        value = +value;
-
-        // Perform the initial formatting.
-        var valueNegative = value < 0;
-        value = formatType(Math.abs(value), precision);
-
-        // If a negative value rounds to zero during formatting, treat as positive.
-        if (valueNegative && +value === 0) valueNegative = false;
-
-        // Compute the prefix and suffix.
-        valuePrefix = (valueNegative ? sign === "(" ? sign : "-" : sign === "-" || sign === "(" ? "" : sign) + valuePrefix;
-        valueSuffix = (type === "s" ? prefixes[8 + prefixExponent / 3] : "") + valueSuffix + (valueNegative && sign === "(" ? ")" : "");
-
-        // Break the formatted value into the integer “value” part that can be
-        // grouped, and fractional or exponential “suffix” part that is not.
-        if (maybeSuffix) {
-          i = -1, n = value.length;
-          while (++i < n) {
-            if (c = value.charCodeAt(i), 48 > c || c > 57) {
-              valueSuffix = (c === 46 ? decimal + value.slice(i + 1) : value.slice(i)) + valueSuffix;
-              value = value.slice(0, i);
-              break;
-            }
-          }
-        }
-      }
-
-      // If the fill character is not "0", grouping is applied before padding.
-      if (comma && !zero) value = group(value, Infinity);
-
-      // Compute the padding.
-      var length = valuePrefix.length + value.length + valueSuffix.length,
-          padding = length < width ? new Array(width - length + 1).join(fill) : "";
-
-      // If the fill character is "0", grouping is applied after padding.
-      if (comma && zero) value = group(padding + value, padding.length ? width - valueSuffix.length : Infinity), padding = "";
-
-      // Reconstruct the final output based on the desired alignment.
-      switch (align) {
-        case "<":
-          value = valuePrefix + value + valueSuffix + padding;break;
-        case "=":
-          value = valuePrefix + padding + value + valueSuffix;break;
-        case "^":
-          value = padding.slice(0, length = padding.length >> 1) + valuePrefix + value + valueSuffix + padding.slice(length);break;
-        default:
-          value = padding + valuePrefix + value + valueSuffix;break;
-      }
-
-      return numerals(value);
-    }
-
-    format.toString = function () {
-      return specifier + "";
-    };
-
-    return format;
-  }
-
-  function formatPrefix(specifier, value) {
-    var f = newFormat((specifier = formatSpecifier(specifier), specifier.type = "f", specifier)),
-        e = Math.max(-8, Math.min(8, Math.floor(exponent(value) / 3))) * 3,
-        k = Math.pow(10, -e),
-        prefix = prefixes[8 + e / 3];
-    return function (value) {
-      return f(k * value) + prefix;
-    };
-  }
-
-  return {
-    format: newFormat,
-    formatPrefix: formatPrefix
-  };
-};
-
-var locale$1;
-var format;
-var formatPrefix;
-
-defaultLocale({
-  decimal: ".",
-  thousands: ",",
-  grouping: [3],
-  currency: ["$", ""]
-});
-
-function defaultLocale(definition) {
-  locale$1 = formatLocale(definition);
-  format = locale$1.format;
-  formatPrefix = locale$1.formatPrefix;
-  return locale$1;
-}
-
-var precisionFixed = function (step) {
-  return Math.max(0, -exponent(Math.abs(step)));
-};
-
-var precisionPrefix = function (step, value) {
-  return Math.max(0, Math.max(-8, Math.min(8, Math.floor(exponent(value) / 3))) * 3 - exponent(Math.abs(step)));
-};
-
-var precisionRound = function (step, max) {
-  step = Math.abs(step), max = Math.abs(max) - step;
-  return Math.max(0, exponent(max) - exponent(step)) + 1;
-};
-
-var tickFormat = function (domain, count, specifier) {
-  var start = domain[0],
-      stop = domain[domain.length - 1],
-      step = tickStep(start, stop, count == null ? 10 : count),
-      precision;
-  specifier = formatSpecifier(specifier == null ? ",f" : specifier);
-  switch (specifier.type) {
-    case "s":
-      {
-        var value = Math.max(Math.abs(start), Math.abs(stop));
-        if (specifier.precision == null && !isNaN(precision = precisionPrefix(step, value))) specifier.precision = precision;
-        return formatPrefix(specifier, value);
-      }
-    case "":
-    case "e":
-    case "g":
-    case "p":
-    case "r":
-      {
-        if (specifier.precision == null && !isNaN(precision = precisionRound(step, Math.max(Math.abs(start), Math.abs(stop))))) specifier.precision = precision - (specifier.type === "e");
-        break;
-      }
-    case "f":
-    case "%":
-      {
-        if (specifier.precision == null && !isNaN(precision = precisionFixed(step))) specifier.precision = precision - (specifier.type === "%") * 2;
-        break;
-      }
-  }
-  return format(specifier);
-};
-
-function linearish(scale) {
-  var domain = scale.domain;
-
-  scale.ticks = function (count) {
-    var d = domain();
-    return ticks(d[0], d[d.length - 1], count == null ? 10 : count);
-  };
-
-  scale.tickFormat = function (count, specifier) {
-    return tickFormat(domain(), count, specifier);
-  };
-
-  scale.nice = function (count) {
-    if (count == null) count = 10;
-
-    var d = domain(),
-        i0 = 0,
-        i1 = d.length - 1,
-        start = d[i0],
-        stop = d[i1],
-        step;
-
-    if (stop < start) {
-      step = start, start = stop, stop = step;
-      step = i0, i0 = i1, i1 = step;
-    }
-
-    step = tickIncrement(start, stop, count);
-
-    if (step > 0) {
-      start = Math.floor(start / step) * step;
-      stop = Math.ceil(stop / step) * step;
-      step = tickIncrement(start, stop, count);
-    } else if (step < 0) {
-      start = Math.ceil(start * step) / step;
-      stop = Math.floor(stop * step) / step;
-      step = tickIncrement(start, stop, count);
-    }
-
-    if (step > 0) {
-      d[i0] = Math.floor(start / step) * step;
-      d[i1] = Math.ceil(stop / step) * step;
-      domain(d);
-    } else if (step < 0) {
-      d[i0] = Math.ceil(start * step) / step;
-      d[i1] = Math.floor(stop * step) / step;
-      domain(d);
-    }
-
-    return scale;
-  };
-
-  return scale;
-}
-
-function linear() {
-  var scale = continuous(deinterpolateLinear, interpolateNumber);
-
-  scale.copy = function () {
-    return copy(scale, linear());
-  };
-
-  return linearish(scale);
-}
-
-var nice = function (domain, interval) {
-  domain = domain.slice();
-
-  var i0 = 0,
-      i1 = domain.length - 1,
-      x0 = domain[i0],
-      x1 = domain[i1],
-      t;
-
-  if (x1 < x0) {
-    t = i0, i0 = i1, i1 = t;
-    t = x0, x0 = x1, x1 = t;
-  }
-
-  domain[i0] = interval.floor(x0);
-  domain[i1] = interval.ceil(x1);
-  return domain;
-};
-
-function deinterpolate(a, b) {
-  return (b = Math.log(b / a)) ? function (x) {
-    return Math.log(x / a) / b;
-  } : constant$3(b);
-}
-
-function reinterpolate(a, b) {
-  return a < 0 ? function (t) {
-    return -Math.pow(-b, t) * Math.pow(-a, 1 - t);
-  } : function (t) {
-    return Math.pow(b, t) * Math.pow(a, 1 - t);
-  };
-}
-
-function pow10(x) {
-  return isFinite(x) ? +("1e" + x) : x < 0 ? 0 : x;
-}
-
-function powp(base) {
-  return base === 10 ? pow10 : base === Math.E ? Math.exp : function (x) {
-    return Math.pow(base, x);
-  };
-}
-
-function logp(base) {
-  return base === Math.E ? Math.log : base === 10 && Math.log10 || base === 2 && Math.log2 || (base = Math.log(base), function (x) {
-    return Math.log(x) / base;
-  });
-}
-
-var t0$1 = new Date();
-var t1$1 = new Date();
-
-function newInterval(floori, offseti, count, field) {
-
-  function interval(date) {
-    return floori(date = new Date(+date)), date;
-  }
-
-  interval.floor = interval;
-
-  interval.ceil = function (date) {
-    return floori(date = new Date(date - 1)), offseti(date, 1), floori(date), date;
-  };
-
-  interval.round = function (date) {
-    var d0 = interval(date),
-        d1 = interval.ceil(date);
-    return date - d0 < d1 - date ? d0 : d1;
-  };
-
-  interval.offset = function (date, step) {
-    return offseti(date = new Date(+date), step == null ? 1 : Math.floor(step)), date;
-  };
-
-  interval.range = function (start, stop, step) {
-    var range = [],
-        previous;
-    start = interval.ceil(start);
-    step = step == null ? 1 : Math.floor(step);
-    if (!(start < stop) || !(step > 0)) return range; // also handles Invalid Date
-    do {
-      range.push(previous = new Date(+start)), offseti(start, step), floori(start);
-    } while (previous < start && start < stop);
-    return range;
-  };
-
-  interval.filter = function (test) {
-    return newInterval(function (date) {
-      if (date >= date) while (floori(date), !test(date)) {
-        date.setTime(date - 1);
-      }
-    }, function (date, step) {
-      if (date >= date) {
-        if (step < 0) while (++step <= 0) {
-          while (offseti(date, -1), !test(date)) {} // eslint-disable-line no-empty
-        } else while (--step >= 0) {
-          while (offseti(date, +1), !test(date)) {} // eslint-disable-line no-empty
-        }
-      }
-    });
-  };
-
-  if (count) {
-    interval.count = function (start, end) {
-      t0$1.setTime(+start), t1$1.setTime(+end);
-      floori(t0$1), floori(t1$1);
-      return Math.floor(count(t0$1, t1$1));
-    };
-
-    interval.every = function (step) {
-      step = Math.floor(step);
-      return !isFinite(step) || !(step > 0) ? null : !(step > 1) ? interval : interval.filter(field ? function (d) {
-        return field(d) % step === 0;
-      } : function (d) {
-        return interval.count(0, d) % step === 0;
-      });
-    };
-  }
-
-  return interval;
-}
-
-var millisecond = newInterval(function () {
-  // noop
-}, function (date, step) {
-  date.setTime(+date + step);
-}, function (start, end) {
-  return end - start;
-});
-
-// An optimized implementation for this simple case.
-millisecond.every = function (k) {
-  k = Math.floor(k);
-  if (!isFinite(k) || !(k > 0)) return null;
-  if (!(k > 1)) return millisecond;
-  return newInterval(function (date) {
-    date.setTime(Math.floor(date / k) * k);
-  }, function (date, step) {
-    date.setTime(+date + step * k);
-  }, function (start, end) {
-    return (end - start) / k;
-  });
-};
-
-var durationSecond$1 = 1e3;
-var durationMinute$1 = 6e4;
-var durationHour$1 = 36e5;
-var durationDay$1 = 864e5;
-var durationWeek$1 = 6048e5;
-
-var second = newInterval(function (date) {
-  date.setTime(Math.floor(date / durationSecond$1) * durationSecond$1);
-}, function (date, step) {
-  date.setTime(+date + step * durationSecond$1);
-}, function (start, end) {
-  return (end - start) / durationSecond$1;
-}, function (date) {
-  return date.getUTCSeconds();
-});
-
-var minute = newInterval(function (date) {
-  date.setTime(Math.floor(date / durationMinute$1) * durationMinute$1);
-}, function (date, step) {
-  date.setTime(+date + step * durationMinute$1);
-}, function (start, end) {
-  return (end - start) / durationMinute$1;
-}, function (date) {
-  return date.getMinutes();
-});
-
-var hour = newInterval(function (date) {
-  var offset = date.getTimezoneOffset() * durationMinute$1 % durationHour$1;
-  if (offset < 0) offset += durationHour$1;
-  date.setTime(Math.floor((+date - offset) / durationHour$1) * durationHour$1 + offset);
-}, function (date, step) {
-  date.setTime(+date + step * durationHour$1);
-}, function (start, end) {
-  return (end - start) / durationHour$1;
-}, function (date) {
-  return date.getHours();
-});
-
-var day = newInterval(function (date) {
-  date.setHours(0, 0, 0, 0);
-}, function (date, step) {
-  date.setDate(date.getDate() + step);
-}, function (start, end) {
-  return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * durationMinute$1) / durationDay$1;
-}, function (date) {
-  return date.getDate() - 1;
-});
-
-function weekday(i) {
-  return newInterval(function (date) {
-    date.setDate(date.getDate() - (date.getDay() + 7 - i) % 7);
-    date.setHours(0, 0, 0, 0);
-  }, function (date, step) {
-    date.setDate(date.getDate() + step * 7);
-  }, function (start, end) {
-    return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * durationMinute$1) / durationWeek$1;
-  });
-}
-
-var sunday = weekday(0);
-var monday = weekday(1);
-var tuesday = weekday(2);
-var wednesday = weekday(3);
-var thursday = weekday(4);
-var friday = weekday(5);
-var saturday = weekday(6);
-
-var month = newInterval(function (date) {
-  date.setDate(1);
-  date.setHours(0, 0, 0, 0);
-}, function (date, step) {
-  date.setMonth(date.getMonth() + step);
-}, function (start, end) {
-  return end.getMonth() - start.getMonth() + (end.getFullYear() - start.getFullYear()) * 12;
-}, function (date) {
-  return date.getMonth();
-});
-
-var year = newInterval(function (date) {
-  date.setMonth(0, 1);
-  date.setHours(0, 0, 0, 0);
-}, function (date, step) {
-  date.setFullYear(date.getFullYear() + step);
-}, function (start, end) {
-  return end.getFullYear() - start.getFullYear();
-}, function (date) {
-  return date.getFullYear();
-});
-
-// An optimized implementation for this simple case.
-year.every = function (k) {
-  return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : newInterval(function (date) {
-    date.setFullYear(Math.floor(date.getFullYear() / k) * k);
-    date.setMonth(0, 1);
-    date.setHours(0, 0, 0, 0);
-  }, function (date, step) {
-    date.setFullYear(date.getFullYear() + step * k);
-  });
-};
-
-var utcMinute = newInterval(function (date) {
-  date.setUTCSeconds(0, 0);
-}, function (date, step) {
-  date.setTime(+date + step * durationMinute$1);
-}, function (start, end) {
-  return (end - start) / durationMinute$1;
-}, function (date) {
-  return date.getUTCMinutes();
-});
-
-var utcHour = newInterval(function (date) {
-  date.setUTCMinutes(0, 0, 0);
-}, function (date, step) {
-  date.setTime(+date + step * durationHour$1);
-}, function (start, end) {
-  return (end - start) / durationHour$1;
-}, function (date) {
-  return date.getUTCHours();
-});
-
-var utcDay = newInterval(function (date) {
-  date.setUTCHours(0, 0, 0, 0);
-}, function (date, step) {
-  date.setUTCDate(date.getUTCDate() + step);
-}, function (start, end) {
-  return (end - start) / durationDay$1;
-}, function (date) {
-  return date.getUTCDate() - 1;
-});
-
-function utcWeekday(i) {
-  return newInterval(function (date) {
-    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 7 - i) % 7);
-    date.setUTCHours(0, 0, 0, 0);
-  }, function (date, step) {
-    date.setUTCDate(date.getUTCDate() + step * 7);
-  }, function (start, end) {
-    return (end - start) / durationWeek$1;
-  });
-}
-
-var utcSunday = utcWeekday(0);
-var utcMonday = utcWeekday(1);
-var utcTuesday = utcWeekday(2);
-var utcWednesday = utcWeekday(3);
-var utcThursday = utcWeekday(4);
-var utcFriday = utcWeekday(5);
-var utcSaturday = utcWeekday(6);
-
-var utcMonth = newInterval(function (date) {
-  date.setUTCDate(1);
-  date.setUTCHours(0, 0, 0, 0);
-}, function (date, step) {
-  date.setUTCMonth(date.getUTCMonth() + step);
-}, function (start, end) {
-  return end.getUTCMonth() - start.getUTCMonth() + (end.getUTCFullYear() - start.getUTCFullYear()) * 12;
-}, function (date) {
-  return date.getUTCMonth();
-});
-
-var utcYear = newInterval(function (date) {
-  date.setUTCMonth(0, 1);
-  date.setUTCHours(0, 0, 0, 0);
-}, function (date, step) {
-  date.setUTCFullYear(date.getUTCFullYear() + step);
-}, function (start, end) {
-  return end.getUTCFullYear() - start.getUTCFullYear();
-}, function (date) {
-  return date.getUTCFullYear();
-});
-
-// An optimized implementation for this simple case.
-utcYear.every = function (k) {
-  return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : newInterval(function (date) {
-    date.setUTCFullYear(Math.floor(date.getUTCFullYear() / k) * k);
-    date.setUTCMonth(0, 1);
-    date.setUTCHours(0, 0, 0, 0);
-  }, function (date, step) {
-    date.setUTCFullYear(date.getUTCFullYear() + step * k);
-  });
-};
-
-function localDate(d) {
-  if (0 <= d.y && d.y < 100) {
-    var date = new Date(-1, d.m, d.d, d.H, d.M, d.S, d.L);
-    date.setFullYear(d.y);
-    return date;
-  }
-  return new Date(d.y, d.m, d.d, d.H, d.M, d.S, d.L);
-}
-
-function utcDate(d) {
-  if (0 <= d.y && d.y < 100) {
-    var date = new Date(Date.UTC(-1, d.m, d.d, d.H, d.M, d.S, d.L));
-    date.setUTCFullYear(d.y);
-    return date;
-  }
-  return new Date(Date.UTC(d.y, d.m, d.d, d.H, d.M, d.S, d.L));
-}
-
-function newYear(y) {
-  return { y: y, m: 0, d: 1, H: 0, M: 0, S: 0, L: 0 };
-}
-
-function formatLocale$1(locale) {
-  var locale_dateTime = locale.dateTime,
-      locale_date = locale.date,
-      locale_time = locale.time,
-      locale_periods = locale.periods,
-      locale_weekdays = locale.days,
-      locale_shortWeekdays = locale.shortDays,
-      locale_months = locale.months,
-      locale_shortMonths = locale.shortMonths;
-
-  var periodRe = formatRe(locale_periods),
-      periodLookup = formatLookup(locale_periods),
-      weekdayRe = formatRe(locale_weekdays),
-      weekdayLookup = formatLookup(locale_weekdays),
-      shortWeekdayRe = formatRe(locale_shortWeekdays),
-      shortWeekdayLookup = formatLookup(locale_shortWeekdays),
-      monthRe = formatRe(locale_months),
-      monthLookup = formatLookup(locale_months),
-      shortMonthRe = formatRe(locale_shortMonths),
-      shortMonthLookup = formatLookup(locale_shortMonths);
-
-  var formats = {
-    "a": formatShortWeekday,
-    "A": formatWeekday,
-    "b": formatShortMonth,
-    "B": formatMonth,
-    "c": null,
-    "d": formatDayOfMonth,
-    "e": formatDayOfMonth,
-    "f": formatMicroseconds,
-    "H": formatHour24,
-    "I": formatHour12,
-    "j": formatDayOfYear,
-    "L": formatMilliseconds,
-    "m": formatMonthNumber,
-    "M": formatMinutes,
-    "p": formatPeriod,
-    "Q": formatUnixTimestamp,
-    "s": formatUnixTimestampSeconds,
-    "S": formatSeconds,
-    "u": formatWeekdayNumberMonday,
-    "U": formatWeekNumberSunday,
-    "V": formatWeekNumberISO,
-    "w": formatWeekdayNumberSunday,
-    "W": formatWeekNumberMonday,
-    "x": null,
-    "X": null,
-    "y": formatYear,
-    "Y": formatFullYear,
-    "Z": formatZone,
-    "%": formatLiteralPercent
-  };
-
-  var utcFormats = {
-    "a": formatUTCShortWeekday,
-    "A": formatUTCWeekday,
-    "b": formatUTCShortMonth,
-    "B": formatUTCMonth,
-    "c": null,
-    "d": formatUTCDayOfMonth,
-    "e": formatUTCDayOfMonth,
-    "f": formatUTCMicroseconds,
-    "H": formatUTCHour24,
-    "I": formatUTCHour12,
-    "j": formatUTCDayOfYear,
-    "L": formatUTCMilliseconds,
-    "m": formatUTCMonthNumber,
-    "M": formatUTCMinutes,
-    "p": formatUTCPeriod,
-    "Q": formatUnixTimestamp,
-    "s": formatUnixTimestampSeconds,
-    "S": formatUTCSeconds,
-    "u": formatUTCWeekdayNumberMonday,
-    "U": formatUTCWeekNumberSunday,
-    "V": formatUTCWeekNumberISO,
-    "w": formatUTCWeekdayNumberSunday,
-    "W": formatUTCWeekNumberMonday,
-    "x": null,
-    "X": null,
-    "y": formatUTCYear,
-    "Y": formatUTCFullYear,
-    "Z": formatUTCZone,
-    "%": formatLiteralPercent
-  };
-
-  var parses = {
-    "a": parseShortWeekday,
-    "A": parseWeekday,
-    "b": parseShortMonth,
-    "B": parseMonth,
-    "c": parseLocaleDateTime,
-    "d": parseDayOfMonth,
-    "e": parseDayOfMonth,
-    "f": parseMicroseconds,
-    "H": parseHour24,
-    "I": parseHour24,
-    "j": parseDayOfYear,
-    "L": parseMilliseconds,
-    "m": parseMonthNumber,
-    "M": parseMinutes,
-    "p": parsePeriod,
-    "Q": parseUnixTimestamp,
-    "s": parseUnixTimestampSeconds,
-    "S": parseSeconds,
-    "u": parseWeekdayNumberMonday,
-    "U": parseWeekNumberSunday,
-    "V": parseWeekNumberISO,
-    "w": parseWeekdayNumberSunday,
-    "W": parseWeekNumberMonday,
-    "x": parseLocaleDate,
-    "X": parseLocaleTime,
-    "y": parseYear,
-    "Y": parseFullYear,
-    "Z": parseZone,
-    "%": parseLiteralPercent
-  };
-
-  // These recursive directive definitions must be deferred.
-  formats.x = newFormat(locale_date, formats);
-  formats.X = newFormat(locale_time, formats);
-  formats.c = newFormat(locale_dateTime, formats);
-  utcFormats.x = newFormat(locale_date, utcFormats);
-  utcFormats.X = newFormat(locale_time, utcFormats);
-  utcFormats.c = newFormat(locale_dateTime, utcFormats);
-
-  function newFormat(specifier, formats) {
-    return function (date) {
-      var string = [],
-          i = -1,
-          j = 0,
-          n = specifier.length,
-          c,
-          pad,
-          format;
-
-      if (!(date instanceof Date)) date = new Date(+date);
-
-      while (++i < n) {
-        if (specifier.charCodeAt(i) === 37) {
-          string.push(specifier.slice(j, i));
-          if ((pad = pads[c = specifier.charAt(++i)]) != null) c = specifier.charAt(++i);else pad = c === "e" ? " " : "0";
-          if (format = formats[c]) c = format(date, pad);
-          string.push(c);
-          j = i + 1;
-        }
-      }
-
-      string.push(specifier.slice(j, i));
-      return string.join("");
-    };
-  }
-
-  function newParse(specifier, newDate) {
-    return function (string) {
-      var d = newYear(1900),
-          i = parseSpecifier(d, specifier, string += "", 0),
-          week,
-          day$$1;
-      if (i != string.length) return null;
-
-      // If a UNIX timestamp is specified, return it.
-      if ("Q" in d) return new Date(d.Q);
-
-      // The am-pm flag is 0 for AM, and 1 for PM.
-      if ("p" in d) d.H = d.H % 12 + d.p * 12;
-
-      // Convert day-of-week and week-of-year to day-of-year.
-      if ("V" in d) {
-        if (d.V < 1 || d.V > 53) return null;
-        if (!("w" in d)) d.w = 1;
-        if ("Z" in d) {
-          week = utcDate(newYear(d.y)), day$$1 = week.getUTCDay();
-          week = day$$1 > 4 || day$$1 === 0 ? utcMonday.ceil(week) : utcMonday(week);
-          week = utcDay.offset(week, (d.V - 1) * 7);
-          d.y = week.getUTCFullYear();
-          d.m = week.getUTCMonth();
-          d.d = week.getUTCDate() + (d.w + 6) % 7;
-        } else {
-          week = newDate(newYear(d.y)), day$$1 = week.getDay();
-          week = day$$1 > 4 || day$$1 === 0 ? monday.ceil(week) : monday(week);
-          week = day.offset(week, (d.V - 1) * 7);
-          d.y = week.getFullYear();
-          d.m = week.getMonth();
-          d.d = week.getDate() + (d.w + 6) % 7;
-        }
-      } else if ("W" in d || "U" in d) {
-        if (!("w" in d)) d.w = "u" in d ? d.u % 7 : "W" in d ? 1 : 0;
-        day$$1 = "Z" in d ? utcDate(newYear(d.y)).getUTCDay() : newDate(newYear(d.y)).getDay();
-        d.m = 0;
-        d.d = "W" in d ? (d.w + 6) % 7 + d.W * 7 - (day$$1 + 5) % 7 : d.w + d.U * 7 - (day$$1 + 6) % 7;
-      }
-
-      // If a time zone is specified, all fields are interpreted as UTC and then
-      // offset according to the specified time zone.
-      if ("Z" in d) {
-        d.H += d.Z / 100 | 0;
-        d.M += d.Z % 100;
-        return utcDate(d);
-      }
-
-      // Otherwise, all fields are in local time.
-      return newDate(d);
-    };
-  }
-
-  function parseSpecifier(d, specifier, string, j) {
-    var i = 0,
-        n = specifier.length,
-        m = string.length,
-        c,
-        parse;
-
-    while (i < n) {
-      if (j >= m) return -1;
-      c = specifier.charCodeAt(i++);
-      if (c === 37) {
-        c = specifier.charAt(i++);
-        parse = parses[c in pads ? specifier.charAt(i++) : c];
-        if (!parse || (j = parse(d, string, j)) < 0) return -1;
-      } else if (c != string.charCodeAt(j++)) {
-        return -1;
-      }
-    }
-
-    return j;
-  }
-
-  function parsePeriod(d, string, i) {
-    var n = periodRe.exec(string.slice(i));
-    return n ? (d.p = periodLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-  }
-
-  function parseShortWeekday(d, string, i) {
-    var n = shortWeekdayRe.exec(string.slice(i));
-    return n ? (d.w = shortWeekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-  }
-
-  function parseWeekday(d, string, i) {
-    var n = weekdayRe.exec(string.slice(i));
-    return n ? (d.w = weekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-  }
-
-  function parseShortMonth(d, string, i) {
-    var n = shortMonthRe.exec(string.slice(i));
-    return n ? (d.m = shortMonthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-  }
-
-  function parseMonth(d, string, i) {
-    var n = monthRe.exec(string.slice(i));
-    return n ? (d.m = monthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-  }
-
-  function parseLocaleDateTime(d, string, i) {
-    return parseSpecifier(d, locale_dateTime, string, i);
-  }
-
-  function parseLocaleDate(d, string, i) {
-    return parseSpecifier(d, locale_date, string, i);
-  }
-
-  function parseLocaleTime(d, string, i) {
-    return parseSpecifier(d, locale_time, string, i);
-  }
-
-  function formatShortWeekday(d) {
-    return locale_shortWeekdays[d.getDay()];
-  }
-
-  function formatWeekday(d) {
-    return locale_weekdays[d.getDay()];
-  }
-
-  function formatShortMonth(d) {
-    return locale_shortMonths[d.getMonth()];
-  }
-
-  function formatMonth(d) {
-    return locale_months[d.getMonth()];
-  }
-
-  function formatPeriod(d) {
-    return locale_periods[+(d.getHours() >= 12)];
-  }
-
-  function formatUTCShortWeekday(d) {
-    return locale_shortWeekdays[d.getUTCDay()];
-  }
-
-  function formatUTCWeekday(d) {
-    return locale_weekdays[d.getUTCDay()];
-  }
-
-  function formatUTCShortMonth(d) {
-    return locale_shortMonths[d.getUTCMonth()];
-  }
-
-  function formatUTCMonth(d) {
-    return locale_months[d.getUTCMonth()];
-  }
-
-  function formatUTCPeriod(d) {
-    return locale_periods[+(d.getUTCHours() >= 12)];
-  }
-
-  return {
-    format: function format(specifier) {
-      var f = newFormat(specifier += "", formats);
-      f.toString = function () {
-        return specifier;
-      };
-      return f;
-    },
-    parse: function parse(specifier) {
-      var p = newParse(specifier += "", localDate);
-      p.toString = function () {
-        return specifier;
-      };
-      return p;
-    },
-    utcFormat: function utcFormat(specifier) {
-      var f = newFormat(specifier += "", utcFormats);
-      f.toString = function () {
-        return specifier;
-      };
-      return f;
-    },
-    utcParse: function utcParse(specifier) {
-      var p = newParse(specifier, utcDate);
-      p.toString = function () {
-        return specifier;
-      };
-      return p;
-    }
-  };
-}
-
-var pads = { "-": "", "_": " ", "0": "0" };
-var numberRe = /^\s*\d+/;
-var percentRe = /^%/;
-var requoteRe = /[\\^$*+?|[\]().{}]/g;
-
-function pad(value, fill, width) {
-  var sign = value < 0 ? "-" : "",
-      string = (sign ? -value : value) + "",
-      length = string.length;
-  return sign + (length < width ? new Array(width - length + 1).join(fill) + string : string);
-}
-
-function requote(s) {
-  return s.replace(requoteRe, "\\$&");
-}
-
-function formatRe(names) {
-  return new RegExp("^(?:" + names.map(requote).join("|") + ")", "i");
-}
-
-function formatLookup(names) {
-  var map = {},
-      i = -1,
-      n = names.length;
-  while (++i < n) {
-    map[names[i].toLowerCase()] = i;
-  }return map;
-}
-
-function parseWeekdayNumberSunday(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 1));
-  return n ? (d.w = +n[0], i + n[0].length) : -1;
-}
-
-function parseWeekdayNumberMonday(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 1));
-  return n ? (d.u = +n[0], i + n[0].length) : -1;
-}
-
-function parseWeekNumberSunday(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.U = +n[0], i + n[0].length) : -1;
-}
-
-function parseWeekNumberISO(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.V = +n[0], i + n[0].length) : -1;
-}
-
-function parseWeekNumberMonday(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.W = +n[0], i + n[0].length) : -1;
-}
-
-function parseFullYear(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 4));
-  return n ? (d.y = +n[0], i + n[0].length) : -1;
-}
-
-function parseYear(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.y = +n[0] + (+n[0] > 68 ? 1900 : 2000), i + n[0].length) : -1;
-}
-
-function parseZone(d, string, i) {
-  var n = /^(Z)|([+-]\d\d)(?::?(\d\d))?/.exec(string.slice(i, i + 6));
-  return n ? (d.Z = n[1] ? 0 : -(n[2] + (n[3] || "00")), i + n[0].length) : -1;
-}
-
-function parseMonthNumber(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.m = n[0] - 1, i + n[0].length) : -1;
-}
-
-function parseDayOfMonth(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.d = +n[0], i + n[0].length) : -1;
-}
-
-function parseDayOfYear(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 3));
-  return n ? (d.m = 0, d.d = +n[0], i + n[0].length) : -1;
-}
-
-function parseHour24(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.H = +n[0], i + n[0].length) : -1;
-}
-
-function parseMinutes(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.M = +n[0], i + n[0].length) : -1;
-}
-
-function parseSeconds(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 2));
-  return n ? (d.S = +n[0], i + n[0].length) : -1;
-}
-
-function parseMilliseconds(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 3));
-  return n ? (d.L = +n[0], i + n[0].length) : -1;
-}
-
-function parseMicroseconds(d, string, i) {
-  var n = numberRe.exec(string.slice(i, i + 6));
-  return n ? (d.L = Math.floor(n[0] / 1000), i + n[0].length) : -1;
-}
-
-function parseLiteralPercent(d, string, i) {
-  var n = percentRe.exec(string.slice(i, i + 1));
-  return n ? i + n[0].length : -1;
-}
-
-function parseUnixTimestamp(d, string, i) {
-  var n = numberRe.exec(string.slice(i));
-  return n ? (d.Q = +n[0], i + n[0].length) : -1;
-}
-
-function parseUnixTimestampSeconds(d, string, i) {
-  var n = numberRe.exec(string.slice(i));
-  return n ? (d.Q = +n[0] * 1000, i + n[0].length) : -1;
-}
-
-function formatDayOfMonth(d, p) {
-  return pad(d.getDate(), p, 2);
-}
-
-function formatHour24(d, p) {
-  return pad(d.getHours(), p, 2);
-}
-
-function formatHour12(d, p) {
-  return pad(d.getHours() % 12 || 12, p, 2);
-}
-
-function formatDayOfYear(d, p) {
-  return pad(1 + day.count(year(d), d), p, 3);
-}
-
-function formatMilliseconds(d, p) {
-  return pad(d.getMilliseconds(), p, 3);
-}
-
-function formatMicroseconds(d, p) {
-  return formatMilliseconds(d, p) + "000";
-}
-
-function formatMonthNumber(d, p) {
-  return pad(d.getMonth() + 1, p, 2);
-}
-
-function formatMinutes(d, p) {
-  return pad(d.getMinutes(), p, 2);
-}
-
-function formatSeconds(d, p) {
-  return pad(d.getSeconds(), p, 2);
-}
-
-function formatWeekdayNumberMonday(d) {
-  var day$$1 = d.getDay();
-  return day$$1 === 0 ? 7 : day$$1;
-}
-
-function formatWeekNumberSunday(d, p) {
-  return pad(sunday.count(year(d), d), p, 2);
-}
-
-function formatWeekNumberISO(d, p) {
-  var day$$1 = d.getDay();
-  d = day$$1 >= 4 || day$$1 === 0 ? thursday(d) : thursday.ceil(d);
-  return pad(thursday.count(year(d), d) + (year(d).getDay() === 4), p, 2);
-}
-
-function formatWeekdayNumberSunday(d) {
-  return d.getDay();
-}
-
-function formatWeekNumberMonday(d, p) {
-  return pad(monday.count(year(d), d), p, 2);
-}
-
-function formatYear(d, p) {
-  return pad(d.getFullYear() % 100, p, 2);
-}
-
-function formatFullYear(d, p) {
-  return pad(d.getFullYear() % 10000, p, 4);
-}
-
-function formatZone(d) {
-  var z = d.getTimezoneOffset();
-  return (z > 0 ? "-" : (z *= -1, "+")) + pad(z / 60 | 0, "0", 2) + pad(z % 60, "0", 2);
-}
-
-function formatUTCDayOfMonth(d, p) {
-  return pad(d.getUTCDate(), p, 2);
-}
-
-function formatUTCHour24(d, p) {
-  return pad(d.getUTCHours(), p, 2);
-}
-
-function formatUTCHour12(d, p) {
-  return pad(d.getUTCHours() % 12 || 12, p, 2);
-}
-
-function formatUTCDayOfYear(d, p) {
-  return pad(1 + utcDay.count(utcYear(d), d), p, 3);
-}
-
-function formatUTCMilliseconds(d, p) {
-  return pad(d.getUTCMilliseconds(), p, 3);
-}
-
-function formatUTCMicroseconds(d, p) {
-  return formatUTCMilliseconds(d, p) + "000";
-}
-
-function formatUTCMonthNumber(d, p) {
-  return pad(d.getUTCMonth() + 1, p, 2);
-}
-
-function formatUTCMinutes(d, p) {
-  return pad(d.getUTCMinutes(), p, 2);
-}
-
-function formatUTCSeconds(d, p) {
-  return pad(d.getUTCSeconds(), p, 2);
-}
-
-function formatUTCWeekdayNumberMonday(d) {
-  var dow = d.getUTCDay();
-  return dow === 0 ? 7 : dow;
-}
-
-function formatUTCWeekNumberSunday(d, p) {
-  return pad(utcSunday.count(utcYear(d), d), p, 2);
-}
-
-function formatUTCWeekNumberISO(d, p) {
-  var day$$1 = d.getUTCDay();
-  d = day$$1 >= 4 || day$$1 === 0 ? utcThursday(d) : utcThursday.ceil(d);
-  return pad(utcThursday.count(utcYear(d), d) + (utcYear(d).getUTCDay() === 4), p, 2);
-}
-
-function formatUTCWeekdayNumberSunday(d) {
-  return d.getUTCDay();
-}
-
-function formatUTCWeekNumberMonday(d, p) {
-  return pad(utcMonday.count(utcYear(d), d), p, 2);
-}
-
-function formatUTCYear(d, p) {
-  return pad(d.getUTCFullYear() % 100, p, 2);
-}
-
-function formatUTCFullYear(d, p) {
-  return pad(d.getUTCFullYear() % 10000, p, 4);
-}
-
-function formatUTCZone() {
-  return "+0000";
-}
-
-function formatLiteralPercent() {
-  return "%";
-}
-
-function formatUnixTimestamp(d) {
-  return +d;
-}
-
-function formatUnixTimestampSeconds(d) {
-  return Math.floor(+d / 1000);
-}
-
-var locale$2;
-var timeFormat;
-var timeParse;
-var utcFormat;
-var utcParse;
-
-defaultLocale$1({
-  dateTime: "%x, %X",
-  date: "%-m/%-d/%Y",
-  time: "%-I:%M:%S %p",
-  periods: ["AM", "PM"],
-  days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-  shortDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-  months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-  shortMonths: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-});
-
-function defaultLocale$1(definition) {
-  locale$2 = formatLocale$1(definition);
-  timeFormat = locale$2.format;
-  timeParse = locale$2.parse;
-  utcFormat = locale$2.utcFormat;
-  utcParse = locale$2.utcParse;
-  return locale$2;
-}
-
-var isoSpecifier = "%Y-%m-%dT%H:%M:%S.%LZ";
-
-function formatIsoNative(date) {
-    return date.toISOString();
-}
-
-var formatIso = Date.prototype.toISOString ? formatIsoNative : utcFormat(isoSpecifier);
-
-function parseIsoNative(string) {
-  var date = new Date(string);
-  return isNaN(date) ? null : date;
-}
-
-var parseIso = +new Date("2000-01-01T00:00:00.000Z") ? parseIsoNative : utcParse(isoSpecifier);
-
-var durationSecond = 1000;
-var durationMinute = durationSecond * 60;
-var durationHour = durationMinute * 60;
-var durationDay = durationHour * 24;
-var durationWeek = durationDay * 7;
-var durationMonth = durationDay * 30;
-var durationYear = durationDay * 365;
-
-function date$1(t) {
-  return new Date(t);
-}
-
-function number$2(t) {
-  return t instanceof Date ? +t : +new Date(+t);
-}
-
-function calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1, millisecond$$1, format) {
-  var scale = continuous(deinterpolateLinear, interpolateNumber),
-      invert = scale.invert,
-      domain = scale.domain;
-
-  var formatMillisecond = format(".%L"),
-      formatSecond = format(":%S"),
-      formatMinute = format("%I:%M"),
-      formatHour = format("%I %p"),
-      formatDay = format("%a %d"),
-      formatWeek = format("%b %d"),
-      formatMonth = format("%B"),
-      formatYear = format("%Y");
-
-  var tickIntervals = [[second$$1, 1, durationSecond], [second$$1, 5, 5 * durationSecond], [second$$1, 15, 15 * durationSecond], [second$$1, 30, 30 * durationSecond], [minute$$1, 1, durationMinute], [minute$$1, 5, 5 * durationMinute], [minute$$1, 15, 15 * durationMinute], [minute$$1, 30, 30 * durationMinute], [hour$$1, 1, durationHour], [hour$$1, 3, 3 * durationHour], [hour$$1, 6, 6 * durationHour], [hour$$1, 12, 12 * durationHour], [day$$1, 1, durationDay], [day$$1, 2, 2 * durationDay], [week, 1, durationWeek], [month$$1, 1, durationMonth], [month$$1, 3, 3 * durationMonth], [year$$1, 1, durationYear]];
-
-  function tickFormat(date$$1) {
-    return (second$$1(date$$1) < date$$1 ? formatMillisecond : minute$$1(date$$1) < date$$1 ? formatSecond : hour$$1(date$$1) < date$$1 ? formatMinute : day$$1(date$$1) < date$$1 ? formatHour : month$$1(date$$1) < date$$1 ? week(date$$1) < date$$1 ? formatDay : formatWeek : year$$1(date$$1) < date$$1 ? formatMonth : formatYear)(date$$1);
-  }
-
-  function tickInterval(interval$$1, start, stop, step) {
-    if (interval$$1 == null) interval$$1 = 10;
-
-    // If a desired tick count is specified, pick a reasonable tick interval
-    // based on the extent of the domain and a rough estimate of tick size.
-    // Otherwise, assume interval is already a time interval and use it.
-    if (typeof interval$$1 === "number") {
-      var target = Math.abs(stop - start) / interval$$1,
-          i = bisector(function (i) {
-        return i[2];
-      }).right(tickIntervals, target);
-      if (i === tickIntervals.length) {
-        step = tickStep(start / durationYear, stop / durationYear, interval$$1);
-        interval$$1 = year$$1;
-      } else if (i) {
-        i = tickIntervals[target / tickIntervals[i - 1][2] < tickIntervals[i][2] / target ? i - 1 : i];
-        step = i[1];
-        interval$$1 = i[0];
-      } else {
-        step = Math.max(tickStep(start, stop, interval$$1), 1);
-        interval$$1 = millisecond$$1;
-      }
-    }
-
-    return step == null ? interval$$1 : interval$$1.every(step);
-  }
-
-  scale.invert = function (y) {
-    return new Date(invert(y));
-  };
-
-  scale.domain = function (_) {
-    return arguments.length ? domain(map$3.call(_, number$2)) : domain().map(date$1);
-  };
-
-  scale.ticks = function (interval$$1, step) {
-    var d = domain(),
-        t0 = d[0],
-        t1 = d[d.length - 1],
-        r = t1 < t0,
-        t;
-    if (r) t = t0, t0 = t1, t1 = t;
-    t = tickInterval(interval$$1, t0, t1, step);
-    t = t ? t.range(t0, t1 + 1) : []; // inclusive stop
-    return r ? t.reverse() : t;
-  };
-
-  scale.tickFormat = function (count, specifier) {
-    return specifier == null ? tickFormat : format(specifier);
-  };
-
-  scale.nice = function (interval$$1, step) {
-    var d = domain();
-    return (interval$$1 = tickInterval(interval$$1, d[0], d[d.length - 1], step)) ? domain(nice(d, interval$$1)) : scale;
-  };
-
-  scale.copy = function () {
-    return copy(scale, calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1, millisecond$$1, format));
-  };
-
-  return scale;
-}
-
-var scaleTime = function () {
-  return calendar(year, month, sunday, day, hour, minute, second, millisecond, timeFormat).domain([new Date(2000, 0, 1), new Date(2000, 0, 2)]);
-};
-
-var colors = function (s) {
-  return s.match(/.{6}/g).map(function (x) {
-    return "#" + x;
-  });
-};
-
-colors("1f77b4ff7f0e2ca02cd627289467bd8c564be377c27f7f7fbcbd2217becf");
-
-colors("393b795254a36b6ecf9c9ede6379398ca252b5cf6bcedb9c8c6d31bd9e39e7ba52e7cb94843c39ad494ad6616be7969c7b4173a55194ce6dbdde9ed6");
-
-colors("3182bd6baed69ecae1c6dbefe6550dfd8d3cfdae6bfdd0a231a35474c476a1d99bc7e9c0756bb19e9ac8bcbddcdadaeb636363969696bdbdbdd9d9d9");
-
-colors("1f77b4aec7e8ff7f0effbb782ca02c98df8ad62728ff98969467bdc5b0d58c564bc49c94e377c2f7b6d27f7f7fc7c7c7bcbd22dbdb8d17becf9edae5");
-
-var define$2 = function (constructor, factory, prototype) {
-  constructor.prototype = factory.prototype = prototype;
-  prototype.constructor = constructor;
-};
-
-function extend$1(parent, definition) {
-  var prototype = Object.create(parent.prototype);
-  for (var key in definition) {
-    prototype[key] = definition[key];
-  }return prototype;
-}
-
-function Color$1() {}
-
-var _darker$1 = 0.7;
-var _brighter$1 = 1 / _darker$1;
-
-var reI$1 = "\\s*([+-]?\\d+)\\s*";
-var reN$1 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*";
-var reP$1 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*";
-var reHex3$1 = /^#([0-9a-f]{3})$/;
-var reHex6$1 = /^#([0-9a-f]{6})$/;
-var reRgbInteger$1 = new RegExp("^rgb\\(" + [reI$1, reI$1, reI$1] + "\\)$");
-var reRgbPercent$1 = new RegExp("^rgb\\(" + [reP$1, reP$1, reP$1] + "\\)$");
-var reRgbaInteger$1 = new RegExp("^rgba\\(" + [reI$1, reI$1, reI$1, reN$1] + "\\)$");
-var reRgbaPercent$1 = new RegExp("^rgba\\(" + [reP$1, reP$1, reP$1, reN$1] + "\\)$");
-var reHslPercent$1 = new RegExp("^hsl\\(" + [reN$1, reP$1, reP$1] + "\\)$");
-var reHslaPercent$1 = new RegExp("^hsla\\(" + [reN$1, reP$1, reP$1, reN$1] + "\\)$");
-
-var named$1 = {
-  aliceblue: 0xf0f8ff,
-  antiquewhite: 0xfaebd7,
-  aqua: 0x00ffff,
-  aquamarine: 0x7fffd4,
-  azure: 0xf0ffff,
-  beige: 0xf5f5dc,
-  bisque: 0xffe4c4,
-  black: 0x000000,
-  blanchedalmond: 0xffebcd,
-  blue: 0x0000ff,
-  blueviolet: 0x8a2be2,
-  brown: 0xa52a2a,
-  burlywood: 0xdeb887,
-  cadetblue: 0x5f9ea0,
-  chartreuse: 0x7fff00,
-  chocolate: 0xd2691e,
-  coral: 0xff7f50,
-  cornflowerblue: 0x6495ed,
-  cornsilk: 0xfff8dc,
-  crimson: 0xdc143c,
-  cyan: 0x00ffff,
-  darkblue: 0x00008b,
-  darkcyan: 0x008b8b,
-  darkgoldenrod: 0xb8860b,
-  darkgray: 0xa9a9a9,
-  darkgreen: 0x006400,
-  darkgrey: 0xa9a9a9,
-  darkkhaki: 0xbdb76b,
-  darkmagenta: 0x8b008b,
-  darkolivegreen: 0x556b2f,
-  darkorange: 0xff8c00,
-  darkorchid: 0x9932cc,
-  darkred: 0x8b0000,
-  darksalmon: 0xe9967a,
-  darkseagreen: 0x8fbc8f,
-  darkslateblue: 0x483d8b,
-  darkslategray: 0x2f4f4f,
-  darkslategrey: 0x2f4f4f,
-  darkturquoise: 0x00ced1,
-  darkviolet: 0x9400d3,
-  deeppink: 0xff1493,
-  deepskyblue: 0x00bfff,
-  dimgray: 0x696969,
-  dimgrey: 0x696969,
-  dodgerblue: 0x1e90ff,
-  firebrick: 0xb22222,
-  floralwhite: 0xfffaf0,
-  forestgreen: 0x228b22,
-  fuchsia: 0xff00ff,
-  gainsboro: 0xdcdcdc,
-  ghostwhite: 0xf8f8ff,
-  gold: 0xffd700,
-  goldenrod: 0xdaa520,
-  gray: 0x808080,
-  green: 0x008000,
-  greenyellow: 0xadff2f,
-  grey: 0x808080,
-  honeydew: 0xf0fff0,
-  hotpink: 0xff69b4,
-  indianred: 0xcd5c5c,
-  indigo: 0x4b0082,
-  ivory: 0xfffff0,
-  khaki: 0xf0e68c,
-  lavender: 0xe6e6fa,
-  lavenderblush: 0xfff0f5,
-  lawngreen: 0x7cfc00,
-  lemonchiffon: 0xfffacd,
-  lightblue: 0xadd8e6,
-  lightcoral: 0xf08080,
-  lightcyan: 0xe0ffff,
-  lightgoldenrodyellow: 0xfafad2,
-  lightgray: 0xd3d3d3,
-  lightgreen: 0x90ee90,
-  lightgrey: 0xd3d3d3,
-  lightpink: 0xffb6c1,
-  lightsalmon: 0xffa07a,
-  lightseagreen: 0x20b2aa,
-  lightskyblue: 0x87cefa,
-  lightslategray: 0x778899,
-  lightslategrey: 0x778899,
-  lightsteelblue: 0xb0c4de,
-  lightyellow: 0xffffe0,
-  lime: 0x00ff00,
-  limegreen: 0x32cd32,
-  linen: 0xfaf0e6,
-  magenta: 0xff00ff,
-  maroon: 0x800000,
-  mediumaquamarine: 0x66cdaa,
-  mediumblue: 0x0000cd,
-  mediumorchid: 0xba55d3,
-  mediumpurple: 0x9370db,
-  mediumseagreen: 0x3cb371,
-  mediumslateblue: 0x7b68ee,
-  mediumspringgreen: 0x00fa9a,
-  mediumturquoise: 0x48d1cc,
-  mediumvioletred: 0xc71585,
-  midnightblue: 0x191970,
-  mintcream: 0xf5fffa,
-  mistyrose: 0xffe4e1,
-  moccasin: 0xffe4b5,
-  navajowhite: 0xffdead,
-  navy: 0x000080,
-  oldlace: 0xfdf5e6,
-  olive: 0x808000,
-  olivedrab: 0x6b8e23,
-  orange: 0xffa500,
-  orangered: 0xff4500,
-  orchid: 0xda70d6,
-  palegoldenrod: 0xeee8aa,
-  palegreen: 0x98fb98,
-  paleturquoise: 0xafeeee,
-  palevioletred: 0xdb7093,
-  papayawhip: 0xffefd5,
-  peachpuff: 0xffdab9,
-  peru: 0xcd853f,
-  pink: 0xffc0cb,
-  plum: 0xdda0dd,
-  powderblue: 0xb0e0e6,
-  purple: 0x800080,
-  rebeccapurple: 0x663399,
-  red: 0xff0000,
-  rosybrown: 0xbc8f8f,
-  royalblue: 0x4169e1,
-  saddlebrown: 0x8b4513,
-  salmon: 0xfa8072,
-  sandybrown: 0xf4a460,
-  seagreen: 0x2e8b57,
-  seashell: 0xfff5ee,
-  sienna: 0xa0522d,
-  silver: 0xc0c0c0,
-  skyblue: 0x87ceeb,
-  slateblue: 0x6a5acd,
-  slategray: 0x708090,
-  slategrey: 0x708090,
-  snow: 0xfffafa,
-  springgreen: 0x00ff7f,
-  steelblue: 0x4682b4,
-  tan: 0xd2b48c,
-  teal: 0x008080,
-  thistle: 0xd8bfd8,
-  tomato: 0xff6347,
-  turquoise: 0x40e0d0,
-  violet: 0xee82ee,
-  wheat: 0xf5deb3,
-  white: 0xffffff,
-  whitesmoke: 0xf5f5f5,
-  yellow: 0xffff00,
-  yellowgreen: 0x9acd32
-};
-
-define$2(Color$1, color$1, {
-  displayable: function displayable() {
-    return this.rgb().displayable();
-  },
-  toString: function toString() {
-    return this.rgb() + "";
-  }
-});
-
-function color$1(format) {
-  var m;
-  format = (format + "").trim().toLowerCase();
-  return (m = reHex3$1.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$1(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
-  ) : (m = reHex6$1.exec(format)) ? rgbn$1(parseInt(m[1], 16) // #ff0000
-  ) : (m = reRgbInteger$1.exec(format)) ? new Rgb$1(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
-  : (m = reRgbPercent$1.exec(format)) ? new Rgb$1(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
-  : (m = reRgbaInteger$1.exec(format)) ? rgba$1(m[1], m[2], m[3], m[4] // rgba(255, 0, 0, 1)
-  ) : (m = reRgbaPercent$1.exec(format)) ? rgba$1(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4] // rgb(100%, 0%, 0%, 1)
-  ) : (m = reHslPercent$1.exec(format)) ? hsla$1(m[1], m[2] / 100, m[3] / 100, 1 // hsl(120, 50%, 50%)
-  ) : (m = reHslaPercent$1.exec(format)) ? hsla$1(m[1], m[2] / 100, m[3] / 100, m[4] // hsla(120, 50%, 50%, 1)
-  ) : named$1.hasOwnProperty(format) ? rgbn$1(named$1[format]) : format === "transparent" ? new Rgb$1(NaN, NaN, NaN, 0) : null;
-}
-
-function rgbn$1(n) {
-  return new Rgb$1(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
-}
-
-function rgba$1(r, g, b, a) {
-  if (a <= 0) r = g = b = NaN;
-  return new Rgb$1(r, g, b, a);
-}
-
-function rgbConvert$1(o) {
-  if (!(o instanceof Color$1)) o = color$1(o);
-  if (!o) return new Rgb$1();
-  o = o.rgb();
-  return new Rgb$1(o.r, o.g, o.b, o.opacity);
-}
-
-function rgb$1(r, g, b, opacity) {
-  return arguments.length === 1 ? rgbConvert$1(r) : new Rgb$1(r, g, b, opacity == null ? 1 : opacity);
-}
-
-function Rgb$1(r, g, b, opacity) {
-  this.r = +r;
-  this.g = +g;
-  this.b = +b;
-  this.opacity = +opacity;
-}
-
-define$2(Rgb$1, rgb$1, extend$1(Color$1, {
-  brighter: function brighter(k) {
-    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
-    return new Rgb$1(this.r * k, this.g * k, this.b * k, this.opacity);
-  },
-  darker: function darker(k) {
-    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
-    return new Rgb$1(this.r * k, this.g * k, this.b * k, this.opacity);
-  },
-  rgb: function rgb() {
-    return this;
-  },
-  displayable: function displayable() {
-    return 0 <= this.r && this.r <= 255 && 0 <= this.g && this.g <= 255 && 0 <= this.b && this.b <= 255 && 0 <= this.opacity && this.opacity <= 1;
-  },
-  toString: function toString() {
-    var a = this.opacity;a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
-    return (a === 1 ? "rgb(" : "rgba(") + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.b) || 0)) + (a === 1 ? ")" : ", " + a + ")");
-  }
-}));
-
-function hsla$1(h, s, l, a) {
-  if (a <= 0) h = s = l = NaN;else if (l <= 0 || l >= 1) h = s = NaN;else if (s <= 0) h = NaN;
-  return new Hsl$1(h, s, l, a);
-}
-
-function hslConvert$1(o) {
-  if (o instanceof Hsl$1) return new Hsl$1(o.h, o.s, o.l, o.opacity);
-  if (!(o instanceof Color$1)) o = color$1(o);
-  if (!o) return new Hsl$1();
-  if (o instanceof Hsl$1) return o;
-  o = o.rgb();
-  var r = o.r / 255,
-      g = o.g / 255,
-      b = o.b / 255,
-      min = Math.min(r, g, b),
-      max = Math.max(r, g, b),
-      h = NaN,
-      s = max - min,
-      l = (max + min) / 2;
-  if (s) {
-    if (r === max) h = (g - b) / s + (g < b) * 6;else if (g === max) h = (b - r) / s + 2;else h = (r - g) / s + 4;
-    s /= l < 0.5 ? max + min : 2 - max - min;
-    h *= 60;
-  } else {
-    s = l > 0 && l < 1 ? 0 : h;
-  }
-  return new Hsl$1(h, s, l, o.opacity);
-}
-
-function hsl$3(h, s, l, opacity) {
-  return arguments.length === 1 ? hslConvert$1(h) : new Hsl$1(h, s, l, opacity == null ? 1 : opacity);
-}
-
-function Hsl$1(h, s, l, opacity) {
-  this.h = +h;
-  this.s = +s;
-  this.l = +l;
-  this.opacity = +opacity;
-}
-
-define$2(Hsl$1, hsl$3, extend$1(Color$1, {
-  brighter: function brighter(k) {
-    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
-    return new Hsl$1(this.h, this.s, this.l * k, this.opacity);
-  },
-  darker: function darker(k) {
-    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
-    return new Hsl$1(this.h, this.s, this.l * k, this.opacity);
-  },
-  rgb: function rgb() {
-    var h = this.h % 360 + (this.h < 0) * 360,
-        s = isNaN(h) || isNaN(this.s) ? 0 : this.s,
-        l = this.l,
-        m2 = l + (l < 0.5 ? l : 1 - l) * s,
-        m1 = 2 * l - m2;
-    return new Rgb$1(hsl2rgb$1(h >= 240 ? h - 240 : h + 120, m1, m2), hsl2rgb$1(h, m1, m2), hsl2rgb$1(h < 120 ? h + 240 : h - 120, m1, m2), this.opacity);
-  },
-  displayable: function displayable() {
-    return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
-  }
-}));
-
-/* From FvD 13.37, CSS Color Module Level 3 */
-function hsl2rgb$1(h, m1, m2) {
-  return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
-}
-
-var deg2rad$1 = Math.PI / 180;
-var rad2deg$1 = 180 / Math.PI;
-
-var Kn$1 = 18;
-var Xn$1 = 0.950470;
-var Yn$1 = 1;
-var Zn$1 = 1.088830;
-var t0$2 = 4 / 29;
-var t1$2 = 6 / 29;
-var t2$1 = 3 * t1$2 * t1$2;
-var t3$1 = t1$2 * t1$2 * t1$2;
-
-function labConvert$1(o) {
-  if (o instanceof Lab$1) return new Lab$1(o.l, o.a, o.b, o.opacity);
-  if (o instanceof Hcl$1) {
-    var h = o.h * deg2rad$1;
-    return new Lab$1(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
-  }
-  if (!(o instanceof Rgb$1)) o = rgbConvert$1(o);
-  var b = rgb2xyz$1(o.r),
-      a = rgb2xyz$1(o.g),
-      l = rgb2xyz$1(o.b),
-      x = xyz2lab$1((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn$1),
-      y = xyz2lab$1((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn$1),
-      z = xyz2lab$1((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn$1);
-  return new Lab$1(116 * y - 16, 500 * (x - y), 200 * (y - z), o.opacity);
-}
-
-function lab$2(l, a, b, opacity) {
-  return arguments.length === 1 ? labConvert$1(l) : new Lab$1(l, a, b, opacity == null ? 1 : opacity);
-}
-
-function Lab$1(l, a, b, opacity) {
-  this.l = +l;
-  this.a = +a;
-  this.b = +b;
-  this.opacity = +opacity;
-}
-
-define$2(Lab$1, lab$2, extend$1(Color$1, {
-  brighter: function brighter(k) {
-    return new Lab$1(this.l + Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
-  },
-  darker: function darker(k) {
-    return new Lab$1(this.l - Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
-  },
-  rgb: function rgb() {
-    var y = (this.l + 16) / 116,
-        x = isNaN(this.a) ? y : y + this.a / 500,
-        z = isNaN(this.b) ? y : y - this.b / 200;
-    y = Yn$1 * lab2xyz$1(y);
-    x = Xn$1 * lab2xyz$1(x);
-    z = Zn$1 * lab2xyz$1(z);
-    return new Rgb$1(xyz2rgb$1(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
-    xyz2rgb$1(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb$1(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
-  }
-}));
-
-function xyz2lab$1(t) {
-  return t > t3$1 ? Math.pow(t, 1 / 3) : t / t2$1 + t0$2;
-}
-
-function lab2xyz$1(t) {
-  return t > t1$2 ? t * t * t : t2$1 * (t - t0$2);
-}
-
-function xyz2rgb$1(x) {
-  return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
-}
-
-function rgb2xyz$1(x) {
-  return (x /= 255) <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-}
-
-function hclConvert$1(o) {
-  if (o instanceof Hcl$1) return new Hcl$1(o.h, o.c, o.l, o.opacity);
-  if (!(o instanceof Lab$1)) o = labConvert$1(o);
-  var h = Math.atan2(o.b, o.a) * rad2deg$1;
-  return new Hcl$1(h < 0 ? h + 360 : h, Math.sqrt(o.a * o.a + o.b * o.b), o.l, o.opacity);
-}
-
-function hcl$3(h, c, l, opacity) {
-  return arguments.length === 1 ? hclConvert$1(h) : new Hcl$1(h, c, l, opacity == null ? 1 : opacity);
-}
-
-function Hcl$1(h, c, l, opacity) {
-  this.h = +h;
-  this.c = +c;
-  this.l = +l;
-  this.opacity = +opacity;
-}
-
-define$2(Hcl$1, hcl$3, extend$1(Color$1, {
-  brighter: function brighter(k) {
-    return new Hcl$1(this.h, this.c, this.l + Kn$1 * (k == null ? 1 : k), this.opacity);
-  },
-  darker: function darker(k) {
-    return new Hcl$1(this.h, this.c, this.l - Kn$1 * (k == null ? 1 : k), this.opacity);
-  },
-  rgb: function rgb() {
-    return labConvert$1(this).rgb();
-  }
-}));
-
-var A$1 = -0.14861;
-var B$1 = +1.78277;
-var C$1 = -0.29227;
-var D$1 = -0.90649;
-var E$1 = +1.97294;
-var ED$1 = E$1 * D$1;
-var EB$1 = E$1 * B$1;
-var BC_DA$1 = B$1 * C$1 - D$1 * A$1;
-
-function cubehelixConvert$1(o) {
-  if (o instanceof Cubehelix$1) return new Cubehelix$1(o.h, o.s, o.l, o.opacity);
-  if (!(o instanceof Rgb$1)) o = rgbConvert$1(o);
-  var r = o.r / 255,
-      g = o.g / 255,
-      b = o.b / 255,
-      l = (BC_DA$1 * b + ED$1 * r - EB$1 * g) / (BC_DA$1 + ED$1 - EB$1),
-      bl = b - l,
-      k = (E$1 * (g - l) - C$1 * bl) / D$1,
-      s = Math.sqrt(k * k + bl * bl) / (E$1 * l * (1 - l)),
-      // NaN if l=0 or l=1
-  h = s ? Math.atan2(k, bl) * rad2deg$1 - 120 : NaN;
-  return new Cubehelix$1(h < 0 ? h + 360 : h, s, l, o.opacity);
-}
-
-function cubehelix$4(h, s, l, opacity) {
-  return arguments.length === 1 ? cubehelixConvert$1(h) : new Cubehelix$1(h, s, l, opacity == null ? 1 : opacity);
-}
-
-function Cubehelix$1(h, s, l, opacity) {
-  this.h = +h;
-  this.s = +s;
-  this.l = +l;
-  this.opacity = +opacity;
-}
-
-define$2(Cubehelix$1, cubehelix$4, extend$1(Color$1, {
-  brighter: function brighter(k) {
-    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
-    return new Cubehelix$1(this.h, this.s, this.l * k, this.opacity);
-  },
-  darker: function darker(k) {
-    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
-    return new Cubehelix$1(this.h, this.s, this.l * k, this.opacity);
-  },
-  rgb: function rgb() {
-    var h = isNaN(this.h) ? 0 : (this.h + 120) * deg2rad$1,
-        l = +this.l,
-        a = isNaN(this.s) ? 0 : this.s * l * (1 - l),
-        cosh = Math.cos(h),
-        sinh = Math.sin(h);
-    return new Rgb$1(255 * (l + a * (A$1 * cosh + B$1 * sinh)), 255 * (l + a * (C$1 * cosh + D$1 * sinh)), 255 * (l + a * (E$1 * cosh)), this.opacity);
-  }
-}));
-
-cubehelixLong(cubehelix$4(300, 0.5, 0.0), cubehelix$4(-240, 0.5, 1.0));
-
-var warm = cubehelixLong(cubehelix$4(-100, 0.75, 0.35), cubehelix$4(80, 1.50, 0.8));
-
-var cool = cubehelixLong(cubehelix$4(260, 0.75, 0.35), cubehelix$4(80, 1.50, 0.8));
-
-var rainbow = cubehelix$4();
-
-var slice$2 = Array.prototype.slice;
-
-var identity$4 = function (x) {
-  return x;
-};
-
-var top = 1;
-var right = 2;
-var bottom = 3;
-var left = 4;
-var epsilon = 1e-6;
-
-function translateX(x) {
-  return "translate(" + (x + 0.5) + ",0)";
-}
-
-function translateY(y) {
-  return "translate(0," + (y + 0.5) + ")";
-}
-
-function number$3(scale) {
-  return function (d) {
-    return +scale(d);
-  };
-}
-
-function center(scale) {
-  var offset = Math.max(0, scale.bandwidth() - 1) / 2; // Adjust for 0.5px offset.
-  if (scale.round()) offset = Math.round(offset);
-  return function (d) {
-    return +scale(d) + offset;
-  };
-}
-
-function entering() {
-  return !this.__axis;
-}
-
-function axis(orient, scale) {
-  var tickArguments = [],
-      tickValues = null,
-      tickFormat = null,
-      tickSizeInner = 6,
-      tickSizeOuter = 6,
-      tickPadding = 3,
-      k = orient === top || orient === left ? -1 : 1,
-      x = orient === left || orient === right ? "x" : "y",
-      transform = orient === top || orient === bottom ? translateX : translateY;
-
-  function axis(context) {
-    var values = tickValues == null ? scale.ticks ? scale.ticks.apply(scale, tickArguments) : scale.domain() : tickValues,
-        format = tickFormat == null ? scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity$4 : tickFormat,
-        spacing = Math.max(tickSizeInner, 0) + tickPadding,
-        range = scale.range(),
-        range0 = +range[0] + 0.5,
-        range1 = +range[range.length - 1] + 0.5,
-        position = (scale.bandwidth ? center : number$3)(scale.copy()),
-        selection = context.selection ? context.selection() : context,
-        path = selection.selectAll(".domain").data([null]),
-        tick = selection.selectAll(".tick").data(values, scale).order(),
-        tickExit = tick.exit(),
-        tickEnter = tick.enter().append("g").attr("class", "tick"),
-        line = tick.select("line"),
-        text = tick.select("text");
-
-    path = path.merge(path.enter().insert("path", ".tick").attr("class", "domain").attr("stroke", "#000"));
-
-    tick = tick.merge(tickEnter);
-
-    line = line.merge(tickEnter.append("line").attr("stroke", "#000").attr(x + "2", k * tickSizeInner));
-
-    text = text.merge(tickEnter.append("text").attr("fill", "#000").attr(x, k * spacing).attr("dy", orient === top ? "0em" : orient === bottom ? "0.71em" : "0.32em"));
-
-    if (context !== selection) {
-      path = path.transition(context);
-      tick = tick.transition(context);
-      line = line.transition(context);
-      text = text.transition(context);
-
-      tickExit = tickExit.transition(context).attr("opacity", epsilon).attr("transform", function (d) {
-        return isFinite(d = position(d)) ? transform(d) : this.getAttribute("transform");
-      });
-
-      tickEnter.attr("opacity", epsilon).attr("transform", function (d) {
-        var p = this.parentNode.__axis;return transform(p && isFinite(p = p(d)) ? p : position(d));
-      });
-    }
-
-    tickExit.remove();
-
-    path.attr("d", orient === left || orient == right ? "M" + k * tickSizeOuter + "," + range0 + "H0.5V" + range1 + "H" + k * tickSizeOuter : "M" + range0 + "," + k * tickSizeOuter + "V0.5H" + range1 + "V" + k * tickSizeOuter);
-
-    tick.attr("opacity", 1).attr("transform", function (d) {
-      return transform(position(d));
-    });
-
-    line.attr(x + "2", k * tickSizeInner);
-
-    text.attr(x, k * spacing).text(format);
-
-    selection.filter(entering).attr("fill", "none").attr("font-size", 10).attr("font-family", "sans-serif").attr("text-anchor", orient === right ? "start" : orient === left ? "end" : "middle");
-
-    selection.each(function () {
-      this.__axis = position;
-    });
-  }
-
-  axis.scale = function (_) {
-    return arguments.length ? (scale = _, axis) : scale;
-  };
-
-  axis.ticks = function () {
-    return tickArguments = slice$2.call(arguments), axis;
-  };
-
-  axis.tickArguments = function (_) {
-    return arguments.length ? (tickArguments = _ == null ? [] : slice$2.call(_), axis) : tickArguments.slice();
-  };
-
-  axis.tickValues = function (_) {
-    return arguments.length ? (tickValues = _ == null ? null : slice$2.call(_), axis) : tickValues && tickValues.slice();
-  };
-
-  axis.tickFormat = function (_) {
-    return arguments.length ? (tickFormat = _, axis) : tickFormat;
-  };
-
-  axis.tickSize = function (_) {
-    return arguments.length ? (tickSizeInner = tickSizeOuter = +_, axis) : tickSizeInner;
-  };
-
-  axis.tickSizeInner = function (_) {
-    return arguments.length ? (tickSizeInner = +_, axis) : tickSizeInner;
-  };
-
-  axis.tickSizeOuter = function (_) {
-    return arguments.length ? (tickSizeOuter = +_, axis) : tickSizeOuter;
-  };
-
-  axis.tickPadding = function (_) {
-    return arguments.length ? (tickPadding = +_, axis) : tickPadding;
-  };
-
-  return axis;
-}
-
-function axisTop(scale) {
-  return axis(top, scale);
-}
-
-function axisRight(scale) {
-  return axis(right, scale);
-}
-
-function axisBottom(scale) {
-  return axis(bottom, scale);
-}
-
-function axisLeft(scale) {
-  return axis(left, scale);
-}
-
-/**
- * requestAnimationFrame version: "0.0.23" Copyright (c) 2011-2012, Cyril Agosta ( cyril.agosta.dev@gmail.com) All Rights Reserved.
- * Available via the MIT license.
- * see: http://github.com/cagosta/requestAnimationFrame for details
- *
- * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
- * http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
- * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
- * MIT license
- *
- */
-
-(function (global) {
-
-    (function () {
-
-        if (global.requestAnimationFrame) {
-
-            return;
-        }
-
-        if (global.webkitRequestAnimationFrame) {
-            // Chrome <= 23, Safari <= 6.1, Blackberry 10
-
-            global.requestAnimationFrame = global['webkitRequestAnimationFrame'];
-            global.cancelAnimationFrame = global['webkitCancelAnimationFrame'] || global['webkitCancelRequestAnimationFrame'];
-            return;
-        }
-
-        // IE <= 9, Android <= 4.3, very old/rare browsers
-
-        var lastTime = 0;
-
-        global.requestAnimationFrame = function (callback) {
-
-            var currTime = new Date().getTime();
-
-            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-
-            var id = global.setTimeout(function () {
-
-                callback(currTime + timeToCall);
-            }, timeToCall);
-
-            lastTime = currTime + timeToCall;
-
-            return id; // return the id for cancellation capabilities
-        };
-
-        global.cancelAnimationFrame = function (id) {
-
-            clearTimeout(id);
-        };
-    })();
-
-    if (typeof define === 'function') {
-
-        define(function () {
-
-            return global.requestAnimationFrame;
-        });
-    }
-})(window);
-
-var renderQueue = function renderQueue(func) {
-  var _queue = [],
-      // data to be rendered
-  _rate = 1000,
-      // number of calls per frame
-  _invalidate = function _invalidate() {},
-      // invalidate last render queue
-  _clear = function _clear() {}; // clearing function
-
-  var rq = function rq(data) {
-    if (data) rq.data(data);
-    _invalidate();
-    _clear();
-    rq.render();
-  };
-
-  rq.render = function () {
-    var valid = true;
-    _invalidate = rq.invalidate = function () {
-      valid = false;
-    };
-
-    function doFrame() {
-      if (!valid) return true;
-      var chunk = _queue.splice(0, _rate);
-      chunk.map(func);
-      requestAnimationFrame(doFrame);
-    }
-
-    doFrame();
-  };
-
-  rq.data = function (data) {
-    _invalidate();
-    _queue = data.slice(0); // creates a copy of the data
-    return rq;
-  };
-
-  rq.add = function (data) {
-    _queue = _queue.concat(data);
-  };
-
-  rq.rate = function (value) {
-    if (!arguments.length) return _rate;
-    _rate = value;
-    return rq;
-  };
-
-  rq.remaining = function () {
-    return _queue.length;
-  };
-
-  // clear the canvas
-  rq.clear = function (func) {
-    if (!arguments.length) {
-      _clear();
-      return rq;
-    }
-    _clear = func;
-    return rq;
-  };
-
-  rq.invalidate = _invalidate;
-
-  return rq;
-};
-
-var without = function without(arr, items) {
-  items.forEach(function (el) {
-    delete arr[el];
-  });
-  return arr;
-};
-
-var d3_rebind = function d3_rebind(target, source, method) {
-  return function () {
-    var value = method.apply(source, arguments);
-    return value === source ? target : value;
-  };
-};
-
-var _rebind = function _rebind(target, source, method) {
-  target[method] = d3_rebind(target, source, source[method]);
-  return target;
-};
-
-var _functor = function _functor(v) {
-  return typeof v === 'function' ? v : function () {
-    return v;
-  };
-};
-
-var DefaultConfig = {
-  data: [],
-  highlighted: [],
-  dimensions: {},
-  dimensionTitleRotation: 0,
-  brushes: [],
-  brushed: false,
-  brushedColor: null,
-  alphaOnBrushed: 0.0,
-  mode: 'default',
-  rate: 20,
-  width: 600,
-  height: 300,
-  margin: { top: 24, right: 20, bottom: 12, left: 20 },
-  nullValueSeparator: 'undefined', // set to "top" or "bottom"
-  nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
-  color: '#069',
-  composite: 'source-over',
-  alpha: 0.7,
-  bundlingStrength: 0.5,
-  bundleDimension: null,
-  smoothness: 0.0,
-  showControlPoints: false,
-  hideAxis: [],
-  flipAxes: [],
-  animationTime: 1100, // How long it takes to flip the axis when you double click
-  rotateLabels: false
-};
-
-var getset = function getset(obj, state, events, side_effects) {
-  keys(state).forEach(function (key) {
-    obj[key] = function (x) {
-      if (!arguments.length) {
-        return state[key];
-      }
-      if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
-        console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
-        x = pc.applyDimensionDefaults(x);
-      }
-      var old = state[key];
-      state[key] = x;
-      side_effects.call(key, obj, { value: x, previous: old });
-      events.call(key, obj, { value: x, previous: old });
-      return obj;
-    };
-  });
-};
-
-var w$1 = function w(config) {
-  return config.width - config.margin.right - config.margin.left;
-};
-
-var computeClusterCentroids = function computeClusterCentroids(config, d) {
-  var clusterCentroids = map();
-  var clusterCounts = map();
-  // determine clusterCounts
-  config.data.forEach(function (row) {
-    var scaled = config.dimensions[d].yscale(row[d]);
-    if (!clusterCounts.has(scaled)) {
-      clusterCounts.set(scaled, 0);
-    }
-    var count = clusterCounts.get(scaled);
-    clusterCounts.set(scaled, count + 1);
-  });
-
-  config.data.forEach(function (row) {
-    keys(config.dimensions).map(function (p, i) {
-      var scaled = config.dimensions[d].yscale(row[d]);
-      if (!clusterCentroids.has(scaled)) {
-        var _map = map();
-        clusterCentroids.set(scaled, _map);
-      }
-      if (!clusterCentroids.get(scaled).has(p)) {
-        clusterCentroids.get(scaled).set(p, 0);
-      }
-      var value = clusterCentroids.get(scaled).get(p);
-      value += config.dimensions[p].yscale(row[p]) / clusterCounts.get(scaled);
-      clusterCentroids.get(scaled).set(p, value);
-    });
-  });
-
-  return clusterCentroids;
-};
-
-function nopropagation() {
-  event.stopImmediatePropagation();
-}
-
-var noevent = function () {
-  event.preventDefault();
-  event.stopImmediatePropagation();
-};
-
-var nodrag = function (view) {
-  var root = view.document.documentElement,
-      selection$$1 = select(view).on("dragstart.drag", noevent, true);
-  if ("onselectstart" in root) {
-    selection$$1.on("selectstart.drag", noevent, true);
-  } else {
-    root.__noselect = root.style.MozUserSelect;
-    root.style.MozUserSelect = "none";
-  }
-};
-
-function yesdrag(view, noclick) {
-  var root = view.document.documentElement,
-      selection$$1 = select(view).on("dragstart.drag", null);
-  if (noclick) {
-    selection$$1.on("click.drag", noevent, true);
-    setTimeout(function () {
-      selection$$1.on("click.drag", null);
-    }, 0);
-  }
-  if ("onselectstart" in root) {
-    selection$$1.on("selectstart.drag", null);
-  } else {
-    root.style.MozUserSelect = root.__noselect;
-    delete root.__noselect;
-  }
-}
-
-var constant$4 = function (x) {
-  return function () {
-    return x;
-  };
-};
-
-function DragEvent(target, type, subject, id, active, x, y, dx, dy, dispatch) {
-  this.target = target;
-  this.type = type;
-  this.subject = subject;
-  this.identifier = id;
-  this.active = active;
-  this.x = x;
-  this.y = y;
-  this.dx = dx;
-  this.dy = dy;
-  this._ = dispatch;
-}
-
-DragEvent.prototype.on = function () {
-  var value = this._.on.apply(this._, arguments);
-  return value === this._ ? this : value;
-};
-
-function defaultFilter$1() {
-  return !event.button;
-}
-
-function defaultContainer() {
-  return this.parentNode;
-}
-
-function defaultSubject(d) {
-  return d == null ? { x: event.x, y: event.y } : d;
-}
-
-function defaultTouchable() {
-  return "ontouchstart" in this;
-}
-
-var drag = function () {
-  var filter = defaultFilter$1,
-      container = defaultContainer,
-      subject = defaultSubject,
-      touchable = defaultTouchable,
-      gestures = {},
-      listeners = dispatch("start", "drag", "end"),
-      active = 0,
-      mousedownx,
-      mousedowny,
-      mousemoving,
-      touchending,
-      clickDistance2 = 0;
-
-  function drag(selection$$1) {
-    selection$$1.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
-  }
-
-  function mousedowned() {
-    if (touchending || !filter.apply(this, arguments)) return;
-    var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
-    if (!gesture) return;
-    select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
-    nodrag(event.view);
-    nopropagation();
-    mousemoving = false;
-    mousedownx = event.clientX;
-    mousedowny = event.clientY;
-    gesture("start");
-  }
-
-  function mousemoved() {
-    noevent();
-    if (!mousemoving) {
-      var dx = event.clientX - mousedownx,
-          dy = event.clientY - mousedowny;
-      mousemoving = dx * dx + dy * dy > clickDistance2;
-    }
-    gestures.mouse("drag");
-  }
-
-  function mouseupped() {
-    select(event.view).on("mousemove.drag mouseup.drag", null);
-    yesdrag(event.view, mousemoving);
-    noevent();
-    gestures.mouse("end");
-  }
-
-  function touchstarted() {
-    if (!filter.apply(this, arguments)) return;
-    var touches$$1 = event.changedTouches,
-        c = container.apply(this, arguments),
-        n = touches$$1.length,
-        i,
-        gesture;
-
-    for (i = 0; i < n; ++i) {
-      if (gesture = beforestart(touches$$1[i].identifier, c, touch, this, arguments)) {
-        nopropagation();
-        gesture("start");
-      }
-    }
-  }
-
-  function touchmoved() {
-    var touches$$1 = event.changedTouches,
-        n = touches$$1.length,
-        i,
-        gesture;
-
-    for (i = 0; i < n; ++i) {
-      if (gesture = gestures[touches$$1[i].identifier]) {
-        noevent();
-        gesture("drag");
-      }
-    }
-  }
-
-  function touchended() {
-    var touches$$1 = event.changedTouches,
-        n = touches$$1.length,
-        i,
-        gesture;
-
-    if (touchending) clearTimeout(touchending);
-    touchending = setTimeout(function () {
-      touchending = null;
-    }, 500); // Ghost clicks are delayed!
-    for (i = 0; i < n; ++i) {
-      if (gesture = gestures[touches$$1[i].identifier]) {
-        nopropagation();
-        gesture("end");
-      }
-    }
-  }
-
-  function beforestart(id, container, point$$1, that, args) {
-    var p = point$$1(container, id),
-        s,
-        dx,
-        dy,
-        sublisteners = listeners.copy();
-
-    if (!customEvent(new DragEvent(drag, "beforestart", s, id, active, p[0], p[1], 0, 0, sublisteners), function () {
-      if ((event.subject = s = subject.apply(that, args)) == null) return false;
-      dx = s.x - p[0] || 0;
-      dy = s.y - p[1] || 0;
-      return true;
-    })) return;
-
-    return function gesture(type) {
-      var p0 = p,
-          n;
-      switch (type) {
-        case "start":
-          gestures[id] = gesture, n = active++;break;
-        case "end":
-          delete gestures[id], --active; // nobreak
-        case "drag":
-          p = point$$1(container, id), n = active;break;
-      }
-      customEvent(new DragEvent(drag, type, s, id, n, p[0] + dx, p[1] + dy, p[0] - p0[0], p[1] - p0[1], sublisteners), sublisteners.apply, sublisteners, [type, that, args]);
-    };
-  }
-
-  drag.filter = function (_) {
-    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$4(!!_), drag) : filter;
-  };
-
-  drag.container = function (_) {
-    return arguments.length ? (container = typeof _ === "function" ? _ : constant$4(_), drag) : container;
-  };
-
-  drag.subject = function (_) {
-    return arguments.length ? (subject = typeof _ === "function" ? _ : constant$4(_), drag) : subject;
-  };
-
-  drag.touchable = function (_) {
-    return arguments.length ? (touchable = typeof _ === "function" ? _ : constant$4(!!_), drag) : touchable;
-  };
-
-  drag.on = function () {
-    var value = listeners.on.apply(listeners, arguments);
-    return value === listeners ? drag : value;
-  };
-
-  drag.clickDistance = function (_) {
-    return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
-  };
-
-  return drag;
-};
 
 var frame = 0;
 var timeout = 0;
@@ -5506,36 +3017,36 @@ function tweenValue(transition, name, value) {
   };
 }
 
-var define$3 = function (constructor, factory, prototype) {
+var define$2 = function (constructor, factory, prototype) {
   constructor.prototype = factory.prototype = prototype;
   prototype.constructor = constructor;
 };
 
-function extend$2(parent, definition) {
+function extend$1(parent, definition) {
   var prototype = Object.create(parent.prototype);
   for (var key in definition) {
     prototype[key] = definition[key];
   }return prototype;
 }
 
-function Color$2() {}
+function Color$1() {}
 
-var _darker$2 = 0.7;
-var _brighter$2 = 1 / _darker$2;
+var _darker$1 = 0.7;
+var _brighter$1 = 1 / _darker$1;
 
-var reI$2 = "\\s*([+-]?\\d+)\\s*";
-var reN$2 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*";
-var reP$2 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*";
-var reHex3$2 = /^#([0-9a-f]{3})$/;
-var reHex6$2 = /^#([0-9a-f]{6})$/;
-var reRgbInteger$2 = new RegExp("^rgb\\(" + [reI$2, reI$2, reI$2] + "\\)$");
-var reRgbPercent$2 = new RegExp("^rgb\\(" + [reP$2, reP$2, reP$2] + "\\)$");
-var reRgbaInteger$2 = new RegExp("^rgba\\(" + [reI$2, reI$2, reI$2, reN$2] + "\\)$");
-var reRgbaPercent$2 = new RegExp("^rgba\\(" + [reP$2, reP$2, reP$2, reN$2] + "\\)$");
-var reHslPercent$2 = new RegExp("^hsl\\(" + [reN$2, reP$2, reP$2] + "\\)$");
-var reHslaPercent$2 = new RegExp("^hsla\\(" + [reN$2, reP$2, reP$2, reN$2] + "\\)$");
+var reI$1 = "\\s*([+-]?\\d+)\\s*";
+var reN$1 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*";
+var reP$1 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*";
+var reHex3$1 = /^#([0-9a-f]{3})$/;
+var reHex6$1 = /^#([0-9a-f]{6})$/;
+var reRgbInteger$1 = new RegExp("^rgb\\(" + [reI$1, reI$1, reI$1] + "\\)$");
+var reRgbPercent$1 = new RegExp("^rgb\\(" + [reP$1, reP$1, reP$1] + "\\)$");
+var reRgbaInteger$1 = new RegExp("^rgba\\(" + [reI$1, reI$1, reI$1, reN$1] + "\\)$");
+var reRgbaPercent$1 = new RegExp("^rgba\\(" + [reP$1, reP$1, reP$1, reN$1] + "\\)$");
+var reHslPercent$1 = new RegExp("^hsl\\(" + [reN$1, reP$1, reP$1] + "\\)$");
+var reHslaPercent$1 = new RegExp("^hsla\\(" + [reN$1, reP$1, reP$1, reN$1] + "\\)$");
 
-var named$2 = {
+var named$1 = {
   aliceblue: 0xf0f8ff,
   antiquewhite: 0xfaebd7,
   aqua: 0x00ffff,
@@ -5686,7 +3197,7 @@ var named$2 = {
   yellowgreen: 0x9acd32
 };
 
-define$3(Color$2, color$2, {
+define$2(Color$1, color$1, {
   displayable: function displayable() {
     return this.rgb().displayable();
   },
@@ -5695,55 +3206,55 @@ define$3(Color$2, color$2, {
   }
 });
 
-function color$2(format) {
+function color$1(format) {
   var m;
   format = (format + "").trim().toLowerCase();
-  return (m = reHex3$2.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$2(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
-  ) : (m = reHex6$2.exec(format)) ? rgbn$2(parseInt(m[1], 16) // #ff0000
-  ) : (m = reRgbInteger$2.exec(format)) ? new Rgb$2(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
-  : (m = reRgbPercent$2.exec(format)) ? new Rgb$2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
-  : (m = reRgbaInteger$2.exec(format)) ? rgba$2(m[1], m[2], m[3], m[4] // rgba(255, 0, 0, 1)
-  ) : (m = reRgbaPercent$2.exec(format)) ? rgba$2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4] // rgb(100%, 0%, 0%, 1)
-  ) : (m = reHslPercent$2.exec(format)) ? hsla$2(m[1], m[2] / 100, m[3] / 100, 1 // hsl(120, 50%, 50%)
-  ) : (m = reHslaPercent$2.exec(format)) ? hsla$2(m[1], m[2] / 100, m[3] / 100, m[4] // hsla(120, 50%, 50%, 1)
-  ) : named$2.hasOwnProperty(format) ? rgbn$2(named$2[format]) : format === "transparent" ? new Rgb$2(NaN, NaN, NaN, 0) : null;
+  return (m = reHex3$1.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$1(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
+  ) : (m = reHex6$1.exec(format)) ? rgbn$1(parseInt(m[1], 16) // #ff0000
+  ) : (m = reRgbInteger$1.exec(format)) ? new Rgb$1(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
+  : (m = reRgbPercent$1.exec(format)) ? new Rgb$1(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
+  : (m = reRgbaInteger$1.exec(format)) ? rgba$1(m[1], m[2], m[3], m[4] // rgba(255, 0, 0, 1)
+  ) : (m = reRgbaPercent$1.exec(format)) ? rgba$1(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4] // rgb(100%, 0%, 0%, 1)
+  ) : (m = reHslPercent$1.exec(format)) ? hsla$1(m[1], m[2] / 100, m[3] / 100, 1 // hsl(120, 50%, 50%)
+  ) : (m = reHslaPercent$1.exec(format)) ? hsla$1(m[1], m[2] / 100, m[3] / 100, m[4] // hsla(120, 50%, 50%, 1)
+  ) : named$1.hasOwnProperty(format) ? rgbn$1(named$1[format]) : format === "transparent" ? new Rgb$1(NaN, NaN, NaN, 0) : null;
 }
 
-function rgbn$2(n) {
-  return new Rgb$2(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
+function rgbn$1(n) {
+  return new Rgb$1(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
 }
 
-function rgba$2(r, g, b, a) {
+function rgba$1(r, g, b, a) {
   if (a <= 0) r = g = b = NaN;
-  return new Rgb$2(r, g, b, a);
+  return new Rgb$1(r, g, b, a);
 }
 
-function rgbConvert$2(o) {
-  if (!(o instanceof Color$2)) o = color$2(o);
-  if (!o) return new Rgb$2();
+function rgbConvert$1(o) {
+  if (!(o instanceof Color$1)) o = color$1(o);
+  if (!o) return new Rgb$1();
   o = o.rgb();
-  return new Rgb$2(o.r, o.g, o.b, o.opacity);
+  return new Rgb$1(o.r, o.g, o.b, o.opacity);
 }
 
-function rgb$2(r, g, b, opacity) {
-  return arguments.length === 1 ? rgbConvert$2(r) : new Rgb$2(r, g, b, opacity == null ? 1 : opacity);
+function rgb$1(r, g, b, opacity) {
+  return arguments.length === 1 ? rgbConvert$1(r) : new Rgb$1(r, g, b, opacity == null ? 1 : opacity);
 }
 
-function Rgb$2(r, g, b, opacity) {
+function Rgb$1(r, g, b, opacity) {
   this.r = +r;
   this.g = +g;
   this.b = +b;
   this.opacity = +opacity;
 }
 
-define$3(Rgb$2, rgb$2, extend$2(Color$2, {
+define$2(Rgb$1, rgb$1, extend$1(Color$1, {
   brighter: function brighter(k) {
-    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
-    return new Rgb$2(this.r * k, this.g * k, this.b * k, this.opacity);
+    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
+    return new Rgb$1(this.r * k, this.g * k, this.b * k, this.opacity);
   },
   darker: function darker(k) {
-    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
-    return new Rgb$2(this.r * k, this.g * k, this.b * k, this.opacity);
+    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
+    return new Rgb$1(this.r * k, this.g * k, this.b * k, this.opacity);
   },
   rgb: function rgb() {
     return this;
@@ -5757,16 +3268,16 @@ define$3(Rgb$2, rgb$2, extend$2(Color$2, {
   }
 }));
 
-function hsla$2(h, s, l, a) {
+function hsla$1(h, s, l, a) {
   if (a <= 0) h = s = l = NaN;else if (l <= 0 || l >= 1) h = s = NaN;else if (s <= 0) h = NaN;
-  return new Hsl$2(h, s, l, a);
+  return new Hsl$1(h, s, l, a);
 }
 
-function hslConvert$2(o) {
-  if (o instanceof Hsl$2) return new Hsl$2(o.h, o.s, o.l, o.opacity);
-  if (!(o instanceof Color$2)) o = color$2(o);
-  if (!o) return new Hsl$2();
-  if (o instanceof Hsl$2) return o;
+function hslConvert$1(o) {
+  if (o instanceof Hsl$1) return new Hsl$1(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Color$1)) o = color$1(o);
+  if (!o) return new Hsl$1();
+  if (o instanceof Hsl$1) return o;
   o = o.rgb();
   var r = o.r / 255,
       g = o.g / 255,
@@ -5783,28 +3294,28 @@ function hslConvert$2(o) {
   } else {
     s = l > 0 && l < 1 ? 0 : h;
   }
-  return new Hsl$2(h, s, l, o.opacity);
+  return new Hsl$1(h, s, l, o.opacity);
 }
 
-function hsl$4(h, s, l, opacity) {
-  return arguments.length === 1 ? hslConvert$2(h) : new Hsl$2(h, s, l, opacity == null ? 1 : opacity);
+function hsl$3(h, s, l, opacity) {
+  return arguments.length === 1 ? hslConvert$1(h) : new Hsl$1(h, s, l, opacity == null ? 1 : opacity);
 }
 
-function Hsl$2(h, s, l, opacity) {
+function Hsl$1(h, s, l, opacity) {
   this.h = +h;
   this.s = +s;
   this.l = +l;
   this.opacity = +opacity;
 }
 
-define$3(Hsl$2, hsl$4, extend$2(Color$2, {
+define$2(Hsl$1, hsl$3, extend$1(Color$1, {
   brighter: function brighter(k) {
-    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
-    return new Hsl$2(this.h, this.s, this.l * k, this.opacity);
+    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
+    return new Hsl$1(this.h, this.s, this.l * k, this.opacity);
   },
   darker: function darker(k) {
-    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
-    return new Hsl$2(this.h, this.s, this.l * k, this.opacity);
+    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
+    return new Hsl$1(this.h, this.s, this.l * k, this.opacity);
   },
   rgb: function rgb() {
     var h = this.h % 360 + (this.h < 0) * 360,
@@ -5812,7 +3323,7 @@ define$3(Hsl$2, hsl$4, extend$2(Color$2, {
         l = this.l,
         m2 = l + (l < 0.5 ? l : 1 - l) * s,
         m1 = 2 * l - m2;
-    return new Rgb$2(hsl2rgb$2(h >= 240 ? h - 240 : h + 120, m1, m2), hsl2rgb$2(h, m1, m2), hsl2rgb$2(h < 120 ? h + 240 : h - 120, m1, m2), this.opacity);
+    return new Rgb$1(hsl2rgb$1(h >= 240 ? h - 240 : h + 120, m1, m2), hsl2rgb$1(h, m1, m2), hsl2rgb$1(h < 120 ? h + 240 : h - 120, m1, m2), this.opacity);
   },
   displayable: function displayable() {
     return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
@@ -5820,171 +3331,171 @@ define$3(Hsl$2, hsl$4, extend$2(Color$2, {
 }));
 
 /* From FvD 13.37, CSS Color Module Level 3 */
-function hsl2rgb$2(h, m1, m2) {
+function hsl2rgb$1(h, m1, m2) {
   return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
 }
 
-var deg2rad$2 = Math.PI / 180;
-var rad2deg$2 = 180 / Math.PI;
+var deg2rad$1 = Math.PI / 180;
+var rad2deg$1 = 180 / Math.PI;
 
-var Kn$2 = 18;
-var Xn$2 = 0.950470;
-var Yn$2 = 1;
-var Zn$2 = 1.088830;
-var t0$3 = 4 / 29;
-var t1$3 = 6 / 29;
-var t2$2 = 3 * t1$3 * t1$3;
-var t3$2 = t1$3 * t1$3 * t1$3;
+var Kn$1 = 18;
+var Xn$1 = 0.950470;
+var Yn$1 = 1;
+var Zn$1 = 1.088830;
+var t0$1 = 4 / 29;
+var t1$1 = 6 / 29;
+var t2$1 = 3 * t1$1 * t1$1;
+var t3$1 = t1$1 * t1$1 * t1$1;
 
-function labConvert$2(o) {
-  if (o instanceof Lab$2) return new Lab$2(o.l, o.a, o.b, o.opacity);
-  if (o instanceof Hcl$2) {
-    var h = o.h * deg2rad$2;
-    return new Lab$2(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
+function labConvert$1(o) {
+  if (o instanceof Lab$1) return new Lab$1(o.l, o.a, o.b, o.opacity);
+  if (o instanceof Hcl$1) {
+    var h = o.h * deg2rad$1;
+    return new Lab$1(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
   }
-  if (!(o instanceof Rgb$2)) o = rgbConvert$2(o);
-  var b = rgb2xyz$2(o.r),
-      a = rgb2xyz$2(o.g),
-      l = rgb2xyz$2(o.b),
-      x = xyz2lab$2((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn$2),
-      y = xyz2lab$2((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn$2),
-      z = xyz2lab$2((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn$2);
-  return new Lab$2(116 * y - 16, 500 * (x - y), 200 * (y - z), o.opacity);
+  if (!(o instanceof Rgb$1)) o = rgbConvert$1(o);
+  var b = rgb2xyz$1(o.r),
+      a = rgb2xyz$1(o.g),
+      l = rgb2xyz$1(o.b),
+      x = xyz2lab$1((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn$1),
+      y = xyz2lab$1((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn$1),
+      z = xyz2lab$1((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn$1);
+  return new Lab$1(116 * y - 16, 500 * (x - y), 200 * (y - z), o.opacity);
 }
 
-function lab$3(l, a, b, opacity) {
-  return arguments.length === 1 ? labConvert$2(l) : new Lab$2(l, a, b, opacity == null ? 1 : opacity);
+function lab$2(l, a, b, opacity) {
+  return arguments.length === 1 ? labConvert$1(l) : new Lab$1(l, a, b, opacity == null ? 1 : opacity);
 }
 
-function Lab$2(l, a, b, opacity) {
+function Lab$1(l, a, b, opacity) {
   this.l = +l;
   this.a = +a;
   this.b = +b;
   this.opacity = +opacity;
 }
 
-define$3(Lab$2, lab$3, extend$2(Color$2, {
+define$2(Lab$1, lab$2, extend$1(Color$1, {
   brighter: function brighter(k) {
-    return new Lab$2(this.l + Kn$2 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+    return new Lab$1(this.l + Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
   },
   darker: function darker(k) {
-    return new Lab$2(this.l - Kn$2 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+    return new Lab$1(this.l - Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
   },
   rgb: function rgb() {
     var y = (this.l + 16) / 116,
         x = isNaN(this.a) ? y : y + this.a / 500,
         z = isNaN(this.b) ? y : y - this.b / 200;
-    y = Yn$2 * lab2xyz$2(y);
-    x = Xn$2 * lab2xyz$2(x);
-    z = Zn$2 * lab2xyz$2(z);
-    return new Rgb$2(xyz2rgb$2(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
-    xyz2rgb$2(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb$2(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
+    y = Yn$1 * lab2xyz$1(y);
+    x = Xn$1 * lab2xyz$1(x);
+    z = Zn$1 * lab2xyz$1(z);
+    return new Rgb$1(xyz2rgb$1(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
+    xyz2rgb$1(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb$1(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
   }
 }));
 
-function xyz2lab$2(t) {
-  return t > t3$2 ? Math.pow(t, 1 / 3) : t / t2$2 + t0$3;
+function xyz2lab$1(t) {
+  return t > t3$1 ? Math.pow(t, 1 / 3) : t / t2$1 + t0$1;
 }
 
-function lab2xyz$2(t) {
-  return t > t1$3 ? t * t * t : t2$2 * (t - t0$3);
+function lab2xyz$1(t) {
+  return t > t1$1 ? t * t * t : t2$1 * (t - t0$1);
 }
 
-function xyz2rgb$2(x) {
+function xyz2rgb$1(x) {
   return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
 }
 
-function rgb2xyz$2(x) {
+function rgb2xyz$1(x) {
   return (x /= 255) <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
 }
 
-function hclConvert$2(o) {
-  if (o instanceof Hcl$2) return new Hcl$2(o.h, o.c, o.l, o.opacity);
-  if (!(o instanceof Lab$2)) o = labConvert$2(o);
-  var h = Math.atan2(o.b, o.a) * rad2deg$2;
-  return new Hcl$2(h < 0 ? h + 360 : h, Math.sqrt(o.a * o.a + o.b * o.b), o.l, o.opacity);
+function hclConvert$1(o) {
+  if (o instanceof Hcl$1) return new Hcl$1(o.h, o.c, o.l, o.opacity);
+  if (!(o instanceof Lab$1)) o = labConvert$1(o);
+  var h = Math.atan2(o.b, o.a) * rad2deg$1;
+  return new Hcl$1(h < 0 ? h + 360 : h, Math.sqrt(o.a * o.a + o.b * o.b), o.l, o.opacity);
 }
 
-function hcl$4(h, c, l, opacity) {
-  return arguments.length === 1 ? hclConvert$2(h) : new Hcl$2(h, c, l, opacity == null ? 1 : opacity);
+function hcl$3(h, c, l, opacity) {
+  return arguments.length === 1 ? hclConvert$1(h) : new Hcl$1(h, c, l, opacity == null ? 1 : opacity);
 }
 
-function Hcl$2(h, c, l, opacity) {
+function Hcl$1(h, c, l, opacity) {
   this.h = +h;
   this.c = +c;
   this.l = +l;
   this.opacity = +opacity;
 }
 
-define$3(Hcl$2, hcl$4, extend$2(Color$2, {
+define$2(Hcl$1, hcl$3, extend$1(Color$1, {
   brighter: function brighter(k) {
-    return new Hcl$2(this.h, this.c, this.l + Kn$2 * (k == null ? 1 : k), this.opacity);
+    return new Hcl$1(this.h, this.c, this.l + Kn$1 * (k == null ? 1 : k), this.opacity);
   },
   darker: function darker(k) {
-    return new Hcl$2(this.h, this.c, this.l - Kn$2 * (k == null ? 1 : k), this.opacity);
+    return new Hcl$1(this.h, this.c, this.l - Kn$1 * (k == null ? 1 : k), this.opacity);
   },
   rgb: function rgb() {
-    return labConvert$2(this).rgb();
+    return labConvert$1(this).rgb();
   }
 }));
 
-var A$2 = -0.14861;
-var B$2 = +1.78277;
-var C$2 = -0.29227;
-var D$2 = -0.90649;
-var E$2 = +1.97294;
-var ED$2 = E$2 * D$2;
-var EB$2 = E$2 * B$2;
-var BC_DA$2 = B$2 * C$2 - D$2 * A$2;
+var A$1 = -0.14861;
+var B$1 = +1.78277;
+var C$1 = -0.29227;
+var D$1 = -0.90649;
+var E$1 = +1.97294;
+var ED$1 = E$1 * D$1;
+var EB$1 = E$1 * B$1;
+var BC_DA$1 = B$1 * C$1 - D$1 * A$1;
 
-function cubehelixConvert$2(o) {
-  if (o instanceof Cubehelix$2) return new Cubehelix$2(o.h, o.s, o.l, o.opacity);
-  if (!(o instanceof Rgb$2)) o = rgbConvert$2(o);
+function cubehelixConvert$1(o) {
+  if (o instanceof Cubehelix$1) return new Cubehelix$1(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Rgb$1)) o = rgbConvert$1(o);
   var r = o.r / 255,
       g = o.g / 255,
       b = o.b / 255,
-      l = (BC_DA$2 * b + ED$2 * r - EB$2 * g) / (BC_DA$2 + ED$2 - EB$2),
+      l = (BC_DA$1 * b + ED$1 * r - EB$1 * g) / (BC_DA$1 + ED$1 - EB$1),
       bl = b - l,
-      k = (E$2 * (g - l) - C$2 * bl) / D$2,
-      s = Math.sqrt(k * k + bl * bl) / (E$2 * l * (1 - l)),
+      k = (E$1 * (g - l) - C$1 * bl) / D$1,
+      s = Math.sqrt(k * k + bl * bl) / (E$1 * l * (1 - l)),
       // NaN if l=0 or l=1
-  h = s ? Math.atan2(k, bl) * rad2deg$2 - 120 : NaN;
-  return new Cubehelix$2(h < 0 ? h + 360 : h, s, l, o.opacity);
+  h = s ? Math.atan2(k, bl) * rad2deg$1 - 120 : NaN;
+  return new Cubehelix$1(h < 0 ? h + 360 : h, s, l, o.opacity);
 }
 
-function cubehelix$5(h, s, l, opacity) {
-  return arguments.length === 1 ? cubehelixConvert$2(h) : new Cubehelix$2(h, s, l, opacity == null ? 1 : opacity);
+function cubehelix$3(h, s, l, opacity) {
+  return arguments.length === 1 ? cubehelixConvert$1(h) : new Cubehelix$1(h, s, l, opacity == null ? 1 : opacity);
 }
 
-function Cubehelix$2(h, s, l, opacity) {
+function Cubehelix$1(h, s, l, opacity) {
   this.h = +h;
   this.s = +s;
   this.l = +l;
   this.opacity = +opacity;
 }
 
-define$3(Cubehelix$2, cubehelix$5, extend$2(Color$2, {
+define$2(Cubehelix$1, cubehelix$3, extend$1(Color$1, {
   brighter: function brighter(k) {
-    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
-    return new Cubehelix$2(this.h, this.s, this.l * k, this.opacity);
+    k = k == null ? _brighter$1 : Math.pow(_brighter$1, k);
+    return new Cubehelix$1(this.h, this.s, this.l * k, this.opacity);
   },
   darker: function darker(k) {
-    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
-    return new Cubehelix$2(this.h, this.s, this.l * k, this.opacity);
+    k = k == null ? _darker$1 : Math.pow(_darker$1, k);
+    return new Cubehelix$1(this.h, this.s, this.l * k, this.opacity);
   },
   rgb: function rgb() {
-    var h = isNaN(this.h) ? 0 : (this.h + 120) * deg2rad$2,
+    var h = isNaN(this.h) ? 0 : (this.h + 120) * deg2rad$1,
         l = +this.l,
         a = isNaN(this.s) ? 0 : this.s * l * (1 - l),
         cosh = Math.cos(h),
         sinh = Math.sin(h);
-    return new Rgb$2(255 * (l + a * (A$2 * cosh + B$2 * sinh)), 255 * (l + a * (C$2 * cosh + D$2 * sinh)), 255 * (l + a * (E$2 * cosh)), this.opacity);
+    return new Rgb$1(255 * (l + a * (A$1 * cosh + B$1 * sinh)), 255 * (l + a * (C$1 * cosh + D$1 * sinh)), 255 * (l + a * (E$1 * cosh)), this.opacity);
   }
 }));
 
-var interpolate$1 = function (a, b) {
+var interpolate = function (a, b) {
     var c;
-    return (typeof b === "number" ? interpolateNumber : b instanceof color$2 ? interpolateRgb : (c = color$2(b)) ? (b = c, interpolateRgb) : interpolateString)(a, b);
+    return (typeof b === "number" ? reinterpolate : b instanceof color$1 ? interpolateRgb : (c = color$1(b)) ? (b = c, interpolateRgb) : interpolateString)(a, b);
 };
 
 function attrRemove$1(name) {
@@ -6039,7 +3550,7 @@ function attrFunctionNS$1(fullname, interpolate$$1, value) {
 
 var transition_attr = function (name, value) {
   var fullname = namespace(name),
-      i = fullname === "transform" ? interpolateTransformSvg : interpolate$1;
+      i = fullname === "transform" ? interpolateTransformSvg : interpolate;
   return this.attrTween(name, typeof value === "function" ? (fullname.local ? attrFunctionNS$1 : attrFunction$1)(fullname, i, tweenValue(this, "attr." + name, value)) : value == null ? (fullname.local ? attrRemoveNS$1 : attrRemove$1)(fullname) : (fullname.local ? attrConstantNS$1 : attrConstant$1)(fullname, i, value + ""));
 };
 
@@ -6283,7 +3794,7 @@ function styleFunction$1(name, interpolate$$1, value) {
 }
 
 var transition_style = function (name, value, priority) {
-    var i = (name += "") === "transform" ? interpolateTransformCss : interpolate$1;
+    var i = (name += "") === "transform" ? interpolateTransformCss : interpolate;
     return value == null ? this.styleTween(name, styleRemove$1(name, i)).on("end.style." + name, styleRemoveEnd(name)) : this.styleTween(name, typeof value === "function" ? styleFunction$1(name, i, tweenValue(this, "style." + name, value)) : styleConstant$1(name, i, value + ""), priority);
 };
 
@@ -6396,7 +3907,7 @@ function cubicInOut(t) {
   return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
 }
 
-var exponent$1 = 3;
+var exponent = 3;
 
 var polyIn = function custom(e) {
   e = +e;
@@ -6408,7 +3919,7 @@ var polyIn = function custom(e) {
   polyIn.exponent = custom;
 
   return polyIn;
-}(exponent$1);
+}(exponent);
 
 var polyOut = function custom(e) {
   e = +e;
@@ -6420,7 +3931,7 @@ var polyOut = function custom(e) {
   polyOut.exponent = custom;
 
   return polyOut;
-}(exponent$1);
+}(exponent);
 
 var polyInOut = function custom(e) {
   e = +e;
@@ -6432,7 +3943,7 @@ var polyInOut = function custom(e) {
   polyInOut.exponent = custom;
 
   return polyInOut;
-}(exponent$1);
+}(exponent);
 
 var overshoot = 1.70158;
 
@@ -6567,7 +4078,7 @@ var selection_transition = function (name) {
 selection.prototype.interrupt = selection_interrupt;
 selection.prototype.transition = selection_transition;
 
-var constant$5 = function (x) {
+var constant$4 = function (x) {
   return function () {
     return x;
   };
@@ -6763,7 +4274,7 @@ function brush$1(dim) {
             emit = emitter(that, arguments),
             selection0 = state.selection,
             selection1 = dim.input(typeof selection$$1 === "function" ? selection$$1.apply(this, arguments) : selection$$1, state.extent),
-            i = interpolate(selection0, selection1);
+            i = interpolateValue(selection0, selection1);
 
         function tween(t) {
           state.selection = t === 1 && empty$1(selection1) ? null : i(t);
@@ -7086,11 +4597,11 @@ function brush$1(dim) {
   }
 
   brush.extent = function (_) {
-    return arguments.length ? (extent = typeof _ === "function" ? _ : constant$5([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), brush) : extent;
+    return arguments.length ? (extent = typeof _ === "function" ? _ : constant$4([[+_[0][0], +_[0][1]], [+_[1][0], +_[1][1]]]), brush) : extent;
   };
 
   brush.filter = function (_) {
-    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$5(!!_), brush) : filter;
+    return arguments.length ? (filter = typeof _ === "function" ? _ : constant$4(!!_), brush) : filter;
   };
 
   brush.handleSize = function (_) {
@@ -7627,8 +5138,8 @@ var install2DStrums = function install2DStrums(brushGroup, config, pc, events, x
 
 var pi$1 = Math.PI;
 var tau$1 = 2 * pi$1;
-var epsilon$1 = 1e-6;
-var tauEpsilon = tau$1 - epsilon$1;
+var epsilon = 1e-6;
+var tauEpsilon = tau$1 - epsilon;
 
 function Path() {
   this._x0 = this._y0 = // start of current subpath
@@ -7679,12 +5190,12 @@ Path.prototype = path.prototype = {
     }
 
     // Or, is (x1,y1) coincident with (x0,y0)? Do nothing.
-    else if (!(l01_2 > epsilon$1)) {}
+    else if (!(l01_2 > epsilon)) {}
 
       // Or, are (x0,y0), (x1,y1) and (x2,y2) collinear?
       // Equivalently, is (x1,y1) coincident with (x2,y2)?
       // Or, is the radius zero? Line to (x1,y1).
-      else if (!(Math.abs(y01 * x21 - y21 * x01) > epsilon$1) || !r) {
+      else if (!(Math.abs(y01 * x21 - y21 * x01) > epsilon) || !r) {
           this._ += "L" + (this._x1 = x1) + "," + (this._y1 = y1);
         }
 
@@ -7701,7 +5212,7 @@ Path.prototype = path.prototype = {
                 t21 = l / l21;
 
             // If the start tangent is not coincident with (x0,y0), line to.
-            if (Math.abs(t01 - 1) > epsilon$1) {
+            if (Math.abs(t01 - 1) > epsilon) {
               this._ += "L" + (x1 + t01 * x01) + "," + (y1 + t01 * y01);
             }
 
@@ -7726,7 +5237,7 @@ Path.prototype = path.prototype = {
     }
 
     // Or, is (x0,y0) not coincident with the previous point? Line to (x0,y0).
-    else if (Math.abs(this._x1 - x0) > epsilon$1 || Math.abs(this._y1 - y0) > epsilon$1) {
+    else if (Math.abs(this._x1 - x0) > epsilon || Math.abs(this._y1 - y0) > epsilon) {
         this._ += "L" + x0 + "," + y0;
       }
 
@@ -7742,7 +5253,7 @@ Path.prototype = path.prototype = {
     }
 
     // Is this arc non-empty? Draw an arc!
-    else if (da > epsilon$1) {
+    else if (da > epsilon) {
         this._ += "A" + r + "," + r + ",0," + +(da >= pi$1) + "," + cw + "," + (this._x1 = x + r * Math.cos(a1)) + "," + (this._y1 = y + r * Math.sin(a1));
       }
   },
@@ -7754,7 +5265,7 @@ Path.prototype = path.prototype = {
   }
 };
 
-var constant$6 = function (x) {
+var constant$5 = function (x) {
   return function constant() {
     return x;
   };
@@ -7766,9 +5277,9 @@ var cos = Math.cos;
 var max$1 = Math.max;
 var min$1 = Math.min;
 var sin = Math.sin;
-var sqrt$1 = Math.sqrt;
+var sqrt = Math.sqrt;
 
-var epsilon$2 = 1e-12;
+var epsilon$1 = 1e-12;
 var pi$2 = Math.PI;
 var halfPi$1 = pi$2 / 2;
 var tau$2 = 2 * pi$2;
@@ -7815,7 +5326,7 @@ function intersect(x0, y0, x1, y1, x2, y2, x3, y3) {
 function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
   var x01 = x0 - x1,
       y01 = y0 - y1,
-      lo = (cw ? rc : -rc) / sqrt$1(x01 * x01 + y01 * y01),
+      lo = (cw ? rc : -rc) / sqrt(x01 * x01 + y01 * y01),
       ox = lo * y01,
       oy = -lo * x01,
       x11 = x0 + ox,
@@ -7829,7 +5340,7 @@ function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
       d2 = dx * dx + dy * dy,
       r = r1 - rc,
       D = x11 * y10 - x10 * y11,
-      d = (dy < 0 ? -1 : 1) * sqrt$1(max$1(0, r * r * d2 - D * D)),
+      d = (dy < 0 ? -1 : 1) * sqrt(max$1(0, r * r * d2 - D * D)),
       cx0 = (D * dy - dx * d) / d2,
       cy0 = (-D * dx - dy * d) / d2,
       cx1 = (D * dy + dx * d) / d2,
@@ -7856,7 +5367,7 @@ function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
 var d3Arc = function () {
   var innerRadius = arcInnerRadius,
       outerRadius = arcOuterRadius,
-      cornerRadius = constant$6(0),
+      cornerRadius = constant$5(0),
       padRadius = null,
       startAngle = arcStartAngle,
       endAngle = arcEndAngle,
@@ -7879,13 +5390,13 @@ var d3Arc = function () {
     if (r1 < r0) r = r1, r1 = r0, r0 = r;
 
     // Is it a point?
-    if (!(r1 > epsilon$2)) context.moveTo(0, 0);
+    if (!(r1 > epsilon$1)) context.moveTo(0, 0);
 
     // Or is it a circle or annulus?
-    else if (da > tau$2 - epsilon$2) {
+    else if (da > tau$2 - epsilon$1) {
         context.moveTo(r1 * cos(a0), r1 * sin(a0));
         context.arc(0, 0, r1, a0, a1, !cw);
-        if (r0 > epsilon$2) {
+        if (r0 > epsilon$1) {
           context.moveTo(r0 * cos(a1), r0 * sin(a1));
           context.arc(0, 0, r0, a1, a0, cw);
         }
@@ -7900,7 +5411,7 @@ var d3Arc = function () {
               da0 = da,
               da1 = da,
               ap = padAngle.apply(this, arguments) / 2,
-              rp = ap > epsilon$2 && (padRadius ? +padRadius.apply(this, arguments) : sqrt$1(r0 * r0 + r1 * r1)),
+              rp = ap > epsilon$1 && (padRadius ? +padRadius.apply(this, arguments) : sqrt(r0 * r0 + r1 * r1)),
               rc = min$1(abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments)),
               rc0 = rc,
               rc1 = rc,
@@ -7908,11 +5419,11 @@ var d3Arc = function () {
               t1;
 
           // Apply padding? Note that since r1 ≥ r0, da1 ≥ da0.
-          if (rp > epsilon$2) {
+          if (rp > epsilon$1) {
             var p0 = asin(rp / r0 * sin(ap)),
                 p1 = asin(rp / r1 * sin(ap));
-            if ((da0 -= p0 * 2) > epsilon$2) p0 *= cw ? 1 : -1, a00 += p0, a10 -= p0;else da0 = 0, a00 = a10 = (a0 + a1) / 2;
-            if ((da1 -= p1 * 2) > epsilon$2) p1 *= cw ? 1 : -1, a01 += p1, a11 -= p1;else da1 = 0, a01 = a11 = (a0 + a1) / 2;
+            if ((da0 -= p0 * 2) > epsilon$1) p0 *= cw ? 1 : -1, a00 += p0, a10 -= p0;else da0 = 0, a00 = a10 = (a0 + a1) / 2;
+            if ((da1 -= p1 * 2) > epsilon$1) p1 *= cw ? 1 : -1, a01 += p1, a11 -= p1;else da1 = 0, a01 = a11 = (a0 + a1) / 2;
           }
 
           var x01 = r1 * cos(a01),
@@ -7921,7 +5432,7 @@ var d3Arc = function () {
               y10 = r0 * sin(a10);
 
           // Apply rounded corners?
-          if (rc > epsilon$2) {
+          if (rc > epsilon$1) {
             var x11 = r1 * cos(a11),
                 y11 = r1 * sin(a11),
                 x00 = r0 * cos(a00),
@@ -7929,23 +5440,23 @@ var d3Arc = function () {
 
             // Restrict the corner radius according to the sector angle.
             if (da < pi$2) {
-              var oc = da0 > epsilon$2 ? intersect(x01, y01, x00, y00, x11, y11, x10, y10) : [x10, y10],
+              var oc = da0 > epsilon$1 ? intersect(x01, y01, x00, y00, x11, y11, x10, y10) : [x10, y10],
                   ax = x01 - oc[0],
                   ay = y01 - oc[1],
                   bx = x11 - oc[0],
                   by = y11 - oc[1],
-                  kc = 1 / sin(acos((ax * bx + ay * by) / (sqrt$1(ax * ax + ay * ay) * sqrt$1(bx * bx + by * by))) / 2),
-                  lc = sqrt$1(oc[0] * oc[0] + oc[1] * oc[1]);
+                  kc = 1 / sin(acos((ax * bx + ay * by) / (sqrt(ax * ax + ay * ay) * sqrt(bx * bx + by * by))) / 2),
+                  lc = sqrt(oc[0] * oc[0] + oc[1] * oc[1]);
               rc0 = min$1(rc, (r0 - lc) / (kc - 1));
               rc1 = min$1(rc, (r1 - lc) / (kc + 1));
             }
           }
 
           // Is the sector collapsed to a line?
-          if (!(da1 > epsilon$2)) context.moveTo(x01, y01);
+          if (!(da1 > epsilon$1)) context.moveTo(x01, y01);
 
           // Does the sector’s outer ring have rounded corners?
-          else if (rc1 > epsilon$2) {
+          else if (rc1 > epsilon$1) {
               t0 = cornerTangents(x00, y00, x01, y01, r1, rc1, cw);
               t1 = cornerTangents(x11, y11, x10, y10, r1, rc1, cw);
 
@@ -7967,10 +5478,10 @@ var d3Arc = function () {
 
           // Is there no inner ring, and it’s a circular sector?
           // Or perhaps it’s an annular sector collapsed due to padding?
-          if (!(r0 > epsilon$2) || !(da0 > epsilon$2)) context.lineTo(x10, y10);
+          if (!(r0 > epsilon$1) || !(da0 > epsilon$1)) context.lineTo(x10, y10);
 
           // Does the sector’s inner ring (or point) have rounded corners?
-          else if (rc0 > epsilon$2) {
+          else if (rc0 > epsilon$1) {
               t0 = cornerTangents(x10, y10, x11, y11, r0, -rc0, cw);
               t1 = cornerTangents(x01, y01, x00, y00, r0, -rc0, cw);
 
@@ -8003,31 +5514,31 @@ var d3Arc = function () {
   };
 
   arc.innerRadius = function (_) {
-    return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant$6(+_), arc) : innerRadius;
+    return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant$5(+_), arc) : innerRadius;
   };
 
   arc.outerRadius = function (_) {
-    return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant$6(+_), arc) : outerRadius;
+    return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant$5(+_), arc) : outerRadius;
   };
 
   arc.cornerRadius = function (_) {
-    return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant$6(+_), arc) : cornerRadius;
+    return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant$5(+_), arc) : cornerRadius;
   };
 
   arc.padRadius = function (_) {
-    return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant$6(+_), arc) : padRadius;
+    return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant$5(+_), arc) : padRadius;
   };
 
   arc.startAngle = function (_) {
-    return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$6(+_), arc) : startAngle;
+    return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant$5(+_), arc) : startAngle;
   };
 
   arc.endAngle = function (_) {
-    return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$6(+_), arc) : endAngle;
+    return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant$5(+_), arc) : endAngle;
   };
 
   arc.padAngle = function (_) {
-    return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$6(+_), arc) : padAngle;
+    return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant$5(+_), arc) : padAngle;
   };
 
   arc.context = function (_) {
@@ -8982,6 +6493,2304 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
   };
 };
 
+var array$2 = Array.prototype;
+
+var map$3 = array$2.map;
+var slice$2 = array$2.slice;
+
+var implicit = { name: "implicit" };
+
+function ordinal(range) {
+  var index = map(),
+      domain = [],
+      unknown = implicit;
+
+  range = range == null ? [] : slice$2.call(range);
+
+  function scale(d) {
+    var key = d + "",
+        i = index.get(key);
+    if (!i) {
+      if (unknown !== implicit) return unknown;
+      index.set(key, i = domain.push(d));
+    }
+    return range[(i - 1) % range.length];
+  }
+
+  scale.domain = function (_) {
+    if (!arguments.length) return domain.slice();
+    domain = [], index = map();
+    var i = -1,
+        n = _.length,
+        d,
+        key;
+    while (++i < n) {
+      if (!index.has(key = (d = _[i]) + "")) index.set(key, domain.push(d));
+    }return scale;
+  };
+
+  scale.range = function (_) {
+    return arguments.length ? (range = slice$2.call(_), scale) : range.slice();
+  };
+
+  scale.unknown = function (_) {
+    return arguments.length ? (unknown = _, scale) : unknown;
+  };
+
+  scale.copy = function () {
+    return ordinal().domain(domain).range(range).unknown(unknown);
+  };
+
+  return scale;
+}
+
+function band() {
+  var scale = ordinal().unknown(undefined),
+      domain = scale.domain,
+      ordinalRange = scale.range,
+      range = [0, 1],
+      step,
+      bandwidth,
+      round = false,
+      paddingInner = 0,
+      paddingOuter = 0,
+      align = 0.5;
+
+  delete scale.unknown;
+
+  function rescale() {
+    var n = domain().length,
+        reverse = range[1] < range[0],
+        start = range[reverse - 0],
+        stop = range[1 - reverse];
+    step = (stop - start) / Math.max(1, n - paddingInner + paddingOuter * 2);
+    if (round) step = Math.floor(step);
+    start += (stop - start - step * (n - paddingInner)) * align;
+    bandwidth = step * (1 - paddingInner);
+    if (round) start = Math.round(start), bandwidth = Math.round(bandwidth);
+    var values = sequence(n).map(function (i) {
+      return start + step * i;
+    });
+    return ordinalRange(reverse ? values.reverse() : values);
+  }
+
+  scale.domain = function (_) {
+    return arguments.length ? (domain(_), rescale()) : domain();
+  };
+
+  scale.range = function (_) {
+    return arguments.length ? (range = [+_[0], +_[1]], rescale()) : range.slice();
+  };
+
+  scale.rangeRound = function (_) {
+    return range = [+_[0], +_[1]], round = true, rescale();
+  };
+
+  scale.bandwidth = function () {
+    return bandwidth;
+  };
+
+  scale.step = function () {
+    return step;
+  };
+
+  scale.round = function (_) {
+    return arguments.length ? (round = !!_, rescale()) : round;
+  };
+
+  scale.padding = function (_) {
+    return arguments.length ? (paddingInner = paddingOuter = Math.max(0, Math.min(1, _)), rescale()) : paddingInner;
+  };
+
+  scale.paddingInner = function (_) {
+    return arguments.length ? (paddingInner = Math.max(0, Math.min(1, _)), rescale()) : paddingInner;
+  };
+
+  scale.paddingOuter = function (_) {
+    return arguments.length ? (paddingOuter = Math.max(0, Math.min(1, _)), rescale()) : paddingOuter;
+  };
+
+  scale.align = function (_) {
+    return arguments.length ? (align = Math.max(0, Math.min(1, _)), rescale()) : align;
+  };
+
+  scale.copy = function () {
+    return band().domain(domain()).range(range).round(round).paddingInner(paddingInner).paddingOuter(paddingOuter).align(align);
+  };
+
+  return rescale();
+}
+
+function pointish(scale) {
+  var copy = scale.copy;
+
+  scale.padding = scale.paddingOuter;
+  delete scale.paddingInner;
+  delete scale.paddingOuter;
+
+  scale.copy = function () {
+    return pointish(copy());
+  };
+
+  return scale;
+}
+
+function point$1() {
+  return pointish(band().paddingInner(1));
+}
+
+var constant$6 = function (x) {
+  return function () {
+    return x;
+  };
+};
+
+var number$1 = function (x) {
+  return +x;
+};
+
+var unit = [0, 1];
+
+function deinterpolateLinear(a, b) {
+  return (b -= a = +a) ? function (x) {
+    return (x - a) / b;
+  } : constant$6(b);
+}
+
+function deinterpolateClamp(deinterpolate) {
+  return function (a, b) {
+    var d = deinterpolate(a = +a, b = +b);
+    return function (x) {
+      return x <= a ? 0 : x >= b ? 1 : d(x);
+    };
+  };
+}
+
+function reinterpolateClamp(reinterpolate$$1) {
+  return function (a, b) {
+    var r = reinterpolate$$1(a = +a, b = +b);
+    return function (t) {
+      return t <= 0 ? a : t >= 1 ? b : r(t);
+    };
+  };
+}
+
+function bimap(domain, range, deinterpolate, reinterpolate$$1) {
+  var d0 = domain[0],
+      d1 = domain[1],
+      r0 = range[0],
+      r1 = range[1];
+  if (d1 < d0) d0 = deinterpolate(d1, d0), r0 = reinterpolate$$1(r1, r0);else d0 = deinterpolate(d0, d1), r0 = reinterpolate$$1(r0, r1);
+  return function (x) {
+    return r0(d0(x));
+  };
+}
+
+function polymap(domain, range, deinterpolate, reinterpolate$$1) {
+  var j = Math.min(domain.length, range.length) - 1,
+      d = new Array(j),
+      r = new Array(j),
+      i = -1;
+
+  // Reverse descending domains.
+  if (domain[j] < domain[0]) {
+    domain = domain.slice().reverse();
+    range = range.slice().reverse();
+  }
+
+  while (++i < j) {
+    d[i] = deinterpolate(domain[i], domain[i + 1]);
+    r[i] = reinterpolate$$1(range[i], range[i + 1]);
+  }
+
+  return function (x) {
+    var i = bisectRight(domain, x, 1, j) - 1;
+    return r[i](d[i](x));
+  };
+}
+
+function copy(source, target) {
+  return target.domain(source.domain()).range(source.range()).interpolate(source.interpolate()).clamp(source.clamp());
+}
+
+// deinterpolate(a, b)(x) takes a domain value x in [a,b] and returns the corresponding parameter t in [0,1].
+// reinterpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding domain value x in [a,b].
+function continuous(deinterpolate, reinterpolate$$1) {
+  var domain = unit,
+      range = unit,
+      interpolate = interpolateValue,
+      clamp = false,
+      piecewise,
+      output,
+      input;
+
+  function rescale() {
+    piecewise = Math.min(domain.length, range.length) > 2 ? polymap : bimap;
+    output = input = null;
+    return scale;
+  }
+
+  function scale(x) {
+    return (output || (output = piecewise(domain, range, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate)))(+x);
+  }
+
+  scale.invert = function (y) {
+    return (input || (input = piecewise(range, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate$$1) : reinterpolate$$1)))(+y);
+  };
+
+  scale.domain = function (_) {
+    return arguments.length ? (domain = map$3.call(_, number$1), rescale()) : domain.slice();
+  };
+
+  scale.range = function (_) {
+    return arguments.length ? (range = slice$2.call(_), rescale()) : range.slice();
+  };
+
+  scale.rangeRound = function (_) {
+    return range = slice$2.call(_), interpolate = interpolateRound, rescale();
+  };
+
+  scale.clamp = function (_) {
+    return arguments.length ? (clamp = !!_, rescale()) : clamp;
+  };
+
+  scale.interpolate = function (_) {
+    return arguments.length ? (interpolate = _, rescale()) : interpolate;
+  };
+
+  return rescale();
+}
+
+// Computes the decimal coefficient and exponent of the specified number x with
+// significant digits p, where x is positive and p is in [1, 21] or undefined.
+// For example, formatDecimal(1.23) returns ["123", 0].
+var formatDecimal = function (x, p) {
+  if ((i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e")) < 0) return null; // NaN, ±Infinity
+  var i,
+      coefficient = x.slice(0, i);
+
+  // The string returned by toExponential either has the form \d\.\d+e[-+]\d+
+  // (e.g., 1.2e+3) or the form \de[-+]\d+ (e.g., 1e+3).
+  return [coefficient.length > 1 ? coefficient[0] + coefficient.slice(2) : coefficient, +x.slice(i + 1)];
+};
+
+var exponent$1 = function (x) {
+  return x = formatDecimal(Math.abs(x)), x ? x[1] : NaN;
+};
+
+var formatGroup = function (grouping, thousands) {
+  return function (value, width) {
+    var i = value.length,
+        t = [],
+        j = 0,
+        g = grouping[0],
+        length = 0;
+
+    while (i > 0 && g > 0) {
+      if (length + g + 1 > width) g = Math.max(1, width - length);
+      t.push(value.substring(i -= g, i + g));
+      if ((length += g + 1) > width) break;
+      g = grouping[j = (j + 1) % grouping.length];
+    }
+
+    return t.reverse().join(thousands);
+  };
+};
+
+var formatNumerals = function (numerals) {
+  return function (value) {
+    return value.replace(/[0-9]/g, function (i) {
+      return numerals[+i];
+    });
+  };
+};
+
+var formatDefault = function (x, p) {
+  x = x.toPrecision(p);
+
+  out: for (var n = x.length, i = 1, i0 = -1, i1; i < n; ++i) {
+    switch (x[i]) {
+      case ".":
+        i0 = i1 = i;break;
+      case "0":
+        if (i0 === 0) i0 = i;i1 = i;break;
+      case "e":
+        break out;
+      default:
+        if (i0 > 0) i0 = 0;break;
+    }
+  }
+
+  return i0 > 0 ? x.slice(0, i0) + x.slice(i1 + 1) : x;
+};
+
+var prefixExponent;
+
+var formatPrefixAuto = function (x, p) {
+    var d = formatDecimal(x, p);
+    if (!d) return x + "";
+    var coefficient = d[0],
+        exponent = d[1],
+        i = exponent - (prefixExponent = Math.max(-8, Math.min(8, Math.floor(exponent / 3))) * 3) + 1,
+        n = coefficient.length;
+    return i === n ? coefficient : i > n ? coefficient + new Array(i - n + 1).join("0") : i > 0 ? coefficient.slice(0, i) + "." + coefficient.slice(i) : "0." + new Array(1 - i).join("0") + formatDecimal(x, Math.max(0, p + i - 1))[0]; // less than 1y!
+};
+
+var formatRounded = function (x, p) {
+    var d = formatDecimal(x, p);
+    if (!d) return x + "";
+    var coefficient = d[0],
+        exponent = d[1];
+    return exponent < 0 ? "0." + new Array(-exponent).join("0") + coefficient : coefficient.length > exponent + 1 ? coefficient.slice(0, exponent + 1) + "." + coefficient.slice(exponent + 1) : coefficient + new Array(exponent - coefficient.length + 2).join("0");
+};
+
+var formatTypes = {
+  "": formatDefault,
+  "%": function _(x, p) {
+    return (x * 100).toFixed(p);
+  },
+  "b": function b(x) {
+    return Math.round(x).toString(2);
+  },
+  "c": function c(x) {
+    return x + "";
+  },
+  "d": function d(x) {
+    return Math.round(x).toString(10);
+  },
+  "e": function e(x, p) {
+    return x.toExponential(p);
+  },
+  "f": function f(x, p) {
+    return x.toFixed(p);
+  },
+  "g": function g(x, p) {
+    return x.toPrecision(p);
+  },
+  "o": function o(x) {
+    return Math.round(x).toString(8);
+  },
+  "p": function p(x, _p) {
+    return formatRounded(x * 100, _p);
+  },
+  "r": formatRounded,
+  "s": formatPrefixAuto,
+  "X": function X(x) {
+    return Math.round(x).toString(16).toUpperCase();
+  },
+  "x": function x(_x) {
+    return Math.round(_x).toString(16);
+  }
+};
+
+var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
+
+function formatSpecifier(specifier) {
+  return new FormatSpecifier(specifier);
+}
+
+formatSpecifier.prototype = FormatSpecifier.prototype; // instanceof
+
+function FormatSpecifier(specifier) {
+  if (!(match = re.exec(specifier))) throw new Error("invalid format: " + specifier);
+
+  var match,
+      fill = match[1] || " ",
+      align = match[2] || ">",
+      sign = match[3] || "-",
+      symbol = match[4] || "",
+      zero = !!match[5],
+      width = match[6] && +match[6],
+      comma = !!match[7],
+      precision = match[8] && +match[8].slice(1),
+      type = match[9] || "";
+
+  // The "n" type is an alias for ",g".
+  if (type === "n") comma = true, type = "g";
+
+  // Map invalid types to the default format.
+  else if (!formatTypes[type]) type = "";
+
+  // If zero fill is specified, padding goes after sign and before digits.
+  if (zero || fill === "0" && align === "=") zero = true, fill = "0", align = "=";
+
+  this.fill = fill;
+  this.align = align;
+  this.sign = sign;
+  this.symbol = symbol;
+  this.zero = zero;
+  this.width = width;
+  this.comma = comma;
+  this.precision = precision;
+  this.type = type;
+}
+
+FormatSpecifier.prototype.toString = function () {
+  return this.fill + this.align + this.sign + this.symbol + (this.zero ? "0" : "") + (this.width == null ? "" : Math.max(1, this.width | 0)) + (this.comma ? "," : "") + (this.precision == null ? "" : "." + Math.max(0, this.precision | 0)) + this.type;
+};
+
+var identity$4 = function (x) {
+  return x;
+};
+
+var prefixes = ["y", "z", "a", "f", "p", "n", "µ", "m", "", "k", "M", "G", "T", "P", "E", "Z", "Y"];
+
+var formatLocale = function (locale) {
+  var group = locale.grouping && locale.thousands ? formatGroup(locale.grouping, locale.thousands) : identity$4,
+      currency = locale.currency,
+      decimal = locale.decimal,
+      numerals = locale.numerals ? formatNumerals(locale.numerals) : identity$4,
+      percent = locale.percent || "%";
+
+  function newFormat(specifier) {
+    specifier = formatSpecifier(specifier);
+
+    var fill = specifier.fill,
+        align = specifier.align,
+        sign = specifier.sign,
+        symbol = specifier.symbol,
+        zero = specifier.zero,
+        width = specifier.width,
+        comma = specifier.comma,
+        precision = specifier.precision,
+        type = specifier.type;
+
+    // Compute the prefix and suffix.
+    // For SI-prefix, the suffix is lazily computed.
+    var prefix = symbol === "$" ? currency[0] : symbol === "#" && /[boxX]/.test(type) ? "0" + type.toLowerCase() : "",
+        suffix = symbol === "$" ? currency[1] : /[%p]/.test(type) ? percent : "";
+
+    // What format function should we use?
+    // Is this an integer type?
+    // Can this type generate exponential notation?
+    var formatType = formatTypes[type],
+        maybeSuffix = !type || /[defgprs%]/.test(type);
+
+    // Set the default precision if not specified,
+    // or clamp the specified precision to the supported range.
+    // For significant precision, it must be in [1, 21].
+    // For fixed precision, it must be in [0, 20].
+    precision = precision == null ? type ? 6 : 12 : /[gprs]/.test(type) ? Math.max(1, Math.min(21, precision)) : Math.max(0, Math.min(20, precision));
+
+    function format(value) {
+      var valuePrefix = prefix,
+          valueSuffix = suffix,
+          i,
+          n,
+          c;
+
+      if (type === "c") {
+        valueSuffix = formatType(value) + valueSuffix;
+        value = "";
+      } else {
+        value = +value;
+
+        // Perform the initial formatting.
+        var valueNegative = value < 0;
+        value = formatType(Math.abs(value), precision);
+
+        // If a negative value rounds to zero during formatting, treat as positive.
+        if (valueNegative && +value === 0) valueNegative = false;
+
+        // Compute the prefix and suffix.
+        valuePrefix = (valueNegative ? sign === "(" ? sign : "-" : sign === "-" || sign === "(" ? "" : sign) + valuePrefix;
+        valueSuffix = (type === "s" ? prefixes[8 + prefixExponent / 3] : "") + valueSuffix + (valueNegative && sign === "(" ? ")" : "");
+
+        // Break the formatted value into the integer “value” part that can be
+        // grouped, and fractional or exponential “suffix” part that is not.
+        if (maybeSuffix) {
+          i = -1, n = value.length;
+          while (++i < n) {
+            if (c = value.charCodeAt(i), 48 > c || c > 57) {
+              valueSuffix = (c === 46 ? decimal + value.slice(i + 1) : value.slice(i)) + valueSuffix;
+              value = value.slice(0, i);
+              break;
+            }
+          }
+        }
+      }
+
+      // If the fill character is not "0", grouping is applied before padding.
+      if (comma && !zero) value = group(value, Infinity);
+
+      // Compute the padding.
+      var length = valuePrefix.length + value.length + valueSuffix.length,
+          padding = length < width ? new Array(width - length + 1).join(fill) : "";
+
+      // If the fill character is "0", grouping is applied after padding.
+      if (comma && zero) value = group(padding + value, padding.length ? width - valueSuffix.length : Infinity), padding = "";
+
+      // Reconstruct the final output based on the desired alignment.
+      switch (align) {
+        case "<":
+          value = valuePrefix + value + valueSuffix + padding;break;
+        case "=":
+          value = valuePrefix + padding + value + valueSuffix;break;
+        case "^":
+          value = padding.slice(0, length = padding.length >> 1) + valuePrefix + value + valueSuffix + padding.slice(length);break;
+        default:
+          value = padding + valuePrefix + value + valueSuffix;break;
+      }
+
+      return numerals(value);
+    }
+
+    format.toString = function () {
+      return specifier + "";
+    };
+
+    return format;
+  }
+
+  function formatPrefix(specifier, value) {
+    var f = newFormat((specifier = formatSpecifier(specifier), specifier.type = "f", specifier)),
+        e = Math.max(-8, Math.min(8, Math.floor(exponent$1(value) / 3))) * 3,
+        k = Math.pow(10, -e),
+        prefix = prefixes[8 + e / 3];
+    return function (value) {
+      return f(k * value) + prefix;
+    };
+  }
+
+  return {
+    format: newFormat,
+    formatPrefix: formatPrefix
+  };
+};
+
+var locale$1;
+var format;
+var formatPrefix;
+
+defaultLocale({
+  decimal: ".",
+  thousands: ",",
+  grouping: [3],
+  currency: ["$", ""]
+});
+
+function defaultLocale(definition) {
+  locale$1 = formatLocale(definition);
+  format = locale$1.format;
+  formatPrefix = locale$1.formatPrefix;
+  return locale$1;
+}
+
+var precisionFixed = function (step) {
+  return Math.max(0, -exponent$1(Math.abs(step)));
+};
+
+var precisionPrefix = function (step, value) {
+  return Math.max(0, Math.max(-8, Math.min(8, Math.floor(exponent$1(value) / 3))) * 3 - exponent$1(Math.abs(step)));
+};
+
+var precisionRound = function (step, max) {
+  step = Math.abs(step), max = Math.abs(max) - step;
+  return Math.max(0, exponent$1(max) - exponent$1(step)) + 1;
+};
+
+var tickFormat = function (domain, count, specifier) {
+  var start = domain[0],
+      stop = domain[domain.length - 1],
+      step = tickStep(start, stop, count == null ? 10 : count),
+      precision;
+  specifier = formatSpecifier(specifier == null ? ",f" : specifier);
+  switch (specifier.type) {
+    case "s":
+      {
+        var value = Math.max(Math.abs(start), Math.abs(stop));
+        if (specifier.precision == null && !isNaN(precision = precisionPrefix(step, value))) specifier.precision = precision;
+        return formatPrefix(specifier, value);
+      }
+    case "":
+    case "e":
+    case "g":
+    case "p":
+    case "r":
+      {
+        if (specifier.precision == null && !isNaN(precision = precisionRound(step, Math.max(Math.abs(start), Math.abs(stop))))) specifier.precision = precision - (specifier.type === "e");
+        break;
+      }
+    case "f":
+    case "%":
+      {
+        if (specifier.precision == null && !isNaN(precision = precisionFixed(step))) specifier.precision = precision - (specifier.type === "%") * 2;
+        break;
+      }
+  }
+  return format(specifier);
+};
+
+function linearish(scale) {
+  var domain = scale.domain;
+
+  scale.ticks = function (count) {
+    var d = domain();
+    return ticks(d[0], d[d.length - 1], count == null ? 10 : count);
+  };
+
+  scale.tickFormat = function (count, specifier) {
+    return tickFormat(domain(), count, specifier);
+  };
+
+  scale.nice = function (count) {
+    if (count == null) count = 10;
+
+    var d = domain(),
+        i0 = 0,
+        i1 = d.length - 1,
+        start = d[i0],
+        stop = d[i1],
+        step;
+
+    if (stop < start) {
+      step = start, start = stop, stop = step;
+      step = i0, i0 = i1, i1 = step;
+    }
+
+    step = tickIncrement(start, stop, count);
+
+    if (step > 0) {
+      start = Math.floor(start / step) * step;
+      stop = Math.ceil(stop / step) * step;
+      step = tickIncrement(start, stop, count);
+    } else if (step < 0) {
+      start = Math.ceil(start * step) / step;
+      stop = Math.floor(stop * step) / step;
+      step = tickIncrement(start, stop, count);
+    }
+
+    if (step > 0) {
+      d[i0] = Math.floor(start / step) * step;
+      d[i1] = Math.ceil(stop / step) * step;
+      domain(d);
+    } else if (step < 0) {
+      d[i0] = Math.ceil(start * step) / step;
+      d[i1] = Math.floor(stop * step) / step;
+      domain(d);
+    }
+
+    return scale;
+  };
+
+  return scale;
+}
+
+function linear$2() {
+  var scale = continuous(deinterpolateLinear, reinterpolate);
+
+  scale.copy = function () {
+    return copy(scale, linear$2());
+  };
+
+  return linearish(scale);
+}
+
+var nice = function (domain, interval) {
+  domain = domain.slice();
+
+  var i0 = 0,
+      i1 = domain.length - 1,
+      x0 = domain[i0],
+      x1 = domain[i1],
+      t;
+
+  if (x1 < x0) {
+    t = i0, i0 = i1, i1 = t;
+    t = x0, x0 = x1, x1 = t;
+  }
+
+  domain[i0] = interval.floor(x0);
+  domain[i1] = interval.ceil(x1);
+  return domain;
+};
+
+function deinterpolate(a, b) {
+  return (b = Math.log(b / a)) ? function (x) {
+    return Math.log(x / a) / b;
+  } : constant$6(b);
+}
+
+function reinterpolate$1(a, b) {
+  return a < 0 ? function (t) {
+    return -Math.pow(-b, t) * Math.pow(-a, 1 - t);
+  } : function (t) {
+    return Math.pow(b, t) * Math.pow(a, 1 - t);
+  };
+}
+
+function pow10(x) {
+  return isFinite(x) ? +("1e" + x) : x < 0 ? 0 : x;
+}
+
+function powp(base) {
+  return base === 10 ? pow10 : base === Math.E ? Math.exp : function (x) {
+    return Math.pow(base, x);
+  };
+}
+
+function logp(base) {
+  return base === Math.E ? Math.log : base === 10 && Math.log10 || base === 2 && Math.log2 || (base = Math.log(base), function (x) {
+    return Math.log(x) / base;
+  });
+}
+
+var t0$2 = new Date();
+var t1$2 = new Date();
+
+function newInterval(floori, offseti, count, field) {
+
+  function interval(date) {
+    return floori(date = new Date(+date)), date;
+  }
+
+  interval.floor = interval;
+
+  interval.ceil = function (date) {
+    return floori(date = new Date(date - 1)), offseti(date, 1), floori(date), date;
+  };
+
+  interval.round = function (date) {
+    var d0 = interval(date),
+        d1 = interval.ceil(date);
+    return date - d0 < d1 - date ? d0 : d1;
+  };
+
+  interval.offset = function (date, step) {
+    return offseti(date = new Date(+date), step == null ? 1 : Math.floor(step)), date;
+  };
+
+  interval.range = function (start, stop, step) {
+    var range = [],
+        previous;
+    start = interval.ceil(start);
+    step = step == null ? 1 : Math.floor(step);
+    if (!(start < stop) || !(step > 0)) return range; // also handles Invalid Date
+    do {
+      range.push(previous = new Date(+start)), offseti(start, step), floori(start);
+    } while (previous < start && start < stop);
+    return range;
+  };
+
+  interval.filter = function (test) {
+    return newInterval(function (date) {
+      if (date >= date) while (floori(date), !test(date)) {
+        date.setTime(date - 1);
+      }
+    }, function (date, step) {
+      if (date >= date) {
+        if (step < 0) while (++step <= 0) {
+          while (offseti(date, -1), !test(date)) {} // eslint-disable-line no-empty
+        } else while (--step >= 0) {
+          while (offseti(date, +1), !test(date)) {} // eslint-disable-line no-empty
+        }
+      }
+    });
+  };
+
+  if (count) {
+    interval.count = function (start, end) {
+      t0$2.setTime(+start), t1$2.setTime(+end);
+      floori(t0$2), floori(t1$2);
+      return Math.floor(count(t0$2, t1$2));
+    };
+
+    interval.every = function (step) {
+      step = Math.floor(step);
+      return !isFinite(step) || !(step > 0) ? null : !(step > 1) ? interval : interval.filter(field ? function (d) {
+        return field(d) % step === 0;
+      } : function (d) {
+        return interval.count(0, d) % step === 0;
+      });
+    };
+  }
+
+  return interval;
+}
+
+var millisecond = newInterval(function () {
+  // noop
+}, function (date, step) {
+  date.setTime(+date + step);
+}, function (start, end) {
+  return end - start;
+});
+
+// An optimized implementation for this simple case.
+millisecond.every = function (k) {
+  k = Math.floor(k);
+  if (!isFinite(k) || !(k > 0)) return null;
+  if (!(k > 1)) return millisecond;
+  return newInterval(function (date) {
+    date.setTime(Math.floor(date / k) * k);
+  }, function (date, step) {
+    date.setTime(+date + step * k);
+  }, function (start, end) {
+    return (end - start) / k;
+  });
+};
+
+var durationSecond$1 = 1e3;
+var durationMinute$1 = 6e4;
+var durationHour$1 = 36e5;
+var durationDay$1 = 864e5;
+var durationWeek$1 = 6048e5;
+
+var second = newInterval(function (date) {
+  date.setTime(Math.floor(date / durationSecond$1) * durationSecond$1);
+}, function (date, step) {
+  date.setTime(+date + step * durationSecond$1);
+}, function (start, end) {
+  return (end - start) / durationSecond$1;
+}, function (date) {
+  return date.getUTCSeconds();
+});
+
+var minute = newInterval(function (date) {
+  date.setTime(Math.floor(date / durationMinute$1) * durationMinute$1);
+}, function (date, step) {
+  date.setTime(+date + step * durationMinute$1);
+}, function (start, end) {
+  return (end - start) / durationMinute$1;
+}, function (date) {
+  return date.getMinutes();
+});
+
+var hour = newInterval(function (date) {
+  var offset = date.getTimezoneOffset() * durationMinute$1 % durationHour$1;
+  if (offset < 0) offset += durationHour$1;
+  date.setTime(Math.floor((+date - offset) / durationHour$1) * durationHour$1 + offset);
+}, function (date, step) {
+  date.setTime(+date + step * durationHour$1);
+}, function (start, end) {
+  return (end - start) / durationHour$1;
+}, function (date) {
+  return date.getHours();
+});
+
+var day = newInterval(function (date) {
+  date.setHours(0, 0, 0, 0);
+}, function (date, step) {
+  date.setDate(date.getDate() + step);
+}, function (start, end) {
+  return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * durationMinute$1) / durationDay$1;
+}, function (date) {
+  return date.getDate() - 1;
+});
+
+function weekday(i) {
+  return newInterval(function (date) {
+    date.setDate(date.getDate() - (date.getDay() + 7 - i) % 7);
+    date.setHours(0, 0, 0, 0);
+  }, function (date, step) {
+    date.setDate(date.getDate() + step * 7);
+  }, function (start, end) {
+    return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * durationMinute$1) / durationWeek$1;
+  });
+}
+
+var sunday = weekday(0);
+var monday = weekday(1);
+var tuesday = weekday(2);
+var wednesday = weekday(3);
+var thursday = weekday(4);
+var friday = weekday(5);
+var saturday = weekday(6);
+
+var month = newInterval(function (date) {
+  date.setDate(1);
+  date.setHours(0, 0, 0, 0);
+}, function (date, step) {
+  date.setMonth(date.getMonth() + step);
+}, function (start, end) {
+  return end.getMonth() - start.getMonth() + (end.getFullYear() - start.getFullYear()) * 12;
+}, function (date) {
+  return date.getMonth();
+});
+
+var year = newInterval(function (date) {
+  date.setMonth(0, 1);
+  date.setHours(0, 0, 0, 0);
+}, function (date, step) {
+  date.setFullYear(date.getFullYear() + step);
+}, function (start, end) {
+  return end.getFullYear() - start.getFullYear();
+}, function (date) {
+  return date.getFullYear();
+});
+
+// An optimized implementation for this simple case.
+year.every = function (k) {
+  return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : newInterval(function (date) {
+    date.setFullYear(Math.floor(date.getFullYear() / k) * k);
+    date.setMonth(0, 1);
+    date.setHours(0, 0, 0, 0);
+  }, function (date, step) {
+    date.setFullYear(date.getFullYear() + step * k);
+  });
+};
+
+var utcMinute = newInterval(function (date) {
+  date.setUTCSeconds(0, 0);
+}, function (date, step) {
+  date.setTime(+date + step * durationMinute$1);
+}, function (start, end) {
+  return (end - start) / durationMinute$1;
+}, function (date) {
+  return date.getUTCMinutes();
+});
+
+var utcHour = newInterval(function (date) {
+  date.setUTCMinutes(0, 0, 0);
+}, function (date, step) {
+  date.setTime(+date + step * durationHour$1);
+}, function (start, end) {
+  return (end - start) / durationHour$1;
+}, function (date) {
+  return date.getUTCHours();
+});
+
+var utcDay = newInterval(function (date) {
+  date.setUTCHours(0, 0, 0, 0);
+}, function (date, step) {
+  date.setUTCDate(date.getUTCDate() + step);
+}, function (start, end) {
+  return (end - start) / durationDay$1;
+}, function (date) {
+  return date.getUTCDate() - 1;
+});
+
+function utcWeekday(i) {
+  return newInterval(function (date) {
+    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 7 - i) % 7);
+    date.setUTCHours(0, 0, 0, 0);
+  }, function (date, step) {
+    date.setUTCDate(date.getUTCDate() + step * 7);
+  }, function (start, end) {
+    return (end - start) / durationWeek$1;
+  });
+}
+
+var utcSunday = utcWeekday(0);
+var utcMonday = utcWeekday(1);
+var utcTuesday = utcWeekday(2);
+var utcWednesday = utcWeekday(3);
+var utcThursday = utcWeekday(4);
+var utcFriday = utcWeekday(5);
+var utcSaturday = utcWeekday(6);
+
+var utcMonth = newInterval(function (date) {
+  date.setUTCDate(1);
+  date.setUTCHours(0, 0, 0, 0);
+}, function (date, step) {
+  date.setUTCMonth(date.getUTCMonth() + step);
+}, function (start, end) {
+  return end.getUTCMonth() - start.getUTCMonth() + (end.getUTCFullYear() - start.getUTCFullYear()) * 12;
+}, function (date) {
+  return date.getUTCMonth();
+});
+
+var utcYear = newInterval(function (date) {
+  date.setUTCMonth(0, 1);
+  date.setUTCHours(0, 0, 0, 0);
+}, function (date, step) {
+  date.setUTCFullYear(date.getUTCFullYear() + step);
+}, function (start, end) {
+  return end.getUTCFullYear() - start.getUTCFullYear();
+}, function (date) {
+  return date.getUTCFullYear();
+});
+
+// An optimized implementation for this simple case.
+utcYear.every = function (k) {
+  return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : newInterval(function (date) {
+    date.setUTCFullYear(Math.floor(date.getUTCFullYear() / k) * k);
+    date.setUTCMonth(0, 1);
+    date.setUTCHours(0, 0, 0, 0);
+  }, function (date, step) {
+    date.setUTCFullYear(date.getUTCFullYear() + step * k);
+  });
+};
+
+function localDate(d) {
+  if (0 <= d.y && d.y < 100) {
+    var date = new Date(-1, d.m, d.d, d.H, d.M, d.S, d.L);
+    date.setFullYear(d.y);
+    return date;
+  }
+  return new Date(d.y, d.m, d.d, d.H, d.M, d.S, d.L);
+}
+
+function utcDate(d) {
+  if (0 <= d.y && d.y < 100) {
+    var date = new Date(Date.UTC(-1, d.m, d.d, d.H, d.M, d.S, d.L));
+    date.setUTCFullYear(d.y);
+    return date;
+  }
+  return new Date(Date.UTC(d.y, d.m, d.d, d.H, d.M, d.S, d.L));
+}
+
+function newYear(y) {
+  return { y: y, m: 0, d: 1, H: 0, M: 0, S: 0, L: 0 };
+}
+
+function formatLocale$1(locale) {
+  var locale_dateTime = locale.dateTime,
+      locale_date = locale.date,
+      locale_time = locale.time,
+      locale_periods = locale.periods,
+      locale_weekdays = locale.days,
+      locale_shortWeekdays = locale.shortDays,
+      locale_months = locale.months,
+      locale_shortMonths = locale.shortMonths;
+
+  var periodRe = formatRe(locale_periods),
+      periodLookup = formatLookup(locale_periods),
+      weekdayRe = formatRe(locale_weekdays),
+      weekdayLookup = formatLookup(locale_weekdays),
+      shortWeekdayRe = formatRe(locale_shortWeekdays),
+      shortWeekdayLookup = formatLookup(locale_shortWeekdays),
+      monthRe = formatRe(locale_months),
+      monthLookup = formatLookup(locale_months),
+      shortMonthRe = formatRe(locale_shortMonths),
+      shortMonthLookup = formatLookup(locale_shortMonths);
+
+  var formats = {
+    "a": formatShortWeekday,
+    "A": formatWeekday,
+    "b": formatShortMonth,
+    "B": formatMonth,
+    "c": null,
+    "d": formatDayOfMonth,
+    "e": formatDayOfMonth,
+    "f": formatMicroseconds,
+    "H": formatHour24,
+    "I": formatHour12,
+    "j": formatDayOfYear,
+    "L": formatMilliseconds,
+    "m": formatMonthNumber,
+    "M": formatMinutes,
+    "p": formatPeriod,
+    "Q": formatUnixTimestamp,
+    "s": formatUnixTimestampSeconds,
+    "S": formatSeconds,
+    "u": formatWeekdayNumberMonday,
+    "U": formatWeekNumberSunday,
+    "V": formatWeekNumberISO,
+    "w": formatWeekdayNumberSunday,
+    "W": formatWeekNumberMonday,
+    "x": null,
+    "X": null,
+    "y": formatYear,
+    "Y": formatFullYear,
+    "Z": formatZone,
+    "%": formatLiteralPercent
+  };
+
+  var utcFormats = {
+    "a": formatUTCShortWeekday,
+    "A": formatUTCWeekday,
+    "b": formatUTCShortMonth,
+    "B": formatUTCMonth,
+    "c": null,
+    "d": formatUTCDayOfMonth,
+    "e": formatUTCDayOfMonth,
+    "f": formatUTCMicroseconds,
+    "H": formatUTCHour24,
+    "I": formatUTCHour12,
+    "j": formatUTCDayOfYear,
+    "L": formatUTCMilliseconds,
+    "m": formatUTCMonthNumber,
+    "M": formatUTCMinutes,
+    "p": formatUTCPeriod,
+    "Q": formatUnixTimestamp,
+    "s": formatUnixTimestampSeconds,
+    "S": formatUTCSeconds,
+    "u": formatUTCWeekdayNumberMonday,
+    "U": formatUTCWeekNumberSunday,
+    "V": formatUTCWeekNumberISO,
+    "w": formatUTCWeekdayNumberSunday,
+    "W": formatUTCWeekNumberMonday,
+    "x": null,
+    "X": null,
+    "y": formatUTCYear,
+    "Y": formatUTCFullYear,
+    "Z": formatUTCZone,
+    "%": formatLiteralPercent
+  };
+
+  var parses = {
+    "a": parseShortWeekday,
+    "A": parseWeekday,
+    "b": parseShortMonth,
+    "B": parseMonth,
+    "c": parseLocaleDateTime,
+    "d": parseDayOfMonth,
+    "e": parseDayOfMonth,
+    "f": parseMicroseconds,
+    "H": parseHour24,
+    "I": parseHour24,
+    "j": parseDayOfYear,
+    "L": parseMilliseconds,
+    "m": parseMonthNumber,
+    "M": parseMinutes,
+    "p": parsePeriod,
+    "Q": parseUnixTimestamp,
+    "s": parseUnixTimestampSeconds,
+    "S": parseSeconds,
+    "u": parseWeekdayNumberMonday,
+    "U": parseWeekNumberSunday,
+    "V": parseWeekNumberISO,
+    "w": parseWeekdayNumberSunday,
+    "W": parseWeekNumberMonday,
+    "x": parseLocaleDate,
+    "X": parseLocaleTime,
+    "y": parseYear,
+    "Y": parseFullYear,
+    "Z": parseZone,
+    "%": parseLiteralPercent
+  };
+
+  // These recursive directive definitions must be deferred.
+  formats.x = newFormat(locale_date, formats);
+  formats.X = newFormat(locale_time, formats);
+  formats.c = newFormat(locale_dateTime, formats);
+  utcFormats.x = newFormat(locale_date, utcFormats);
+  utcFormats.X = newFormat(locale_time, utcFormats);
+  utcFormats.c = newFormat(locale_dateTime, utcFormats);
+
+  function newFormat(specifier, formats) {
+    return function (date) {
+      var string = [],
+          i = -1,
+          j = 0,
+          n = specifier.length,
+          c,
+          pad,
+          format;
+
+      if (!(date instanceof Date)) date = new Date(+date);
+
+      while (++i < n) {
+        if (specifier.charCodeAt(i) === 37) {
+          string.push(specifier.slice(j, i));
+          if ((pad = pads[c = specifier.charAt(++i)]) != null) c = specifier.charAt(++i);else pad = c === "e" ? " " : "0";
+          if (format = formats[c]) c = format(date, pad);
+          string.push(c);
+          j = i + 1;
+        }
+      }
+
+      string.push(specifier.slice(j, i));
+      return string.join("");
+    };
+  }
+
+  function newParse(specifier, newDate) {
+    return function (string) {
+      var d = newYear(1900),
+          i = parseSpecifier(d, specifier, string += "", 0),
+          week,
+          day$$1;
+      if (i != string.length) return null;
+
+      // If a UNIX timestamp is specified, return it.
+      if ("Q" in d) return new Date(d.Q);
+
+      // The am-pm flag is 0 for AM, and 1 for PM.
+      if ("p" in d) d.H = d.H % 12 + d.p * 12;
+
+      // Convert day-of-week and week-of-year to day-of-year.
+      if ("V" in d) {
+        if (d.V < 1 || d.V > 53) return null;
+        if (!("w" in d)) d.w = 1;
+        if ("Z" in d) {
+          week = utcDate(newYear(d.y)), day$$1 = week.getUTCDay();
+          week = day$$1 > 4 || day$$1 === 0 ? utcMonday.ceil(week) : utcMonday(week);
+          week = utcDay.offset(week, (d.V - 1) * 7);
+          d.y = week.getUTCFullYear();
+          d.m = week.getUTCMonth();
+          d.d = week.getUTCDate() + (d.w + 6) % 7;
+        } else {
+          week = newDate(newYear(d.y)), day$$1 = week.getDay();
+          week = day$$1 > 4 || day$$1 === 0 ? monday.ceil(week) : monday(week);
+          week = day.offset(week, (d.V - 1) * 7);
+          d.y = week.getFullYear();
+          d.m = week.getMonth();
+          d.d = week.getDate() + (d.w + 6) % 7;
+        }
+      } else if ("W" in d || "U" in d) {
+        if (!("w" in d)) d.w = "u" in d ? d.u % 7 : "W" in d ? 1 : 0;
+        day$$1 = "Z" in d ? utcDate(newYear(d.y)).getUTCDay() : newDate(newYear(d.y)).getDay();
+        d.m = 0;
+        d.d = "W" in d ? (d.w + 6) % 7 + d.W * 7 - (day$$1 + 5) % 7 : d.w + d.U * 7 - (day$$1 + 6) % 7;
+      }
+
+      // If a time zone is specified, all fields are interpreted as UTC and then
+      // offset according to the specified time zone.
+      if ("Z" in d) {
+        d.H += d.Z / 100 | 0;
+        d.M += d.Z % 100;
+        return utcDate(d);
+      }
+
+      // Otherwise, all fields are in local time.
+      return newDate(d);
+    };
+  }
+
+  function parseSpecifier(d, specifier, string, j) {
+    var i = 0,
+        n = specifier.length,
+        m = string.length,
+        c,
+        parse;
+
+    while (i < n) {
+      if (j >= m) return -1;
+      c = specifier.charCodeAt(i++);
+      if (c === 37) {
+        c = specifier.charAt(i++);
+        parse = parses[c in pads ? specifier.charAt(i++) : c];
+        if (!parse || (j = parse(d, string, j)) < 0) return -1;
+      } else if (c != string.charCodeAt(j++)) {
+        return -1;
+      }
+    }
+
+    return j;
+  }
+
+  function parsePeriod(d, string, i) {
+    var n = periodRe.exec(string.slice(i));
+    return n ? (d.p = periodLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseShortWeekday(d, string, i) {
+    var n = shortWeekdayRe.exec(string.slice(i));
+    return n ? (d.w = shortWeekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseWeekday(d, string, i) {
+    var n = weekdayRe.exec(string.slice(i));
+    return n ? (d.w = weekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseShortMonth(d, string, i) {
+    var n = shortMonthRe.exec(string.slice(i));
+    return n ? (d.m = shortMonthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseMonth(d, string, i) {
+    var n = monthRe.exec(string.slice(i));
+    return n ? (d.m = monthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseLocaleDateTime(d, string, i) {
+    return parseSpecifier(d, locale_dateTime, string, i);
+  }
+
+  function parseLocaleDate(d, string, i) {
+    return parseSpecifier(d, locale_date, string, i);
+  }
+
+  function parseLocaleTime(d, string, i) {
+    return parseSpecifier(d, locale_time, string, i);
+  }
+
+  function formatShortWeekday(d) {
+    return locale_shortWeekdays[d.getDay()];
+  }
+
+  function formatWeekday(d) {
+    return locale_weekdays[d.getDay()];
+  }
+
+  function formatShortMonth(d) {
+    return locale_shortMonths[d.getMonth()];
+  }
+
+  function formatMonth(d) {
+    return locale_months[d.getMonth()];
+  }
+
+  function formatPeriod(d) {
+    return locale_periods[+(d.getHours() >= 12)];
+  }
+
+  function formatUTCShortWeekday(d) {
+    return locale_shortWeekdays[d.getUTCDay()];
+  }
+
+  function formatUTCWeekday(d) {
+    return locale_weekdays[d.getUTCDay()];
+  }
+
+  function formatUTCShortMonth(d) {
+    return locale_shortMonths[d.getUTCMonth()];
+  }
+
+  function formatUTCMonth(d) {
+    return locale_months[d.getUTCMonth()];
+  }
+
+  function formatUTCPeriod(d) {
+    return locale_periods[+(d.getUTCHours() >= 12)];
+  }
+
+  return {
+    format: function format(specifier) {
+      var f = newFormat(specifier += "", formats);
+      f.toString = function () {
+        return specifier;
+      };
+      return f;
+    },
+    parse: function parse(specifier) {
+      var p = newParse(specifier += "", localDate);
+      p.toString = function () {
+        return specifier;
+      };
+      return p;
+    },
+    utcFormat: function utcFormat(specifier) {
+      var f = newFormat(specifier += "", utcFormats);
+      f.toString = function () {
+        return specifier;
+      };
+      return f;
+    },
+    utcParse: function utcParse(specifier) {
+      var p = newParse(specifier, utcDate);
+      p.toString = function () {
+        return specifier;
+      };
+      return p;
+    }
+  };
+}
+
+var pads = { "-": "", "_": " ", "0": "0" };
+var numberRe = /^\s*\d+/;
+var percentRe = /^%/;
+var requoteRe = /[\\^$*+?|[\]().{}]/g;
+
+function pad(value, fill, width) {
+  var sign = value < 0 ? "-" : "",
+      string = (sign ? -value : value) + "",
+      length = string.length;
+  return sign + (length < width ? new Array(width - length + 1).join(fill) + string : string);
+}
+
+function requote(s) {
+  return s.replace(requoteRe, "\\$&");
+}
+
+function formatRe(names) {
+  return new RegExp("^(?:" + names.map(requote).join("|") + ")", "i");
+}
+
+function formatLookup(names) {
+  var map = {},
+      i = -1,
+      n = names.length;
+  while (++i < n) {
+    map[names[i].toLowerCase()] = i;
+  }return map;
+}
+
+function parseWeekdayNumberSunday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 1));
+  return n ? (d.w = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekdayNumberMonday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 1));
+  return n ? (d.u = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekNumberSunday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.U = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekNumberISO(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.V = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekNumberMonday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.W = +n[0], i + n[0].length) : -1;
+}
+
+function parseFullYear(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 4));
+  return n ? (d.y = +n[0], i + n[0].length) : -1;
+}
+
+function parseYear(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.y = +n[0] + (+n[0] > 68 ? 1900 : 2000), i + n[0].length) : -1;
+}
+
+function parseZone(d, string, i) {
+  var n = /^(Z)|([+-]\d\d)(?::?(\d\d))?/.exec(string.slice(i, i + 6));
+  return n ? (d.Z = n[1] ? 0 : -(n[2] + (n[3] || "00")), i + n[0].length) : -1;
+}
+
+function parseMonthNumber(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.m = n[0] - 1, i + n[0].length) : -1;
+}
+
+function parseDayOfMonth(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.d = +n[0], i + n[0].length) : -1;
+}
+
+function parseDayOfYear(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 3));
+  return n ? (d.m = 0, d.d = +n[0], i + n[0].length) : -1;
+}
+
+function parseHour24(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.H = +n[0], i + n[0].length) : -1;
+}
+
+function parseMinutes(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.M = +n[0], i + n[0].length) : -1;
+}
+
+function parseSeconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.S = +n[0], i + n[0].length) : -1;
+}
+
+function parseMilliseconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 3));
+  return n ? (d.L = +n[0], i + n[0].length) : -1;
+}
+
+function parseMicroseconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 6));
+  return n ? (d.L = Math.floor(n[0] / 1000), i + n[0].length) : -1;
+}
+
+function parseLiteralPercent(d, string, i) {
+  var n = percentRe.exec(string.slice(i, i + 1));
+  return n ? i + n[0].length : -1;
+}
+
+function parseUnixTimestamp(d, string, i) {
+  var n = numberRe.exec(string.slice(i));
+  return n ? (d.Q = +n[0], i + n[0].length) : -1;
+}
+
+function parseUnixTimestampSeconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i));
+  return n ? (d.Q = +n[0] * 1000, i + n[0].length) : -1;
+}
+
+function formatDayOfMonth(d, p) {
+  return pad(d.getDate(), p, 2);
+}
+
+function formatHour24(d, p) {
+  return pad(d.getHours(), p, 2);
+}
+
+function formatHour12(d, p) {
+  return pad(d.getHours() % 12 || 12, p, 2);
+}
+
+function formatDayOfYear(d, p) {
+  return pad(1 + day.count(year(d), d), p, 3);
+}
+
+function formatMilliseconds(d, p) {
+  return pad(d.getMilliseconds(), p, 3);
+}
+
+function formatMicroseconds(d, p) {
+  return formatMilliseconds(d, p) + "000";
+}
+
+function formatMonthNumber(d, p) {
+  return pad(d.getMonth() + 1, p, 2);
+}
+
+function formatMinutes(d, p) {
+  return pad(d.getMinutes(), p, 2);
+}
+
+function formatSeconds(d, p) {
+  return pad(d.getSeconds(), p, 2);
+}
+
+function formatWeekdayNumberMonday(d) {
+  var day$$1 = d.getDay();
+  return day$$1 === 0 ? 7 : day$$1;
+}
+
+function formatWeekNumberSunday(d, p) {
+  return pad(sunday.count(year(d), d), p, 2);
+}
+
+function formatWeekNumberISO(d, p) {
+  var day$$1 = d.getDay();
+  d = day$$1 >= 4 || day$$1 === 0 ? thursday(d) : thursday.ceil(d);
+  return pad(thursday.count(year(d), d) + (year(d).getDay() === 4), p, 2);
+}
+
+function formatWeekdayNumberSunday(d) {
+  return d.getDay();
+}
+
+function formatWeekNumberMonday(d, p) {
+  return pad(monday.count(year(d), d), p, 2);
+}
+
+function formatYear(d, p) {
+  return pad(d.getFullYear() % 100, p, 2);
+}
+
+function formatFullYear(d, p) {
+  return pad(d.getFullYear() % 10000, p, 4);
+}
+
+function formatZone(d) {
+  var z = d.getTimezoneOffset();
+  return (z > 0 ? "-" : (z *= -1, "+")) + pad(z / 60 | 0, "0", 2) + pad(z % 60, "0", 2);
+}
+
+function formatUTCDayOfMonth(d, p) {
+  return pad(d.getUTCDate(), p, 2);
+}
+
+function formatUTCHour24(d, p) {
+  return pad(d.getUTCHours(), p, 2);
+}
+
+function formatUTCHour12(d, p) {
+  return pad(d.getUTCHours() % 12 || 12, p, 2);
+}
+
+function formatUTCDayOfYear(d, p) {
+  return pad(1 + utcDay.count(utcYear(d), d), p, 3);
+}
+
+function formatUTCMilliseconds(d, p) {
+  return pad(d.getUTCMilliseconds(), p, 3);
+}
+
+function formatUTCMicroseconds(d, p) {
+  return formatUTCMilliseconds(d, p) + "000";
+}
+
+function formatUTCMonthNumber(d, p) {
+  return pad(d.getUTCMonth() + 1, p, 2);
+}
+
+function formatUTCMinutes(d, p) {
+  return pad(d.getUTCMinutes(), p, 2);
+}
+
+function formatUTCSeconds(d, p) {
+  return pad(d.getUTCSeconds(), p, 2);
+}
+
+function formatUTCWeekdayNumberMonday(d) {
+  var dow = d.getUTCDay();
+  return dow === 0 ? 7 : dow;
+}
+
+function formatUTCWeekNumberSunday(d, p) {
+  return pad(utcSunday.count(utcYear(d), d), p, 2);
+}
+
+function formatUTCWeekNumberISO(d, p) {
+  var day$$1 = d.getUTCDay();
+  d = day$$1 >= 4 || day$$1 === 0 ? utcThursday(d) : utcThursday.ceil(d);
+  return pad(utcThursday.count(utcYear(d), d) + (utcYear(d).getUTCDay() === 4), p, 2);
+}
+
+function formatUTCWeekdayNumberSunday(d) {
+  return d.getUTCDay();
+}
+
+function formatUTCWeekNumberMonday(d, p) {
+  return pad(utcMonday.count(utcYear(d), d), p, 2);
+}
+
+function formatUTCYear(d, p) {
+  return pad(d.getUTCFullYear() % 100, p, 2);
+}
+
+function formatUTCFullYear(d, p) {
+  return pad(d.getUTCFullYear() % 10000, p, 4);
+}
+
+function formatUTCZone() {
+  return "+0000";
+}
+
+function formatLiteralPercent() {
+  return "%";
+}
+
+function formatUnixTimestamp(d) {
+  return +d;
+}
+
+function formatUnixTimestampSeconds(d) {
+  return Math.floor(+d / 1000);
+}
+
+var locale$2;
+var timeFormat;
+var timeParse;
+var utcFormat;
+var utcParse;
+
+defaultLocale$1({
+  dateTime: "%x, %X",
+  date: "%-m/%-d/%Y",
+  time: "%-I:%M:%S %p",
+  periods: ["AM", "PM"],
+  days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  shortDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  shortMonths: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+});
+
+function defaultLocale$1(definition) {
+  locale$2 = formatLocale$1(definition);
+  timeFormat = locale$2.format;
+  timeParse = locale$2.parse;
+  utcFormat = locale$2.utcFormat;
+  utcParse = locale$2.utcParse;
+  return locale$2;
+}
+
+var isoSpecifier = "%Y-%m-%dT%H:%M:%S.%LZ";
+
+function formatIsoNative(date) {
+    return date.toISOString();
+}
+
+var formatIso = Date.prototype.toISOString ? formatIsoNative : utcFormat(isoSpecifier);
+
+function parseIsoNative(string) {
+  var date = new Date(string);
+  return isNaN(date) ? null : date;
+}
+
+var parseIso = +new Date("2000-01-01T00:00:00.000Z") ? parseIsoNative : utcParse(isoSpecifier);
+
+var durationSecond = 1000;
+var durationMinute = durationSecond * 60;
+var durationHour = durationMinute * 60;
+var durationDay = durationHour * 24;
+var durationWeek = durationDay * 7;
+var durationMonth = durationDay * 30;
+var durationYear = durationDay * 365;
+
+function date$1(t) {
+  return new Date(t);
+}
+
+function number$2(t) {
+  return t instanceof Date ? +t : +new Date(+t);
+}
+
+function calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1, millisecond$$1, format) {
+  var scale = continuous(deinterpolateLinear, reinterpolate),
+      invert = scale.invert,
+      domain = scale.domain;
+
+  var formatMillisecond = format(".%L"),
+      formatSecond = format(":%S"),
+      formatMinute = format("%I:%M"),
+      formatHour = format("%I %p"),
+      formatDay = format("%a %d"),
+      formatWeek = format("%b %d"),
+      formatMonth = format("%B"),
+      formatYear = format("%Y");
+
+  var tickIntervals = [[second$$1, 1, durationSecond], [second$$1, 5, 5 * durationSecond], [second$$1, 15, 15 * durationSecond], [second$$1, 30, 30 * durationSecond], [minute$$1, 1, durationMinute], [minute$$1, 5, 5 * durationMinute], [minute$$1, 15, 15 * durationMinute], [minute$$1, 30, 30 * durationMinute], [hour$$1, 1, durationHour], [hour$$1, 3, 3 * durationHour], [hour$$1, 6, 6 * durationHour], [hour$$1, 12, 12 * durationHour], [day$$1, 1, durationDay], [day$$1, 2, 2 * durationDay], [week, 1, durationWeek], [month$$1, 1, durationMonth], [month$$1, 3, 3 * durationMonth], [year$$1, 1, durationYear]];
+
+  function tickFormat(date$$1) {
+    return (second$$1(date$$1) < date$$1 ? formatMillisecond : minute$$1(date$$1) < date$$1 ? formatSecond : hour$$1(date$$1) < date$$1 ? formatMinute : day$$1(date$$1) < date$$1 ? formatHour : month$$1(date$$1) < date$$1 ? week(date$$1) < date$$1 ? formatDay : formatWeek : year$$1(date$$1) < date$$1 ? formatMonth : formatYear)(date$$1);
+  }
+
+  function tickInterval(interval$$1, start, stop, step) {
+    if (interval$$1 == null) interval$$1 = 10;
+
+    // If a desired tick count is specified, pick a reasonable tick interval
+    // based on the extent of the domain and a rough estimate of tick size.
+    // Otherwise, assume interval is already a time interval and use it.
+    if (typeof interval$$1 === "number") {
+      var target = Math.abs(stop - start) / interval$$1,
+          i = bisector(function (i) {
+        return i[2];
+      }).right(tickIntervals, target);
+      if (i === tickIntervals.length) {
+        step = tickStep(start / durationYear, stop / durationYear, interval$$1);
+        interval$$1 = year$$1;
+      } else if (i) {
+        i = tickIntervals[target / tickIntervals[i - 1][2] < tickIntervals[i][2] / target ? i - 1 : i];
+        step = i[1];
+        interval$$1 = i[0];
+      } else {
+        step = Math.max(tickStep(start, stop, interval$$1), 1);
+        interval$$1 = millisecond$$1;
+      }
+    }
+
+    return step == null ? interval$$1 : interval$$1.every(step);
+  }
+
+  scale.invert = function (y) {
+    return new Date(invert(y));
+  };
+
+  scale.domain = function (_) {
+    return arguments.length ? domain(map$3.call(_, number$2)) : domain().map(date$1);
+  };
+
+  scale.ticks = function (interval$$1, step) {
+    var d = domain(),
+        t0 = d[0],
+        t1 = d[d.length - 1],
+        r = t1 < t0,
+        t;
+    if (r) t = t0, t0 = t1, t1 = t;
+    t = tickInterval(interval$$1, t0, t1, step);
+    t = t ? t.range(t0, t1 + 1) : []; // inclusive stop
+    return r ? t.reverse() : t;
+  };
+
+  scale.tickFormat = function (count, specifier) {
+    return specifier == null ? tickFormat : format(specifier);
+  };
+
+  scale.nice = function (interval$$1, step) {
+    var d = domain();
+    return (interval$$1 = tickInterval(interval$$1, d[0], d[d.length - 1], step)) ? domain(nice(d, interval$$1)) : scale;
+  };
+
+  scale.copy = function () {
+    return copy(scale, calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1, millisecond$$1, format));
+  };
+
+  return scale;
+}
+
+var scaleTime = function () {
+  return calendar(year, month, sunday, day, hour, minute, second, millisecond, timeFormat).domain([new Date(2000, 0, 1), new Date(2000, 0, 2)]);
+};
+
+var colors = function (s) {
+  return s.match(/.{6}/g).map(function (x) {
+    return "#" + x;
+  });
+};
+
+colors("1f77b4ff7f0e2ca02cd627289467bd8c564be377c27f7f7fbcbd2217becf");
+
+colors("393b795254a36b6ecf9c9ede6379398ca252b5cf6bcedb9c8c6d31bd9e39e7ba52e7cb94843c39ad494ad6616be7969c7b4173a55194ce6dbdde9ed6");
+
+colors("3182bd6baed69ecae1c6dbefe6550dfd8d3cfdae6bfdd0a231a35474c476a1d99bc7e9c0756bb19e9ac8bcbddcdadaeb636363969696bdbdbdd9d9d9");
+
+colors("1f77b4aec7e8ff7f0effbb782ca02c98df8ad62728ff98969467bdc5b0d58c564bc49c94e377c2f7b6d27f7f7fc7c7c7bcbd22dbdb8d17becf9edae5");
+
+var define$3 = function (constructor, factory, prototype) {
+  constructor.prototype = factory.prototype = prototype;
+  prototype.constructor = constructor;
+};
+
+function extend$2(parent, definition) {
+  var prototype = Object.create(parent.prototype);
+  for (var key in definition) {
+    prototype[key] = definition[key];
+  }return prototype;
+}
+
+function Color$2() {}
+
+var _darker$2 = 0.7;
+var _brighter$2 = 1 / _darker$2;
+
+var reI$2 = "\\s*([+-]?\\d+)\\s*";
+var reN$2 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*";
+var reP$2 = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*";
+var reHex3$2 = /^#([0-9a-f]{3})$/;
+var reHex6$2 = /^#([0-9a-f]{6})$/;
+var reRgbInteger$2 = new RegExp("^rgb\\(" + [reI$2, reI$2, reI$2] + "\\)$");
+var reRgbPercent$2 = new RegExp("^rgb\\(" + [reP$2, reP$2, reP$2] + "\\)$");
+var reRgbaInteger$2 = new RegExp("^rgba\\(" + [reI$2, reI$2, reI$2, reN$2] + "\\)$");
+var reRgbaPercent$2 = new RegExp("^rgba\\(" + [reP$2, reP$2, reP$2, reN$2] + "\\)$");
+var reHslPercent$2 = new RegExp("^hsl\\(" + [reN$2, reP$2, reP$2] + "\\)$");
+var reHslaPercent$2 = new RegExp("^hsla\\(" + [reN$2, reP$2, reP$2, reN$2] + "\\)$");
+
+var named$2 = {
+  aliceblue: 0xf0f8ff,
+  antiquewhite: 0xfaebd7,
+  aqua: 0x00ffff,
+  aquamarine: 0x7fffd4,
+  azure: 0xf0ffff,
+  beige: 0xf5f5dc,
+  bisque: 0xffe4c4,
+  black: 0x000000,
+  blanchedalmond: 0xffebcd,
+  blue: 0x0000ff,
+  blueviolet: 0x8a2be2,
+  brown: 0xa52a2a,
+  burlywood: 0xdeb887,
+  cadetblue: 0x5f9ea0,
+  chartreuse: 0x7fff00,
+  chocolate: 0xd2691e,
+  coral: 0xff7f50,
+  cornflowerblue: 0x6495ed,
+  cornsilk: 0xfff8dc,
+  crimson: 0xdc143c,
+  cyan: 0x00ffff,
+  darkblue: 0x00008b,
+  darkcyan: 0x008b8b,
+  darkgoldenrod: 0xb8860b,
+  darkgray: 0xa9a9a9,
+  darkgreen: 0x006400,
+  darkgrey: 0xa9a9a9,
+  darkkhaki: 0xbdb76b,
+  darkmagenta: 0x8b008b,
+  darkolivegreen: 0x556b2f,
+  darkorange: 0xff8c00,
+  darkorchid: 0x9932cc,
+  darkred: 0x8b0000,
+  darksalmon: 0xe9967a,
+  darkseagreen: 0x8fbc8f,
+  darkslateblue: 0x483d8b,
+  darkslategray: 0x2f4f4f,
+  darkslategrey: 0x2f4f4f,
+  darkturquoise: 0x00ced1,
+  darkviolet: 0x9400d3,
+  deeppink: 0xff1493,
+  deepskyblue: 0x00bfff,
+  dimgray: 0x696969,
+  dimgrey: 0x696969,
+  dodgerblue: 0x1e90ff,
+  firebrick: 0xb22222,
+  floralwhite: 0xfffaf0,
+  forestgreen: 0x228b22,
+  fuchsia: 0xff00ff,
+  gainsboro: 0xdcdcdc,
+  ghostwhite: 0xf8f8ff,
+  gold: 0xffd700,
+  goldenrod: 0xdaa520,
+  gray: 0x808080,
+  green: 0x008000,
+  greenyellow: 0xadff2f,
+  grey: 0x808080,
+  honeydew: 0xf0fff0,
+  hotpink: 0xff69b4,
+  indianred: 0xcd5c5c,
+  indigo: 0x4b0082,
+  ivory: 0xfffff0,
+  khaki: 0xf0e68c,
+  lavender: 0xe6e6fa,
+  lavenderblush: 0xfff0f5,
+  lawngreen: 0x7cfc00,
+  lemonchiffon: 0xfffacd,
+  lightblue: 0xadd8e6,
+  lightcoral: 0xf08080,
+  lightcyan: 0xe0ffff,
+  lightgoldenrodyellow: 0xfafad2,
+  lightgray: 0xd3d3d3,
+  lightgreen: 0x90ee90,
+  lightgrey: 0xd3d3d3,
+  lightpink: 0xffb6c1,
+  lightsalmon: 0xffa07a,
+  lightseagreen: 0x20b2aa,
+  lightskyblue: 0x87cefa,
+  lightslategray: 0x778899,
+  lightslategrey: 0x778899,
+  lightsteelblue: 0xb0c4de,
+  lightyellow: 0xffffe0,
+  lime: 0x00ff00,
+  limegreen: 0x32cd32,
+  linen: 0xfaf0e6,
+  magenta: 0xff00ff,
+  maroon: 0x800000,
+  mediumaquamarine: 0x66cdaa,
+  mediumblue: 0x0000cd,
+  mediumorchid: 0xba55d3,
+  mediumpurple: 0x9370db,
+  mediumseagreen: 0x3cb371,
+  mediumslateblue: 0x7b68ee,
+  mediumspringgreen: 0x00fa9a,
+  mediumturquoise: 0x48d1cc,
+  mediumvioletred: 0xc71585,
+  midnightblue: 0x191970,
+  mintcream: 0xf5fffa,
+  mistyrose: 0xffe4e1,
+  moccasin: 0xffe4b5,
+  navajowhite: 0xffdead,
+  navy: 0x000080,
+  oldlace: 0xfdf5e6,
+  olive: 0x808000,
+  olivedrab: 0x6b8e23,
+  orange: 0xffa500,
+  orangered: 0xff4500,
+  orchid: 0xda70d6,
+  palegoldenrod: 0xeee8aa,
+  palegreen: 0x98fb98,
+  paleturquoise: 0xafeeee,
+  palevioletred: 0xdb7093,
+  papayawhip: 0xffefd5,
+  peachpuff: 0xffdab9,
+  peru: 0xcd853f,
+  pink: 0xffc0cb,
+  plum: 0xdda0dd,
+  powderblue: 0xb0e0e6,
+  purple: 0x800080,
+  rebeccapurple: 0x663399,
+  red: 0xff0000,
+  rosybrown: 0xbc8f8f,
+  royalblue: 0x4169e1,
+  saddlebrown: 0x8b4513,
+  salmon: 0xfa8072,
+  sandybrown: 0xf4a460,
+  seagreen: 0x2e8b57,
+  seashell: 0xfff5ee,
+  sienna: 0xa0522d,
+  silver: 0xc0c0c0,
+  skyblue: 0x87ceeb,
+  slateblue: 0x6a5acd,
+  slategray: 0x708090,
+  slategrey: 0x708090,
+  snow: 0xfffafa,
+  springgreen: 0x00ff7f,
+  steelblue: 0x4682b4,
+  tan: 0xd2b48c,
+  teal: 0x008080,
+  thistle: 0xd8bfd8,
+  tomato: 0xff6347,
+  turquoise: 0x40e0d0,
+  violet: 0xee82ee,
+  wheat: 0xf5deb3,
+  white: 0xffffff,
+  whitesmoke: 0xf5f5f5,
+  yellow: 0xffff00,
+  yellowgreen: 0x9acd32
+};
+
+define$3(Color$2, color$2, {
+  displayable: function displayable() {
+    return this.rgb().displayable();
+  },
+  toString: function toString() {
+    return this.rgb() + "";
+  }
+});
+
+function color$2(format) {
+  var m;
+  format = (format + "").trim().toLowerCase();
+  return (m = reHex3$2.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$2(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
+  ) : (m = reHex6$2.exec(format)) ? rgbn$2(parseInt(m[1], 16) // #ff0000
+  ) : (m = reRgbInteger$2.exec(format)) ? new Rgb$2(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
+  : (m = reRgbPercent$2.exec(format)) ? new Rgb$2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
+  : (m = reRgbaInteger$2.exec(format)) ? rgba$2(m[1], m[2], m[3], m[4] // rgba(255, 0, 0, 1)
+  ) : (m = reRgbaPercent$2.exec(format)) ? rgba$2(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4] // rgb(100%, 0%, 0%, 1)
+  ) : (m = reHslPercent$2.exec(format)) ? hsla$2(m[1], m[2] / 100, m[3] / 100, 1 // hsl(120, 50%, 50%)
+  ) : (m = reHslaPercent$2.exec(format)) ? hsla$2(m[1], m[2] / 100, m[3] / 100, m[4] // hsla(120, 50%, 50%, 1)
+  ) : named$2.hasOwnProperty(format) ? rgbn$2(named$2[format]) : format === "transparent" ? new Rgb$2(NaN, NaN, NaN, 0) : null;
+}
+
+function rgbn$2(n) {
+  return new Rgb$2(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
+}
+
+function rgba$2(r, g, b, a) {
+  if (a <= 0) r = g = b = NaN;
+  return new Rgb$2(r, g, b, a);
+}
+
+function rgbConvert$2(o) {
+  if (!(o instanceof Color$2)) o = color$2(o);
+  if (!o) return new Rgb$2();
+  o = o.rgb();
+  return new Rgb$2(o.r, o.g, o.b, o.opacity);
+}
+
+function rgb$2(r, g, b, opacity) {
+  return arguments.length === 1 ? rgbConvert$2(r) : new Rgb$2(r, g, b, opacity == null ? 1 : opacity);
+}
+
+function Rgb$2(r, g, b, opacity) {
+  this.r = +r;
+  this.g = +g;
+  this.b = +b;
+  this.opacity = +opacity;
+}
+
+define$3(Rgb$2, rgb$2, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
+    return new Rgb$2(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
+    return new Rgb$2(this.r * k, this.g * k, this.b * k, this.opacity);
+  },
+  rgb: function rgb() {
+    return this;
+  },
+  displayable: function displayable() {
+    return 0 <= this.r && this.r <= 255 && 0 <= this.g && this.g <= 255 && 0 <= this.b && this.b <= 255 && 0 <= this.opacity && this.opacity <= 1;
+  },
+  toString: function toString() {
+    var a = this.opacity;a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
+    return (a === 1 ? "rgb(" : "rgba(") + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.b) || 0)) + (a === 1 ? ")" : ", " + a + ")");
+  }
+}));
+
+function hsla$2(h, s, l, a) {
+  if (a <= 0) h = s = l = NaN;else if (l <= 0 || l >= 1) h = s = NaN;else if (s <= 0) h = NaN;
+  return new Hsl$2(h, s, l, a);
+}
+
+function hslConvert$2(o) {
+  if (o instanceof Hsl$2) return new Hsl$2(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Color$2)) o = color$2(o);
+  if (!o) return new Hsl$2();
+  if (o instanceof Hsl$2) return o;
+  o = o.rgb();
+  var r = o.r / 255,
+      g = o.g / 255,
+      b = o.b / 255,
+      min = Math.min(r, g, b),
+      max = Math.max(r, g, b),
+      h = NaN,
+      s = max - min,
+      l = (max + min) / 2;
+  if (s) {
+    if (r === max) h = (g - b) / s + (g < b) * 6;else if (g === max) h = (b - r) / s + 2;else h = (r - g) / s + 4;
+    s /= l < 0.5 ? max + min : 2 - max - min;
+    h *= 60;
+  } else {
+    s = l > 0 && l < 1 ? 0 : h;
+  }
+  return new Hsl$2(h, s, l, o.opacity);
+}
+
+function hsl$4(h, s, l, opacity) {
+  return arguments.length === 1 ? hslConvert$2(h) : new Hsl$2(h, s, l, opacity == null ? 1 : opacity);
+}
+
+function Hsl$2(h, s, l, opacity) {
+  this.h = +h;
+  this.s = +s;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$3(Hsl$2, hsl$4, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
+    return new Hsl$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
+    return new Hsl$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  rgb: function rgb() {
+    var h = this.h % 360 + (this.h < 0) * 360,
+        s = isNaN(h) || isNaN(this.s) ? 0 : this.s,
+        l = this.l,
+        m2 = l + (l < 0.5 ? l : 1 - l) * s,
+        m1 = 2 * l - m2;
+    return new Rgb$2(hsl2rgb$2(h >= 240 ? h - 240 : h + 120, m1, m2), hsl2rgb$2(h, m1, m2), hsl2rgb$2(h < 120 ? h + 240 : h - 120, m1, m2), this.opacity);
+  },
+  displayable: function displayable() {
+    return (0 <= this.s && this.s <= 1 || isNaN(this.s)) && 0 <= this.l && this.l <= 1 && 0 <= this.opacity && this.opacity <= 1;
+  }
+}));
+
+/* From FvD 13.37, CSS Color Module Level 3 */
+function hsl2rgb$2(h, m1, m2) {
+  return (h < 60 ? m1 + (m2 - m1) * h / 60 : h < 180 ? m2 : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60 : m1) * 255;
+}
+
+var deg2rad$2 = Math.PI / 180;
+var rad2deg$2 = 180 / Math.PI;
+
+var Kn$2 = 18;
+var Xn$2 = 0.950470;
+var Yn$2 = 1;
+var Zn$2 = 1.088830;
+var t0$3 = 4 / 29;
+var t1$3 = 6 / 29;
+var t2$2 = 3 * t1$3 * t1$3;
+var t3$2 = t1$3 * t1$3 * t1$3;
+
+function labConvert$2(o) {
+  if (o instanceof Lab$2) return new Lab$2(o.l, o.a, o.b, o.opacity);
+  if (o instanceof Hcl$2) {
+    var h = o.h * deg2rad$2;
+    return new Lab$2(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
+  }
+  if (!(o instanceof Rgb$2)) o = rgbConvert$2(o);
+  var b = rgb2xyz$2(o.r),
+      a = rgb2xyz$2(o.g),
+      l = rgb2xyz$2(o.b),
+      x = xyz2lab$2((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn$2),
+      y = xyz2lab$2((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn$2),
+      z = xyz2lab$2((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn$2);
+  return new Lab$2(116 * y - 16, 500 * (x - y), 200 * (y - z), o.opacity);
+}
+
+function lab$3(l, a, b, opacity) {
+  return arguments.length === 1 ? labConvert$2(l) : new Lab$2(l, a, b, opacity == null ? 1 : opacity);
+}
+
+function Lab$2(l, a, b, opacity) {
+  this.l = +l;
+  this.a = +a;
+  this.b = +b;
+  this.opacity = +opacity;
+}
+
+define$3(Lab$2, lab$3, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    return new Lab$2(this.l + Kn$2 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+  },
+  darker: function darker(k) {
+    return new Lab$2(this.l - Kn$2 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+  },
+  rgb: function rgb() {
+    var y = (this.l + 16) / 116,
+        x = isNaN(this.a) ? y : y + this.a / 500,
+        z = isNaN(this.b) ? y : y - this.b / 200;
+    y = Yn$2 * lab2xyz$2(y);
+    x = Xn$2 * lab2xyz$2(x);
+    z = Zn$2 * lab2xyz$2(z);
+    return new Rgb$2(xyz2rgb$2(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
+    xyz2rgb$2(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb$2(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
+  }
+}));
+
+function xyz2lab$2(t) {
+  return t > t3$2 ? Math.pow(t, 1 / 3) : t / t2$2 + t0$3;
+}
+
+function lab2xyz$2(t) {
+  return t > t1$3 ? t * t * t : t2$2 * (t - t0$3);
+}
+
+function xyz2rgb$2(x) {
+  return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
+}
+
+function rgb2xyz$2(x) {
+  return (x /= 255) <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+function hclConvert$2(o) {
+  if (o instanceof Hcl$2) return new Hcl$2(o.h, o.c, o.l, o.opacity);
+  if (!(o instanceof Lab$2)) o = labConvert$2(o);
+  var h = Math.atan2(o.b, o.a) * rad2deg$2;
+  return new Hcl$2(h < 0 ? h + 360 : h, Math.sqrt(o.a * o.a + o.b * o.b), o.l, o.opacity);
+}
+
+function hcl$4(h, c, l, opacity) {
+  return arguments.length === 1 ? hclConvert$2(h) : new Hcl$2(h, c, l, opacity == null ? 1 : opacity);
+}
+
+function Hcl$2(h, c, l, opacity) {
+  this.h = +h;
+  this.c = +c;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$3(Hcl$2, hcl$4, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    return new Hcl$2(this.h, this.c, this.l + Kn$2 * (k == null ? 1 : k), this.opacity);
+  },
+  darker: function darker(k) {
+    return new Hcl$2(this.h, this.c, this.l - Kn$2 * (k == null ? 1 : k), this.opacity);
+  },
+  rgb: function rgb() {
+    return labConvert$2(this).rgb();
+  }
+}));
+
+var A$2 = -0.14861;
+var B$2 = +1.78277;
+var C$2 = -0.29227;
+var D$2 = -0.90649;
+var E$2 = +1.97294;
+var ED$2 = E$2 * D$2;
+var EB$2 = E$2 * B$2;
+var BC_DA$2 = B$2 * C$2 - D$2 * A$2;
+
+function cubehelixConvert$2(o) {
+  if (o instanceof Cubehelix$2) return new Cubehelix$2(o.h, o.s, o.l, o.opacity);
+  if (!(o instanceof Rgb$2)) o = rgbConvert$2(o);
+  var r = o.r / 255,
+      g = o.g / 255,
+      b = o.b / 255,
+      l = (BC_DA$2 * b + ED$2 * r - EB$2 * g) / (BC_DA$2 + ED$2 - EB$2),
+      bl = b - l,
+      k = (E$2 * (g - l) - C$2 * bl) / D$2,
+      s = Math.sqrt(k * k + bl * bl) / (E$2 * l * (1 - l)),
+      // NaN if l=0 or l=1
+  h = s ? Math.atan2(k, bl) * rad2deg$2 - 120 : NaN;
+  return new Cubehelix$2(h < 0 ? h + 360 : h, s, l, o.opacity);
+}
+
+function cubehelix$5(h, s, l, opacity) {
+  return arguments.length === 1 ? cubehelixConvert$2(h) : new Cubehelix$2(h, s, l, opacity == null ? 1 : opacity);
+}
+
+function Cubehelix$2(h, s, l, opacity) {
+  this.h = +h;
+  this.s = +s;
+  this.l = +l;
+  this.opacity = +opacity;
+}
+
+define$3(Cubehelix$2, cubehelix$5, extend$2(Color$2, {
+  brighter: function brighter(k) {
+    k = k == null ? _brighter$2 : Math.pow(_brighter$2, k);
+    return new Cubehelix$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  darker: function darker(k) {
+    k = k == null ? _darker$2 : Math.pow(_darker$2, k);
+    return new Cubehelix$2(this.h, this.s, this.l * k, this.opacity);
+  },
+  rgb: function rgb() {
+    var h = isNaN(this.h) ? 0 : (this.h + 120) * deg2rad$2,
+        l = +this.l,
+        a = isNaN(this.s) ? 0 : this.s * l * (1 - l),
+        cosh = Math.cos(h),
+        sinh = Math.sin(h);
+    return new Rgb$2(255 * (l + a * (A$2 * cosh + B$2 * sinh)), 255 * (l + a * (C$2 * cosh + D$2 * sinh)), 255 * (l + a * (E$2 * cosh)), this.opacity);
+  }
+}));
+
+cubehelixLong(cubehelix$5(300, 0.5, 0.0), cubehelix$5(-240, 0.5, 1.0));
+
+var warm = cubehelixLong(cubehelix$5(-100, 0.75, 0.35), cubehelix$5(80, 1.50, 0.8));
+
+var cool = cubehelixLong(cubehelix$5(260, 0.75, 0.35), cubehelix$5(80, 1.50, 0.8));
+
+var rainbow = cubehelix$5();
+
 /** adjusts an axis' default range [h()+1, 1] if a NullValueSeparator is set */
 var getRange = function getRange(config) {
   var h = config.height - config.margin.top - config.margin.bottom;
@@ -9030,7 +8839,7 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
           });
           _extent = temp;
         }
-        return linear().domain(_extent).range(getRange(config));
+        return linear$2().domain(_extent).range(getRange(config));
       },
       string: function string(k) {
         var counts = {},
@@ -9295,6 +9104,168 @@ var axisDots = function axisDots(config, pc, position) {
     return _this$2;
   };
 };
+
+var slice$3 = Array.prototype.slice;
+
+var identity$5 = function (x) {
+  return x;
+};
+
+var top = 1;
+var right = 2;
+var bottom = 3;
+var left = 4;
+var epsilon$2 = 1e-6;
+
+function translateX(x) {
+  return "translate(" + (x + 0.5) + ",0)";
+}
+
+function translateY(y) {
+  return "translate(0," + (y + 0.5) + ")";
+}
+
+function number$3(scale) {
+  return function (d) {
+    return +scale(d);
+  };
+}
+
+function center(scale) {
+  var offset = Math.max(0, scale.bandwidth() - 1) / 2; // Adjust for 0.5px offset.
+  if (scale.round()) offset = Math.round(offset);
+  return function (d) {
+    return +scale(d) + offset;
+  };
+}
+
+function entering() {
+  return !this.__axis;
+}
+
+function axis(orient, scale) {
+  var tickArguments = [],
+      tickValues = null,
+      tickFormat = null,
+      tickSizeInner = 6,
+      tickSizeOuter = 6,
+      tickPadding = 3,
+      k = orient === top || orient === left ? -1 : 1,
+      x = orient === left || orient === right ? "x" : "y",
+      transform = orient === top || orient === bottom ? translateX : translateY;
+
+  function axis(context) {
+    var values = tickValues == null ? scale.ticks ? scale.ticks.apply(scale, tickArguments) : scale.domain() : tickValues,
+        format = tickFormat == null ? scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity$5 : tickFormat,
+        spacing = Math.max(tickSizeInner, 0) + tickPadding,
+        range = scale.range(),
+        range0 = +range[0] + 0.5,
+        range1 = +range[range.length - 1] + 0.5,
+        position = (scale.bandwidth ? center : number$3)(scale.copy()),
+        selection = context.selection ? context.selection() : context,
+        path = selection.selectAll(".domain").data([null]),
+        tick = selection.selectAll(".tick").data(values, scale).order(),
+        tickExit = tick.exit(),
+        tickEnter = tick.enter().append("g").attr("class", "tick"),
+        line = tick.select("line"),
+        text = tick.select("text");
+
+    path = path.merge(path.enter().insert("path", ".tick").attr("class", "domain").attr("stroke", "#000"));
+
+    tick = tick.merge(tickEnter);
+
+    line = line.merge(tickEnter.append("line").attr("stroke", "#000").attr(x + "2", k * tickSizeInner));
+
+    text = text.merge(tickEnter.append("text").attr("fill", "#000").attr(x, k * spacing).attr("dy", orient === top ? "0em" : orient === bottom ? "0.71em" : "0.32em"));
+
+    if (context !== selection) {
+      path = path.transition(context);
+      tick = tick.transition(context);
+      line = line.transition(context);
+      text = text.transition(context);
+
+      tickExit = tickExit.transition(context).attr("opacity", epsilon$2).attr("transform", function (d) {
+        return isFinite(d = position(d)) ? transform(d) : this.getAttribute("transform");
+      });
+
+      tickEnter.attr("opacity", epsilon$2).attr("transform", function (d) {
+        var p = this.parentNode.__axis;return transform(p && isFinite(p = p(d)) ? p : position(d));
+      });
+    }
+
+    tickExit.remove();
+
+    path.attr("d", orient === left || orient == right ? "M" + k * tickSizeOuter + "," + range0 + "H0.5V" + range1 + "H" + k * tickSizeOuter : "M" + range0 + "," + k * tickSizeOuter + "V0.5H" + range1 + "V" + k * tickSizeOuter);
+
+    tick.attr("opacity", 1).attr("transform", function (d) {
+      return transform(position(d));
+    });
+
+    line.attr(x + "2", k * tickSizeInner);
+
+    text.attr(x, k * spacing).text(format);
+
+    selection.filter(entering).attr("fill", "none").attr("font-size", 10).attr("font-family", "sans-serif").attr("text-anchor", orient === right ? "start" : orient === left ? "end" : "middle");
+
+    selection.each(function () {
+      this.__axis = position;
+    });
+  }
+
+  axis.scale = function (_) {
+    return arguments.length ? (scale = _, axis) : scale;
+  };
+
+  axis.ticks = function () {
+    return tickArguments = slice$3.call(arguments), axis;
+  };
+
+  axis.tickArguments = function (_) {
+    return arguments.length ? (tickArguments = _ == null ? [] : slice$3.call(_), axis) : tickArguments.slice();
+  };
+
+  axis.tickValues = function (_) {
+    return arguments.length ? (tickValues = _ == null ? null : slice$3.call(_), axis) : tickValues && tickValues.slice();
+  };
+
+  axis.tickFormat = function (_) {
+    return arguments.length ? (tickFormat = _, axis) : tickFormat;
+  };
+
+  axis.tickSize = function (_) {
+    return arguments.length ? (tickSizeInner = tickSizeOuter = +_, axis) : tickSizeInner;
+  };
+
+  axis.tickSizeInner = function (_) {
+    return arguments.length ? (tickSizeInner = +_, axis) : tickSizeInner;
+  };
+
+  axis.tickSizeOuter = function (_) {
+    return arguments.length ? (tickSizeOuter = +_, axis) : tickSizeOuter;
+  };
+
+  axis.tickPadding = function (_) {
+    return arguments.length ? (tickPadding = +_, axis) : tickPadding;
+  };
+
+  return axis;
+}
+
+function axisTop(scale) {
+  return axis(top, scale);
+}
+
+function axisRight(scale) {
+  return axis(right, scale);
+}
+
+function axisBottom(scale) {
+  return axis(bottom, scale);
+}
+
+function axisLeft(scale) {
+  return axis(left, scale);
+}
 
 var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   var axisCfg = void 0;
@@ -9753,6 +9724,35 @@ var detectDimensionTypes = function detectDimensionTypes(data) {
 };
 
 var version = "1.0.3";
+
+var DefaultConfig = {
+  data: [],
+  highlighted: [],
+  dimensions: {},
+  dimensionTitleRotation: 0,
+  brushes: [],
+  brushed: false,
+  brushedColor: null,
+  alphaOnBrushed: 0.0,
+  mode: 'default',
+  rate: 20,
+  width: 600,
+  height: 300,
+  margin: { top: 24, right: 20, bottom: 12, left: 20 },
+  nullValueSeparator: 'undefined', // set to "top" or "bottom"
+  nullValueSeparatorPadding: { top: 8, right: 0, bottom: 8, left: 0 },
+  color: '#069',
+  composite: 'source-over',
+  alpha: 0.7,
+  bundlingStrength: 0.5,
+  bundleDimension: null,
+  smoothness: 0.0,
+  showControlPoints: false,
+  hideAxis: [],
+  flipAxes: [],
+  animationTime: 1100, // How long it takes to flip the axis when you double click
+  rotateLabels: false
+};
 
 var _this$3 = undefined;
 

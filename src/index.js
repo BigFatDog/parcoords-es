@@ -1,14 +1,11 @@
 import { select } from 'd3-selection';
-import { keys, entries } from 'd3-collection';
+import { keys } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
 import { ascending } from 'd3-array';
-import { scalePoint } from 'd3-scale';
-import { axisLeft } from 'd3-axis';
 
 // misc
 import renderQueue from './util/renderQueue';
 import { _rebind, without } from './helper';
-import DefaultConfig from './defaultConfig';
 import getset from './util/getset';
 import w from './util/width';
 import computeClusterCentroids from './util/computeClusterCentroids';
