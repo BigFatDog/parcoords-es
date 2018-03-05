@@ -50,6 +50,7 @@ import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 import detectDimensionTypes from './api/detectDimensionTypes';
 import getOrderedDimensionKeys from './api/getOrderedDimensionKeys';
 import interactive from './api/interactive';
+import shadows from './api/shadows';
 
 import { version } from '../package.json';
 import initState from './state';
@@ -133,17 +134,28 @@ const ParCoords = userConfig => {
     foregroundQueue
   );
 
-  // expose the state of the chart
-  pc.state = __;
-  pc.flags = flags;
-
   // create getter/setters
   getset(pc, __, events, side_effects);
 
   // expose events
+  // getter/setter with event firing
   _rebind(pc, events, 'on');
 
-  // getter/setter with event firing
+  _rebind(
+    pc,
+    axis,
+    'ticks',
+    'orient',
+    'tickValues',
+    'tickSubdivide',
+    'tickSize',
+    'tickPadding',
+    'tickFormat'
+  );
+
+  // expose the state of the chart
+  pc.state = __;
+  pc.flags = flags;
 
   pc.autoscale = autoscale(__, pc, xscale, ctx);
 
@@ -190,30 +202,11 @@ const ParCoords = userConfig => {
   pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
   pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
 
-  pc.shadows = function() {
-    flags.shadows = true;
-    pc.alphaOnBrushed(0.1);
-    pc.render();
-    return this;
-  };
+  pc.shadows = shadows(flags, pc);
 
   // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
-
   pc.clear = clear(__, pc, ctx, brush);
-
-  _rebind(
-    pc,
-    axis,
-    'ticks',
-    'orient',
-    'tickValues',
-    'tickSubdivide',
-    'tickSize',
-    'tickPadding',
-    'tickFormat'
-  );
-
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
   pc.removeAxes = removeAxes(pc);
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
@@ -253,6 +246,7 @@ const ParCoords = userConfig => {
   pc.mergeParcoords = mergeParcoords(pc);
   pc.brushModes = () => Object.getOwnPropertyNames(brush.modes);
   pc.brushMode = brushMode(brush, __, pc);
+
   install1DAxes(brush, __, pc, events);
   install2DStrums(brush, __, pc, events, xscale);
   installAngularBrush(brush, __, pc, events, xscale);
