@@ -16,7 +16,7 @@ const computeCentroids = (config, position, row) => {
     if (i < cols - 1) {
       let cx = x + a * (position(p[i + 1]) - x);
       let cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
-      if (__.bundleDimension !== null) {
+      if (config.bundleDimension !== null) {
         let leftCentroid = config.clusterCentroids
           .get(
             config.dimensions[config.bundleDimension].yscale(

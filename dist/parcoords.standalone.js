@@ -4866,7 +4866,7 @@ var computeCentroids = function computeCentroids(config, position, row) {
     if (i < cols - 1) {
       var cx = x + a * (position(p[i + 1]) - x);
       var cy = y + a * (config.dimensions[p[i + 1]].yscale(row[p[i + 1]]) - y);
-      if (__.bundleDimension !== null) {
+      if (config.bundleDimension !== null) {
         var leftCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i]);
         var rightCentroid = config.clusterCentroids.get(config.dimensions[config.bundleDimension].yscale(row[config.bundleDimension])).get(p[i + 1]);
         var centroid = 0.5 * (leftCentroid + rightCentroid);
@@ -4877,6 +4877,29 @@ var computeCentroids = function computeCentroids(config, position, row) {
   }
 
   return centroids;
+};
+
+var computeControlPoints = function computeControlPoints(smoothness, centroids) {
+  var cols = centroids.length;
+  var a = smoothness;
+  var cps = [];
+
+  cps.push(centroids[0]);
+  cps.push($V([centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)), centroids[0].e(2)]));
+  for (var col = 1; col < cols - 1; ++col) {
+    var mid = centroids[col];
+    var left = centroids[col - 1];
+    var right = centroids[col + 1];
+
+    var diff = left.subtract(right);
+    cps.push(mid.add(diff.x(a)));
+    cps.push(mid);
+    cps.push(mid.subtract(diff.x(a)));
+  }
+  cps.push($V([centroids[cols - 1].e(1) + a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)), centroids[cols - 1].e(2)]));
+  cps.push(centroids[cols - 1]);
+
+  return cps;
 };
 
 var h$1 = function h(config) {
@@ -9673,10 +9696,6 @@ var removeAxes = function removeAxes(pc) {
 
 var _this = undefined;
 
-// misc
-// brush
-// api
-//css
 var ParCoords = function ParCoords(config) {
   var __ = Object.assign({}, InitialState, config);
 
@@ -9709,6 +9728,26 @@ var ParCoords = function ParCoords(config) {
       ctx = {},
       canvas = {};
 
+  var brush = {
+    modes: {
+      None: {
+        install: function install(pc) {}, // Nothing to be done.
+        uninstall: function uninstall(pc) {}, // Nothing to be done.
+        selected: function selected$$1() {
+          return [];
+        }, // Nothing to return
+        brushState: function brushState() {
+          return {};
+        }
+      }
+    },
+    mode: 'None',
+    predicate: 'AND',
+    currentMode: function currentMode() {
+      return this.modes[this.mode];
+    }
+  };
+
   var pc = function pc(selection) {
     selection = pc.selection = select(selection);
 
@@ -9729,26 +9768,6 @@ var ParCoords = function ParCoords(config) {
   var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
     return pc.clear('brushed');
   });
-
-  var brush = {
-    modes: {
-      None: {
-        install: function install(pc) {}, // Nothing to be done.
-        uninstall: function uninstall(pc) {}, // Nothing to be done.
-        selected: function selected$$1() {
-          return [];
-        }, // Nothing to return
-        brushState: function brushState() {
-          return {};
-        }
-      }
-    },
-    mode: 'None',
-    predicate: 'AND',
-    currentMode: function currentMode() {
-      return this.modes[this.mode];
-    }
-  };
 
   // side effects for setters
   var side_effects = dispatch.apply(_this, keys(__)).on('composite', function (d) {

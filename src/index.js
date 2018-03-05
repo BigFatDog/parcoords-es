@@ -86,7 +86,7 @@ const ParCoords = config => {
     'axesreorder',
   ].concat(keys(__));
 
-  let events = dispatch.apply(this, eventTypes),
+  const events = dispatch.apply(this, eventTypes),
     flags = {
       brushable: false,
       reorderable: false,
@@ -99,6 +99,26 @@ const ParCoords = config => {
     axis = axisLeft().ticks(5),
     ctx = {},
     canvas = {};
+
+    const brush = {
+        modes: {
+            None: {
+                install: function(pc) {}, // Nothing to be done.
+                uninstall: function(pc) {}, // Nothing to be done.
+                selected: function() {
+                    return [];
+                }, // Nothing to return
+                brushState: function() {
+                    return {};
+                },
+            },
+        },
+        mode: 'None',
+        predicate: 'AND',
+        currentMode: function() {
+            return this.modes[this.mode];
+        },
+    };
 
   const pc = function(selection) {
     selection = pc.selection = select(selection);
@@ -135,25 +155,6 @@ const ParCoords = config => {
     .rate(50)
     .clear(() => pc.clear('brushed'));
 
-  const brush = {
-    modes: {
-      None: {
-        install: function(pc) {}, // Nothing to be done.
-        uninstall: function(pc) {}, // Nothing to be done.
-        selected: function() {
-          return [];
-        }, // Nothing to return
-        brushState: function() {
-          return {};
-        },
-      },
-    },
-    mode: 'None',
-    predicate: 'AND',
-    currentMode: function() {
-      return this.modes[this.mode];
-    },
-  };
 
   // side effects for setters
   const side_effects = dispatch
@@ -233,6 +234,8 @@ const ParCoords = config => {
     ctx.foreground.strokeStyle = _functor(__.color)(d, i);
     return colorPath(__, position, d, ctx.foreground);
   }
+
+
 
   // expose the state of the chart
   pc.state = __;
