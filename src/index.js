@@ -345,12 +345,6 @@ const ParCoords = config => {
   pc.updateAxes = updateAxes(__, pc, position, axis, flags);
   pc.applyAxisConfig = applyAxisConfig;
   pc.brushable = brushable(__, pc, flags);
-
-  pc.brush = function() {
-    __.brushed = pc.selected();
-    render.call('render');
-  };
-
   pc.brushReset = brushReset(__);
   pc.selected = selected(__);
   pc.reorderable = reorderable(__, pc, xscale, position, dragging, flags);
