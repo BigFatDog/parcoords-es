@@ -49,6 +49,7 @@ import renderDefault, { pathForeground } from './api/renderDefault';
 import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 import detectDimensionTypes from './api/detectDimensionTypes';
 import getOrderedDimensionKeys from './api/getOrderedDimensionKeys';
+import interactive from './api/interactive';
 
 import { version } from '../package.json';
 import initState from './state';
@@ -101,7 +102,7 @@ const ParCoords = userConfig => {
     return pc;
   };
 
-  function position(d) {
+  const position = d => {
     if (xscale.range().length === 0) {
       xscale.range([0, w(__)], 1);
     }
@@ -227,11 +228,7 @@ const ParCoords = userConfig => {
   // pairs of adjacent dimensions
   pc.adjacent_pairs = adjacentPairs;
 
-  pc.interactive = function() {
-    flags.interactive = true;
-    return this;
-  };
-
+  pc.interactive = interactive(flags);
   // expose a few objects
   pc.xscale = xscale;
   pc.ctx = ctx;

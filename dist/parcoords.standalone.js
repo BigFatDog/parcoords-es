@@ -9699,6 +9699,13 @@ var getOrderedDimensionKeys = function getOrderedDimensionKeys(config) {
   };
 };
 
+var interactive = function interactive(flags) {
+    return function () {
+        flags.interactive = true;
+        return this;
+    };
+};
+
 var version = "1.0.3";
 
 var DefaultConfig = {
@@ -9922,13 +9929,13 @@ var ParCoords = function ParCoords(userConfig) {
     return pc;
   };
 
-  function position(d) {
+  var position = function position(d) {
     if (xscale.range().length === 0) {
       xscale.range([0, w$1(__)], 1);
     }
     var v = dragging[d];
     return v == null ? xscale(d) : v;
-  }
+  };
 
   var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
     return pc.clear('brushed');
@@ -10028,11 +10035,7 @@ var ParCoords = function ParCoords(userConfig) {
   // pairs of adjacent dimensions
   pc.adjacent_pairs = adjacentPairs;
 
-  pc.interactive = function () {
-    flags.interactive = true;
-    return this;
-  };
-
+  pc.interactive = interactive(flags);
   // expose a few objects
   pc.xscale = xscale;
   pc.ctx = ctx;
