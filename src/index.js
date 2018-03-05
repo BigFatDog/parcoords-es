@@ -54,7 +54,7 @@ import unhighlight from './api/unhighlight';
 import removeAxes from './api/removeAxes';
 import render from './api/render';
 import renderDefault, { pathForeground } from './api/renderDefault';
-
+import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 //css
 import './parallel-coordinates.css';
 
@@ -282,13 +282,7 @@ const ParCoords = config => {
   pc.toType = toType;
 
   // try to coerce to number before returning type
-  pc.toTypeCoerceNumbers = function(v) {
-    if (parseFloat(v) == v && v != null) {
-      return 'number';
-    }
-    return pc.toType(v);
-  };
-
+  pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
   // attempt to determine types of each dimension based on first row of data
   pc.detectDimensionTypes = function(data) {
     let types = {};

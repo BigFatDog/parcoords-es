@@ -9737,6 +9737,13 @@ var renderDefault = function renderDefault(config, pc, ctx, position) {
   };
 };
 
+var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
+  if (parseFloat(v) == v && v != null) {
+    return 'number';
+  }
+  return toType(v);
+};
+
 var _this = undefined;
 
 // misc
@@ -9927,13 +9934,7 @@ var ParCoords = function ParCoords(config) {
   pc.toType = toType;
 
   // try to coerce to number before returning type
-  pc.toTypeCoerceNumbers = function (v) {
-    if (parseFloat(v) == v && v != null) {
-      return 'number';
-    }
-    return pc.toType(v);
-  };
-
+  pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
   // attempt to determine types of each dimension based on first row of data
   pc.detectDimensionTypes = function (data) {
     var types = {};
