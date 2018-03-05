@@ -1,9 +1,10 @@
-import {keys} from "d3-collection";
+import { keys } from 'd3-collection';
 
-const render = (config, pc, events) => function() {
+const render = (config, pc, events) =>
+  function() {
     // try to autodetect dimensions and create scales
     if (!keys(config.dimensions).length) {
-        pc.detectDimensions();
+      pc.detectDimensions();
     }
     pc.autoscale();
 
@@ -11,6 +12,6 @@ const render = (config, pc, events) => function() {
 
     events.call('render', this);
     return this;
-}
+  };
 
 export default render;

@@ -1,22 +1,20 @@
-import colorPath from "../util/colorPath";
-import {_functor} from "../helper";
+import colorPath from '../util/colorPath';
+import { _functor } from '../helper';
 
-const pathForeground = (config, ctx, position)=> (d, i)=> {
-    ctx.foreground.strokeStyle = _functor(config.color)(d, i);
-    return colorPath(config, position, d, ctx.foreground);
-}
+const pathForeground = (config, ctx, position) => (d, i) => {
+  ctx.foreground.strokeStyle = _functor(config.color)(d, i);
+  return colorPath(config, position, d, ctx.foreground);
+};
 
-const renderDefault = (config, pc, ctx, position)=> ()=> {
-    pc.clear('foreground');
-    pc.clear('highlight');
+const renderDefault = (config, pc, ctx, position) => () => {
+  pc.clear('foreground');
+  pc.clear('highlight');
 
-    pc.renderBrushed.default();
+  pc.renderBrushed.default();
 
-    config.data.forEach(pathForeground(config, ctx, position));
-}
+  config.data.forEach(pathForeground(config, ctx, position));
+};
 
 export default renderDefault;
 
-export {
-    pathForeground
-}
+export { pathForeground };

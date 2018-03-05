@@ -9686,45 +9686,45 @@ var unhighlight = function unhighlight(config, pc, canvas) {
 };
 
 var removeAxes = function removeAxes(pc) {
-    return function () {
-        pc._g.remove();
+  return function () {
+    pc._g.remove();
 
-        delete pc._g;
-        return this;
-    };
+    delete pc._g;
+    return this;
+  };
 };
 
 var render = function render(config, pc, events) {
-    return function () {
-        // try to autodetect dimensions and create scales
-        if (!keys(config.dimensions).length) {
-            pc.detectDimensions();
-        }
-        pc.autoscale();
+  return function () {
+    // try to autodetect dimensions and create scales
+    if (!keys(config.dimensions).length) {
+      pc.detectDimensions();
+    }
+    pc.autoscale();
 
-        pc.render[config.mode]();
+    pc.render[config.mode]();
 
-        events.call('render', this);
-        return this;
-    };
+    events.call('render', this);
+    return this;
+  };
 };
 
 var pathForeground = function pathForeground(config, ctx, position) {
-    return function (d, i) {
-        ctx.foreground.strokeStyle = _functor(config.color)(d, i);
-        return colorPath(config, position, d, ctx.foreground);
-    };
+  return function (d, i) {
+    ctx.foreground.strokeStyle = _functor(config.color)(d, i);
+    return colorPath(config, position, d, ctx.foreground);
+  };
 };
 
 var renderDefault = function renderDefault(config, pc, ctx, position) {
-    return function () {
-        pc.clear('foreground');
-        pc.clear('highlight');
+  return function () {
+    pc.clear('foreground');
+    pc.clear('highlight');
 
-        pc.renderBrushed.default();
+    pc.renderBrushed.default();
 
-        config.data.forEach(pathForeground(config, ctx, position));
-    };
+    config.data.forEach(pathForeground(config, ctx, position));
+  };
 };
 
 var _this = undefined;
@@ -9806,6 +9806,19 @@ var ParCoords = function ParCoords(config) {
     return pc.clear('brushed');
   });
 
+  function position(d) {
+    if (xscale.range().length === 0) {
+      xscale.range([0, w$1(__)], 1);
+    }
+    var v = dragging[d];
+    return v == null ? xscale(d) : v;
+  }
+
+  var foregroundQueue = renderQueue(pathForeground(__, ctx, position)).rate(50).clear(function () {
+    pc.clear('foreground');
+    pc.clear('highlight');
+  });
+
   // side effects for setters
   var side_effects = dispatch.apply(_this, keys(__)).on('composite', function (d) {
     ctx.foreground.globalCompositeOperation = d.value;
@@ -9858,19 +9871,6 @@ var ParCoords = function ParCoords(config) {
       });
       pc.updateAxes(0);
     }
-  });
-
-  function position(d) {
-    if (xscale.range().length === 0) {
-      xscale.range([0, w$1(__)], 1);
-    }
-    var v = dragging[d];
-    return v == null ? xscale(d) : v;
-  }
-
-  var foregroundQueue = renderQueue(pathForeground(__, ctx, position)).rate(50).clear(function () {
-    pc.clear('foreground');
-    pc.clear('highlight');
   });
 
   // expose the state of the chart

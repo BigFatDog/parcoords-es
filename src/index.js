@@ -5,7 +5,6 @@ import { ascending } from 'd3-array';
 import { scalePoint } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 
-
 // misc
 import renderQueue from './renderQueue';
 import { _functor, _rebind, without } from './helper';
@@ -102,25 +101,25 @@ const ParCoords = config => {
     ctx = {},
     canvas = {};
 
-    const brush = {
-        modes: {
-            None: {
-                install: function(pc) {}, // Nothing to be done.
-                uninstall: function(pc) {}, // Nothing to be done.
-                selected: function() {
-                    return [];
-                }, // Nothing to return
-                brushState: function() {
-                    return {};
-                },
-            },
+  const brush = {
+    modes: {
+      None: {
+        install: function(pc) {}, // Nothing to be done.
+        uninstall: function(pc) {}, // Nothing to be done.
+        selected: function() {
+          return [];
+        }, // Nothing to return
+        brushState: function() {
+          return {};
         },
-        mode: 'None',
-        predicate: 'AND',
-        currentMode: function() {
-            return this.modes[this.mode];
-        },
-    };
+      },
+    },
+    mode: 'None',
+    predicate: 'AND',
+    currentMode: function() {
+      return this.modes[this.mode];
+    },
+  };
 
   const pc = function(selection) {
     selection = pc.selection = select(selection);
@@ -157,6 +156,20 @@ const ParCoords = config => {
     .rate(50)
     .clear(() => pc.clear('brushed'));
 
+  function position(d) {
+    if (xscale.range().length === 0) {
+      xscale.range([0, w(__)], 1);
+    }
+    let v = dragging[d];
+    return v == null ? xscale(d) : v;
+  }
+
+  const foregroundQueue = renderQueue(pathForeground(__, ctx, position))
+    .rate(50)
+    .clear(function() {
+      pc.clear('foreground');
+      pc.clear('highlight');
+    });
 
   // side effects for setters
   const side_effects = dispatch
@@ -223,21 +236,6 @@ const ParCoords = config => {
         pc.updateAxes(0);
       }
     });
-
-  function position(d) {
-    if (xscale.range().length === 0) {
-      xscale.range([0, w(__)], 1);
-    }
-    let v = dragging[d];
-    return v == null ? xscale(d) : v;
-  }
-
-  const foregroundQueue = renderQueue(pathForeground(__, ctx, position))
-      .rate(50)
-      .clear(function() {
-          pc.clear('foreground');
-          pc.clear('highlight');
-      });
 
   // expose the state of the chart
   pc.state = __;
