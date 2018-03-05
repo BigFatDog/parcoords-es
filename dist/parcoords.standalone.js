@@ -9709,6 +9709,24 @@ var render = function render(config, pc, events) {
     };
 };
 
+var pathForeground = function pathForeground(config, ctx, position) {
+    return function (d, i) {
+        ctx.foreground.strokeStyle = _functor(config.color)(d, i);
+        return colorPath(config, position, d, ctx.foreground);
+    };
+};
+
+var renderDefault = function renderDefault(config, pc, ctx, position) {
+    return function () {
+        pc.clear('foreground');
+        pc.clear('highlight');
+
+        pc.renderBrushed.default();
+
+        config.data.forEach(pathForeground(config, ctx, position));
+    };
+};
+
 var _this = undefined;
 
 // misc
@@ -9850,10 +9868,10 @@ var ParCoords = function ParCoords(config) {
     return v == null ? xscale(d) : v;
   }
 
-  function path_foreground(d, i) {
-    ctx.foreground.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.foreground);
-  }
+  var foregroundQueue = renderQueue(pathForeground(__, ctx, position)).rate(50).clear(function () {
+    pc.clear('foreground');
+    pc.clear('highlight');
+  });
 
   // expose the state of the chart
   pc.state = __;
@@ -9925,20 +9943,7 @@ var ParCoords = function ParCoords(config) {
     return this;
   };
 
-  pc.render.default = function () {
-    pc.clear('foreground');
-    pc.clear('highlight');
-
-    pc.renderBrushed.default();
-
-    __.data.forEach(path_foreground);
-  };
-
-  var foregroundQueue = renderQueue(path_foreground).rate(50).clear(function () {
-    pc.clear('foreground');
-    pc.clear('highlight');
-  });
-
+  pc.render.default = renderDefault(__, pc, ctx, position);
   pc.render.queue = function () {
     pc.renderBrushed.queue();
 

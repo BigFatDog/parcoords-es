@@ -53,6 +53,7 @@ import highlight from './api/highlight';
 import unhighlight from './api/unhighlight';
 import removeAxes from './api/removeAxes';
 import render from './api/render';
+import renderDefault, { pathForeground } from './api/renderDefault';
 
 //css
 import './parallel-coordinates.css';
@@ -231,12 +232,12 @@ const ParCoords = config => {
     return v == null ? xscale(d) : v;
   }
 
-  function path_foreground(d, i) {
-    ctx.foreground.strokeStyle = _functor(__.color)(d, i);
-    return colorPath(__, position, d, ctx.foreground);
-  }
-
-
+  const foregroundQueue = renderQueue(pathForeground(__, ctx, position))
+      .rate(50)
+      .clear(function() {
+          pc.clear('foreground');
+          pc.clear('highlight');
+      });
 
   // expose the state of the chart
   pc.state = __;
@@ -310,22 +311,7 @@ const ParCoords = config => {
     return this;
   };
 
-  pc.render.default = function() {
-    pc.clear('foreground');
-    pc.clear('highlight');
-
-    pc.renderBrushed.default();
-
-    __.data.forEach(path_foreground);
-  };
-
-  let foregroundQueue = renderQueue(path_foreground)
-    .rate(50)
-    .clear(function() {
-      pc.clear('foreground');
-      pc.clear('highlight');
-    });
-
+  pc.render.default = renderDefault(__, pc, ctx, position);
   pc.render.queue = function() {
     pc.renderBrushed.queue();
 
