@@ -41,13 +41,16 @@ import highlight from './api/highlight';
 import unhighlight from './api/unhighlight';
 import removeAxes from './api/removeAxes';
 import render from './api/render';
-import renderDefault, { pathForeground } from './api/renderDefault';
+import renderDefault, { pathForeground, renderDefaultQueue } from './api/renderDefault';
 import toTypeCoerceNumbers from './api/toTypeCoerceNumbers';
 import detectDimensionTypes from './api/detectDimensionTypes';
 import getOrderedDimensionKeys from './api/getOrderedDimensionKeys';
 import interactive from './api/interactive';
 import shadows from './api/shadows';
 import init from './api/init';
+import flip from './api/flip';
+import detectDimensions from './api/detectDimensions';
+import scale from './api/scale';
 
 import { version } from '../package.json';
 import initState from './state';
@@ -76,8 +79,7 @@ const ParCoords = userConfig => {
     if (xscale.range().length === 0) {
       xscale.range([0, w(__)], 1);
     }
-    let v = dragging[d];
-    return v == null ? xscale(d) : v;
+    return dragging[d] == null ? xscale(d) : dragging[d];
   };
 
   const brushedQueue = renderQueue(pathBrushed(__, ctx, position))
@@ -108,29 +110,12 @@ const ParCoords = userConfig => {
   pc.flags = flags;
 
   pc.autoscale = autoscale(__, pc, xscale, ctx);
-
-  pc.scale = function(d, domain) {
-    __.dimensions[d].yscale.domain(domain);
-
-    return this;
-  };
-
-  pc.flip = function(d) {
-    //__.dimensions[d].yscale.domain().reverse();                               // does not work
-    __.dimensions[d].yscale.domain(__.dimensions[d].yscale.domain().reverse()); // works
-
-    return this;
-  };
-
+  pc.scale = scale(__);
+  pc.flip = flip(__);
   pc.commonScale = commonScale(__, pc);
-  pc.detectDimensions = function() {
-    pc.dimensions(pc.applyDimensionDefaults());
-    return this;
-  };
-
+  pc.detectDimensions = detectDimensions(pc);
   pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
   pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
-
   pc.toType = toType;
 
   // try to coerce to number before returning type
@@ -142,11 +127,7 @@ const ParCoords = userConfig => {
   pc.renderBrushed = renderBrushed(__, pc, events);
 
   pc.render.default = renderDefault(__, pc, ctx, position);
-  pc.render.queue = function() {
-    pc.renderBrushed.queue();
-
-    foregroundQueue(__.data);
-  };
+  pc.render.queue = renderDefaultQueue(__, pc, foregroundQueue);
 
   pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
   pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);

@@ -1347,6 +1347,7 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
+// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -4328,6 +4329,11 @@ function brush$1(dim) {
 }
 
 // brush mode: 1D-Axes
+// This function can be used for 'live' updates of brushes. That is, during the
+// specification of a brush, this method can be called to update the view.
+//
+// @param newSelection - The new set of data items that is currently contained
+//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -6807,6 +6813,7 @@ var formatTypes = {
   }
 };
 
+// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -9217,6 +9224,7 @@ var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   return axisCfg;
 };
 
+// Jason Davies, http://bl.ocks.org/1341281
 var reorderable = function reorderable(config, pc, xscale, position, dragging, flags) {
   return function () {
     if (pc.g() === undefined) pc.createAxes();
@@ -9657,12 +9665,22 @@ var renderDefault = function renderDefault(config, pc, ctx, position) {
   };
 };
 
+var renderDefaultQueue = function renderDefaultQueue(config, pc, foregroundQueue) {
+  return function () {
+    pc.renderBrushed.queue();
+    foregroundQueue(config.data);
+  };
+};
+
+// try to coerce to number before returning type
 var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
   if (parseFloat(v) == v && v != null) {
     return 'number';
   }
   return toType(v);
 };
+
+// attempt to determine types of each dimension based on first row of data
 
 var detectDimensionTypes = function detectDimensionTypes(data) {
   var types = {};
@@ -9714,6 +9732,30 @@ var init$1 = function init(config, canvas, ctx) {
   };
 
   return pc;
+};
+
+var flip = function flip(config) {
+  return function (d) {
+    //__.dimensions[d].yscale.domain().reverse();                               // does not work
+    config.dimensions[d].yscale.domain(config.dimensions[d].yscale.domain().reverse()); // works
+
+    return this;
+  };
+};
+
+var detectDimensions = function detectDimensions(pc) {
+    return function () {
+        pc.dimensions(pc.applyDimensionDefaults());
+        return this;
+    };
+};
+
+var scale = function scale(config) {
+    return function (d, domain) {
+        config.dimensions[d].yscale.domain(domain);
+
+        return this;
+    };
 };
 
 var version = "1.0.3";
@@ -9939,6 +9981,9 @@ var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, f
 };
 
 // misc
+// brush
+// api
+//css
 var ParCoords = function ParCoords(userConfig) {
   var state = initState(userConfig);
   var __ = state.config,
@@ -9958,8 +10003,7 @@ var ParCoords = function ParCoords(userConfig) {
     if (xscale.range().length === 0) {
       xscale.range([0, w$1(__)], 1);
     }
-    var v = dragging[d];
-    return v == null ? xscale(d) : v;
+    return dragging[d] == null ? xscale(d) : dragging[d];
   };
 
   var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
@@ -9978,29 +10022,12 @@ var ParCoords = function ParCoords(userConfig) {
   pc.flags = flags;
 
   pc.autoscale = autoscale(__, pc, xscale, ctx);
-
-  pc.scale = function (d, domain) {
-    __.dimensions[d].yscale.domain(domain);
-
-    return this;
-  };
-
-  pc.flip = function (d) {
-    //__.dimensions[d].yscale.domain().reverse();                               // does not work
-    __.dimensions[d].yscale.domain(__.dimensions[d].yscale.domain().reverse()); // works
-
-    return this;
-  };
-
+  pc.scale = scale(__);
+  pc.flip = flip(__);
   pc.commonScale = commonScale(__, pc);
-  pc.detectDimensions = function () {
-    pc.dimensions(pc.applyDimensionDefaults());
-    return this;
-  };
-
+  pc.detectDimensions = detectDimensions(pc);
   pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
   pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
-
   pc.toType = toType;
 
   // try to coerce to number before returning type
@@ -10012,11 +10039,7 @@ var ParCoords = function ParCoords(userConfig) {
   pc.renderBrushed = renderBrushed(__, pc, events);
 
   pc.render.default = renderDefault(__, pc, ctx, position);
-  pc.render.queue = function () {
-    pc.renderBrushed.queue();
-
-    foregroundQueue(__.data);
-  };
+  pc.render.queue = renderDefaultQueue(__, pc, foregroundQueue);
 
   pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
   pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
