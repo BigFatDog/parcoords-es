@@ -54,6 +54,7 @@ import interactive from './api/interactive';
 import { version } from '../package.json';
 import initState from './state';
 import sideEffects from './sideEffects';
+
 //css
 import './parallel-coordinates.css';
 
@@ -108,7 +109,7 @@ const ParCoords = userConfig => {
     }
     let v = dragging[d];
     return v == null ? xscale(d) : v;
-  }
+  };
 
   const brushedQueue = renderQueue(pathBrushed(__, ctx, position))
     .rate(50)

@@ -9700,10 +9700,10 @@ var getOrderedDimensionKeys = function getOrderedDimensionKeys(config) {
 };
 
 var interactive = function interactive(flags) {
-    return function () {
-        flags.interactive = true;
-        return this;
-    };
+  return function () {
+    flags.interactive = true;
+    return this;
+  };
 };
 
 var version = "1.0.3";
