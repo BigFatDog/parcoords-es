@@ -9606,6 +9606,16 @@ var renderBrushedQueue = function renderBrushedQueue(config, brushGroup, brushed
   };
 };
 
+var renderBrushed = function renderBrushed(config, pc, events) {
+  return function () {
+    if (!keys(config.dimensions).length) pc.detectDimensions();
+
+    pc.renderBrushed[config.mode]();
+    events.call('render', this);
+    return this;
+  };
+};
+
 var brushReset = function brushReset(config) {
   return function (dimension) {
     var brushesToKeep = [];
@@ -9934,14 +9944,7 @@ var ParCoords = function ParCoords(config) {
   };
 
   pc.render = render(__, pc, events);
-
-  pc.renderBrushed = function () {
-    if (!keys(__.dimensions).length) pc.detectDimensions();
-
-    pc.renderBrushed[__.mode]();
-    events.call('render', this);
-    return this;
-  };
+  pc.renderBrushed = renderBrushed(__, pc, events);
 
   pc.render.default = renderDefault(__, pc, ctx, position);
   pc.render.queue = function () {

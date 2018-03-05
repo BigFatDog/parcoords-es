@@ -41,6 +41,7 @@ import sortDimensionsByRowData from './api/sortDimensionsByRowData';
 import clear from './api/clear';
 import {
   pathBrushed,
+  renderBrushed,
   renderBrushedDefault,
   renderBrushedQueue,
 } from './api/renderBrushed';
@@ -300,14 +301,7 @@ const ParCoords = config => {
   };
 
   pc.render = render(__, pc, events);
-
-  pc.renderBrushed = function() {
-    if (!keys(__.dimensions).length) pc.detectDimensions();
-
-    pc.renderBrushed[__.mode]();
-    events.call('render', this);
-    return this;
-  };
+  pc.renderBrushed = renderBrushed(__, pc, events);
 
   pc.render.default = renderDefault(__, pc, ctx, position);
   pc.render.queue = function() {

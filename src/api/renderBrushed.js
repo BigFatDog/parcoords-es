@@ -1,6 +1,7 @@
 import isBrushed from '../util/isBrushed';
 import colorPath from '../util/colorPath';
 import { _functor } from '../helper';
+import { keys } from 'd3-collection';
 
 const pathBrushed = (config, ctx, position) => (d, i) => {
   if (config.brushedColor !== null) {
@@ -27,4 +28,13 @@ const renderBrushedQueue = (config, brushGroup, brushedQueue) => () => {
   }
 };
 
-export { pathBrushed, renderBrushedDefault, renderBrushedQueue };
+const renderBrushed = (config, pc, events) =>
+  function() {
+    if (!keys(config.dimensions).length) pc.detectDimensions();
+
+    pc.renderBrushed[config.mode]();
+    events.call('render', this);
+    return this;
+  };
+
+export { pathBrushed, renderBrushed, renderBrushedDefault, renderBrushedQueue };
