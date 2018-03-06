@@ -34,7 +34,7 @@ const bindEvents = (
   );
 
   // create getter/setters
-  getset(pc, __, events, side_effects);
+  getset(pc, __, events, side_effects, pc);
 
   // expose events
   // getter/setter with event firing

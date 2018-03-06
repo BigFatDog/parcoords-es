@@ -9199,7 +9199,7 @@ var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQu
   });
 };
 
-var getset = function getset(obj, state, events, side_effects) {
+var getset = function getset(obj, state, events, side_effects, pc) {
   keys(state).forEach(function (key) {
     obj[key] = function (x) {
       if (!arguments.length) {
@@ -9207,7 +9207,7 @@ var getset = function getset(obj, state, events, side_effects) {
       }
       if (key === 'dimensions' && Object.prototype.toString.call(x) === '[object Array]') {
         console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
-        x = pc.applyDimensionDefaults(x);
+        x = obj.applyDimensionDefaults(x);
       }
       var old = state[key];
       state[key] = x;
@@ -9236,7 +9236,7 @@ var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, f
   var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
 
   // create getter/setters
-  getset(pc, __, events, side_effects);
+  getset(pc, __, events, side_effects, pc);
 
   // expose events
   // getter/setter with event firing

@@ -1,6 +1,6 @@
 import { keys } from 'd3-collection';
 
-const getset = (obj, state, events, side_effects) => {
+const getset = (obj, state, events, side_effects, pc) => {
   keys(state).forEach(function(key) {
     obj[key] = function(x) {
       if (!arguments.length) {
@@ -11,7 +11,7 @@ const getset = (obj, state, events, side_effects) => {
         Object.prototype.toString.call(x) === '[object Array]'
       ) {
         console.warn('pc.dimensions([]) is deprecated, use pc.dimensions({})');
-        x = pc.applyDimensionDefaults(x);
+        x = obj.applyDimensionDefaults(x);
       }
       let old = state[key];
       state[key] = x;
