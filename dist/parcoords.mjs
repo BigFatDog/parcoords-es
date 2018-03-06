@@ -1049,6 +1049,8 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
   };
 };
 
+// calculate 2d intersection of line a->b with line c->d
+// points are objects with x and y properties
 var intersection = function intersection(a, b, c, d) {
   return {
     x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
@@ -1056,6 +1058,8 @@ var intersection = function intersection(a, b, c, d) {
   };
 };
 
+// Merges the canvases and SVG elements into one canvas element which is then passed into the callback
+// (so you can choose to save it to disk, etc.)
 var mergeParcoords = function mergeParcoords(pc) {
   return function (callback) {
     // Retina display, etc.
@@ -1668,6 +1672,16 @@ var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
   };
 };
 
+/**
+ * Create static SVG axes with dimension names, ticks, and labels.
+ *
+ * @param config
+ * @param pc
+ * @param xscale
+ * @param flags
+ * @param axis
+ * @returns {Function}
+ */
 var createAxes = function createAxes(config, pc, xscale, flags, axis) {
   return function () {
     if (pc.g() !== undefined) {
@@ -1701,6 +1715,7 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
 
 var _this$1 = undefined;
 
+//draw dots with radius r on the axis line where data intersects
 var axisDots = function axisDots(config, pc, position) {
   return function (_r) {
     var r = _r || 0.1;
@@ -2080,12 +2095,14 @@ var toType = function toType(v) {
   return {}.toString.call(v).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
 };
 
+// this descriptive text should live with other introspective methods
 var toString = function toString(config) {
   return function () {
     return 'Parallel Coordinates: ' + keys(config.dimensions).length + ' dimensions (' + keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
   };
 };
 
+// pairs of adjacent dimensions
 var adjacentPairs = function adjacentPairs(arr) {
   var ret = [];
   for (var i = 0; i < arr.length - 1; i++) {
@@ -2101,6 +2118,7 @@ var pathHighlight = function pathHighlight(config, ctx, position) {
   };
 };
 
+// highlight an array of data
 var highlight = function highlight(config, pc, canvas, events, ctx, position) {
   return function () {
     var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
@@ -2118,6 +2136,7 @@ var highlight = function highlight(config, pc, canvas, events, ctx, position) {
   };
 };
 
+// clear highlighting
 var unhighlight = function unhighlight(config, pc, canvas) {
   return function () {
     config.highlighted = [];
@@ -2136,6 +2155,17 @@ var removeAxes = function removeAxes(pc) {
   };
 };
 
+/**
+ * Renders the polylines.
+ * If no dimensions have been specified, it will attempt to detect quantitative
+ * dimensions based on the first data entry. If scales haven't been set, it will
+ * autoscale based on the extent for each dimension.
+ *
+ * @param config
+ * @param pc
+ * @param events
+ * @returns {Function}
+ */
 var render = function render(config, pc, events) {
   return function () {
     // try to autodetect dimensions and create scales
@@ -2215,7 +2245,21 @@ var shadows = function shadows(flags, pc) {
   };
 };
 
+/**
+ * Setup a new parallel coordinates chart.
+ *
+ * @param config
+ * @param canvas
+ * @param ctx
+ * @returns {pc} a parcoords closure
+ */
 var init = function init(config, canvas, ctx) {
+  /**
+   * Create the chart within a container. The selector can also be a d3 selection.
+   *
+   * @param selection a d3 selection
+   * @returns {pc} instance for chained api
+   */
   var pc = function pc(selection) {
     selection = pc.selection = select(selection);
 
@@ -2229,9 +2273,11 @@ var init = function init(config, canvas, ctx) {
 
     // svg tick and brush layers
     pc.svg = selection.append('svg').attr('width', config.width).attr('height', config.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
+    // for chained api
     return pc;
   };
 
+  // for partial-application style programming
   return pc;
 };
 
@@ -2259,7 +2305,7 @@ var scale = function scale(config) {
   };
 };
 
-var version = "1.0.3";
+var version = "2.0.0";
 
 /** Detect free variable `global` from Node.js. */
 var freeGlobal = (typeof global === 'undefined' ? 'undefined' : _typeof(global)) == 'object' && global && global.Object === Object && global;
@@ -2549,7 +2595,7 @@ var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, f
 
 var ParCoords = function ParCoords(userConfig) {
   var state = initState(userConfig);
-  var __ = state.config,
+  var config = state.config,
       events = state.events,
       flags = state.flags,
       xscale = state.xscale,
@@ -2560,76 +2606,73 @@ var ParCoords = function ParCoords(userConfig) {
       brush = state.brush;
 
 
-  var pc = init(__, canvas, ctx);
+  var pc = init(config, canvas, ctx);
 
   var position = function position(d) {
     if (xscale.range().length === 0) {
-      xscale.range([0, w$1(__)], 1);
+      xscale.range([0, w$1(config)], 1);
     }
     return dragging[d] == null ? xscale(d) : dragging[d];
   };
 
-  var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
+  var brushedQueue = renderQueue(pathBrushed(config, ctx, position)).rate(50).clear(function () {
     return pc.clear('brushed');
   });
 
-  var foregroundQueue = renderQueue(pathForeground(__, ctx, position)).rate(50).clear(function () {
+  var foregroundQueue = renderQueue(pathForeground(config, ctx, position)).rate(50).clear(function () {
     pc.clear('foreground');
     pc.clear('highlight');
   });
 
-  bindEvents(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis);
+  bindEvents(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis);
 
   // expose the state of the chart
-  pc.state = __;
+  pc.state = config;
   pc.flags = flags;
 
-  pc.autoscale = autoscale(__, pc, xscale, ctx);
-  pc.scale = scale(__);
-  pc.flip = flip(__);
-  pc.commonScale = commonScale(__, pc);
+  pc.autoscale = autoscale(config, pc, xscale, ctx);
+  pc.scale = scale(config);
+  pc.flip = flip(config);
+  pc.commonScale = commonScale(config, pc);
   pc.detectDimensions = detectDimensions(pc);
-  pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
-  pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
-  pc.toType = toType;
-
-  // try to coerce to number before returning type
-  pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
   // attempt to determine types of each dimension based on first row of data
   pc.detectDimensionTypes = detectDimensionTypes;
+  pc.applyDimensionDefaults = applyDimensionDefaults(config, pc);
+  pc.getOrderedDimensionKeys = getOrderedDimensionKeys(config);
 
-  pc.render = render(__, pc, events);
-  pc.renderBrushed = renderBrushed(__, pc, events);
+  //Renders the polylines.
+  pc.render = render(config, pc, events);
+  pc.renderBrushed = renderBrushed(config, pc, events);
+  pc.render.default = renderDefault(config, pc, ctx, position);
+  pc.render.queue = renderDefaultQueue(config, pc, foregroundQueue);
+  pc.renderBrushed.default = renderBrushedDefault(config, ctx, position, pc, brush);
+  pc.renderBrushed.queue = renderBrushedQueue(config, brush, brushedQueue);
 
-  pc.render.default = renderDefault(__, pc, ctx, position);
-  pc.render.queue = renderDefaultQueue(__, pc, foregroundQueue);
-
-  pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
-  pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
-  pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
-
+  pc.compute_real_centroids = computeRealCentroids(config.dimensions, position);
   pc.shadows = shadows(flags, pc);
-
-  // draw dots with radius r on the axis line where data intersects
-  pc.axisDots = axisDots(__, pc, position);
-  pc.clear = clear(__, pc, ctx, brush);
-  pc.createAxes = createAxes(__, pc, xscale, flags, axis);
+  pc.axisDots = axisDots(config, pc, position);
+  pc.clear = clear(config, pc, ctx, brush);
+  pc.createAxes = createAxes(config, pc, xscale, flags, axis);
   pc.removeAxes = removeAxes(pc);
-  pc.updateAxes = updateAxes(__, pc, position, axis, flags);
+  pc.updateAxes = updateAxes(config, pc, position, axis, flags);
   pc.applyAxisConfig = applyAxisConfig;
-  pc.brushable = brushable(__, pc, flags);
-  pc.brushReset = brushReset(__);
-  pc.selected = selected(__);
-  pc.reorderable = reorderable(__, pc, xscale, position, dragging, flags);
-  pc.reorder = reorder(__, pc, xscale);
-  pc.sortDimensionsByRowData = sortDimensionsByRowData(__);
-  pc.sortDimensions = sortDimensions(__, position);
+  pc.brushable = brushable(config, pc, flags);
+  pc.brushReset = brushReset(config);
+  pc.selected = selected(config);
+  pc.reorderable = reorderable(config, pc, xscale, position, dragging, flags);
+
+  // Reorder dimensions, such that the highest value (visually) is on the left and
+  // the lowest on the right. Visual values are determined by the data values in
+  // the given row.
+  pc.reorder = reorder(config, pc, xscale);
+  pc.sortDimensionsByRowData = sortDimensionsByRowData(config);
+  pc.sortDimensions = sortDimensions(config, position);
 
   // pairs of adjacent dimensions
   pc.adjacent_pairs = adjacentPairs;
-
   pc.interactive = interactive(flags);
-  // expose a few objects
+
+  // expose internal state
   pc.xscale = xscale;
   pc.ctx = ctx;
   pc.canvas = canvas;
@@ -2637,13 +2680,14 @@ var ParCoords = function ParCoords(userConfig) {
     return pc._g;
   };
 
-  pc.resize = resize(__, pc, flags, events);
+  // rescale for height, width and margins
+  // TODO currently assumes chart is brushable, and destroys old brushes
+  pc.resize = resize(config, pc, flags, events);
 
   // highlight an array of data
-  pc.highlight = highlight(__, pc, canvas, events, ctx, position);
-
+  pc.highlight = highlight(config, pc, canvas, events, ctx, position);
   // clear highlighting
-  pc.unhighlight = unhighlight(__, pc, canvas);
+  pc.unhighlight = unhighlight(config, pc, canvas);
 
   // calculate 2d intersection of line a->b with line c->d
   // points are objects with x and y properties
@@ -2655,17 +2699,22 @@ var ParCoords = function ParCoords(userConfig) {
   pc.brushModes = function () {
     return Object.getOwnPropertyNames(brush.modes);
   };
-  pc.brushMode = brushMode(brush, __, pc);
+  pc.brushMode = brushMode(brush, config, pc);
 
-  install1DAxes(brush, __, pc, events);
-  install2DStrums(brush, __, pc, events, xscale);
-  installAngularBrush(brush, __, pc, events, xscale);
+  // install brushes
+  install1DAxes(brush, config, pc, events);
+  install2DStrums(brush, config, pc, events, xscale);
+  installAngularBrush(brush, config, pc, events, xscale);
 
   pc.version = version;
   // this descriptive text should live with other introspective methods
-  pc.toString = toString(__);
+  pc.toString = toString(config);
+  pc.toType = toType;
+  // try to coerce to number before returning type
+  pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
 
   return pc;
 };
 
 export default ParCoords;
+//# sourceMappingURL=parcoords.mjs.map
