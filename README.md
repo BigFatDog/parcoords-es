@@ -2,6 +2,13 @@
 
 ES6 module of Syntagmatic's [Parallel Coordinates](https://github.com/syntagmatic/parallel-coordinates) (aka. parcoords). This library is completely based on D3 V5 API. 
 
+***
+##Note
+parcoords-es v2.0.0 has identical features to v1.0.3. If you are using v1.0.3, there is no need to upgrade for now.
+
+Starting with v2.0.0, parcoords-es internally has been refactored to api modules. Please refer to [release notes](https://github.com/BigFatDog/parcoords-es/releases/tag/v2.0.0) for details.
+***
+
 ## Features
 
 Please refer to [Parallel Coordinates](https://github.com/syntagmatic/parallel-coordinates)'s project page for concepts and API usage
