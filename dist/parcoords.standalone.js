@@ -9218,11 +9218,11 @@ var getset = function getset(obj, state, events, side_effects) {
   });
 };
 
-var _arguments = arguments;
+// side effects for setters
 
 var d3_rebind = function d3_rebind(target, source, method) {
   return function () {
-    var value = method.apply(source, _arguments);
+    var value = method.apply(source, arguments);
     return value === source ? target : value;
   };
 };
