@@ -10,7 +10,7 @@ let pkg = require('./package.json');
 let external = Object.keys(pkg.dependencies);
 
 export default {
-    entry: 'src/index.js',
+    input: 'src/index.js',
     plugins: [
         json({
             exclude: [ 'node_modules' ],
@@ -30,15 +30,15 @@ export default {
 
     ],
     external: external,
-    targets: [
+    output: [
         {
-            dest: pkg.main,
+            file: pkg.main,
             format: 'umd',
-            moduleName: 'ParCoords',
-            sourceMap: true
+            name: 'ParCoords',
+            sourcemap: true
         },
         {
-            dest: pkg.module,
+            file: pkg.module,
             format: 'es',
             sourceMap: true
         }
