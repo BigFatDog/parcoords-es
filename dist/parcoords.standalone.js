@@ -5655,6 +5655,8 @@ var installAngularBrush = function installAngularBrush(brushGroup, config, pc, e
   };
 };
 
+// calculate 2d intersection of line a->b with line c->d
+// points are objects with x and y properties
 var intersection = function intersection(a, b, c, d) {
   return {
     x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / ((a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)),
@@ -5662,6 +5664,8 @@ var intersection = function intersection(a, b, c, d) {
   };
 };
 
+// Merges the canvases and SVG elements into one canvas element which is then passed into the callback
+// (so you can choose to save it to disk, etc.)
 var mergeParcoords = function mergeParcoords(pc) {
   return function (callback) {
     // Retina display, etc.
@@ -8206,6 +8210,16 @@ var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
   };
 };
 
+/**
+ * Create static SVG axes with dimension names, ticks, and labels.
+ *
+ * @param config
+ * @param pc
+ * @param xscale
+ * @param flags
+ * @param axis
+ * @returns {Function}
+ */
 var createAxes = function createAxes(config, pc, xscale, flags, axis) {
   return function () {
     if (pc.g() !== undefined) {
@@ -8239,6 +8253,7 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
 
 var _this$1 = undefined;
 
+//draw dots with radius r on the axis line where data intersects
 var axisDots = function axisDots(config, pc, position) {
   return function (_r) {
     var r = _r || 0.1;
@@ -8780,12 +8795,14 @@ var toType = function toType(v) {
   return {}.toString.call(v).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
 };
 
+// this descriptive text should live with other introspective methods
 var toString = function toString(config) {
   return function () {
     return 'Parallel Coordinates: ' + keys(config.dimensions).length + ' dimensions (' + keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
   };
 };
 
+// pairs of adjacent dimensions
 var adjacentPairs = function adjacentPairs(arr) {
   var ret = [];
   for (var i = 0; i < arr.length - 1; i++) {
@@ -8801,6 +8818,7 @@ var pathHighlight = function pathHighlight(config, ctx, position) {
   };
 };
 
+// highlight an array of data
 var highlight = function highlight(config, pc, canvas, events, ctx, position) {
   return function () {
     var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
@@ -8818,6 +8836,7 @@ var highlight = function highlight(config, pc, canvas, events, ctx, position) {
   };
 };
 
+// clear highlighting
 var unhighlight = function unhighlight(config, pc, canvas) {
   return function () {
     config.highlighted = [];
@@ -8836,6 +8855,17 @@ var removeAxes = function removeAxes(pc) {
   };
 };
 
+/**
+ * Renders the polylines.
+ * If no dimensions have been specified, it will attempt to detect quantitative
+ * dimensions based on the first data entry. If scales haven't been set, it will
+ * autoscale based on the extent for each dimension.
+ *
+ * @param config
+ * @param pc
+ * @param events
+ * @returns {Function}
+ */
 var render = function render(config, pc, events) {
   return function () {
     // try to autodetect dimensions and create scales
@@ -8915,7 +8945,21 @@ var shadows = function shadows(flags, pc) {
   };
 };
 
+/**
+ * Setup a new parallel coordinates chart.
+ *
+ * @param config
+ * @param canvas
+ * @param ctx
+ * @returns {pc} a parcoords closure
+ */
 var init$1 = function init(config, canvas, ctx) {
+  /**
+   * Create the chart within a container. The selector can also be a d3 selection.
+   *
+   * @param selection a d3 selection
+   * @returns {pc} instance for chained api
+   */
   var pc = function pc(selection$$1) {
     selection$$1 = pc.selection = select(selection$$1);
 
@@ -8929,9 +8973,11 @@ var init$1 = function init(config, canvas, ctx) {
 
     // svg tick and brush layers
     pc.svg = selection$$1.append('svg').attr('width', config.width).attr('height', config.height).style('font', '14px sans-serif').style('position', 'absolute').append('svg:g').attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
+    // for chained api
     return pc;
   };
 
+  // for partial-application style programming
   return pc;
 };
 
@@ -9292,25 +9338,16 @@ var ParCoords = function ParCoords(userConfig) {
   pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
   pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
   pc.toType = toType;
-
-  // try to coerce to number before returning type
   pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
-  // attempt to determine types of each dimension based on first row of data
   pc.detectDimensionTypes = detectDimensionTypes;
-
   pc.render = render(__, pc, events);
   pc.renderBrushed = renderBrushed(__, pc, events);
-
   pc.render.default = renderDefault(__, pc, ctx, position);
   pc.render.queue = renderDefaultQueue(__, pc, foregroundQueue);
-
   pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
   pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
   pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
-
   pc.shadows = shadows(flags, pc);
-
-  // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
   pc.clear = clear(__, pc, ctx, brush);
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
@@ -9324,25 +9361,19 @@ var ParCoords = function ParCoords(userConfig) {
   pc.reorder = reorder(__, pc, xscale);
   pc.sortDimensionsByRowData = sortDimensionsByRowData(__);
   pc.sortDimensions = sortDimensions(__, position);
-
-  // pairs of adjacent dimensions
   pc.adjacent_pairs = adjacentPairs;
-
   pc.interactive = interactive(flags);
-  // expose a few objects
+
   pc.xscale = xscale;
   pc.ctx = ctx;
   pc.canvas = canvas;
   pc.g = function () {
     return pc._g;
   };
-
   pc.resize = resize(__, pc, flags, events);
 
   // highlight an array of data
   pc.highlight = highlight(__, pc, canvas, events, ctx, position);
-
-  // clear highlighting
   pc.unhighlight = unhighlight(__, pc, canvas);
 
   // calculate 2d intersection of line a->b with line c->d

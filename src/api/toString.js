@@ -1,5 +1,6 @@
 import { keys } from 'd3-collection';
 
+// this descriptive text should live with other introspective methods
 const toString = config => () => {
   return (
     'Parallel Coordinates: ' +

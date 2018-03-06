@@ -1,5 +1,6 @@
 import { selectAll } from 'd3-selection';
 
+// clear highlighting
 const unhighlight = (config, pc, canvas) =>
   function() {
     config.highlighted = [];

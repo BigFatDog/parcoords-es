@@ -1,3 +1,5 @@
+// calculate 2d intersection of line a->b with line c->d
+// points are objects with x and y properties
 const intersection = (a, b, c, d) => {
   return {
     x:

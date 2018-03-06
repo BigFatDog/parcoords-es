@@ -2,10 +2,11 @@
 import sideEffects from './state/sideEffects';
 import getset from './util/getset';
 
-const d3_rebind = (target, source, method) => function() {
-  const value = method.apply(source, arguments);
-  return value === source ? target : value;
-};
+const d3_rebind = (target, source, method) =>
+  function() {
+    const value = method.apply(source, arguments);
+    return value === source ? target : value;
+  };
 
 const _rebind = (target, source, method) => {
   target[method] = d3_rebind(target, source, source[method]);

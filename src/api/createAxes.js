@@ -4,6 +4,16 @@ import dimensionLabels from '../util/dimensionLabels';
 import flipAxisAndUpdatePCP from '../util/flipAxisAndUpdatePCP';
 import rotateLabels from '../util/rotateLabels';
 
+/**
+ * Create static SVG axes with dimension names, ticks, and labels.
+ *
+ * @param config
+ * @param pc
+ * @param xscale
+ * @param flags
+ * @param axis
+ * @returns {Function}
+ */
 const createAxes = (config, pc, xscale, flags, axis) =>
   function() {
     if (pc.g() !== undefined) {

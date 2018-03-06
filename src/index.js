@@ -120,25 +120,16 @@ const ParCoords = userConfig => {
   pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
   pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
   pc.toType = toType;
-
-  // try to coerce to number before returning type
   pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
-  // attempt to determine types of each dimension based on first row of data
   pc.detectDimensionTypes = detectDimensionTypes;
-
   pc.render = render(__, pc, events);
   pc.renderBrushed = renderBrushed(__, pc, events);
-
   pc.render.default = renderDefault(__, pc, ctx, position);
   pc.render.queue = renderDefaultQueue(__, pc, foregroundQueue);
-
   pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
   pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
   pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
-
   pc.shadows = shadows(flags, pc);
-
-  // draw dots with radius r on the axis line where data intersects
   pc.axisDots = axisDots(__, pc, position);
   pc.clear = clear(__, pc, ctx, brush);
   pc.createAxes = createAxes(__, pc, xscale, flags, axis);
@@ -152,23 +143,17 @@ const ParCoords = userConfig => {
   pc.reorder = reorder(__, pc, xscale);
   pc.sortDimensionsByRowData = sortDimensionsByRowData(__);
   pc.sortDimensions = sortDimensions(__, position);
-
-  // pairs of adjacent dimensions
   pc.adjacent_pairs = adjacentPairs;
-
   pc.interactive = interactive(flags);
-  // expose a few objects
+
   pc.xscale = xscale;
   pc.ctx = ctx;
   pc.canvas = canvas;
   pc.g = () => pc._g;
-
   pc.resize = resize(__, pc, flags, events);
 
   // highlight an array of data
   pc.highlight = highlight(__, pc, canvas, events, ctx, position);
-
-  // clear highlighting
   pc.unhighlight = unhighlight(__, pc, canvas);
 
   // calculate 2d intersection of line a->b with line c->d

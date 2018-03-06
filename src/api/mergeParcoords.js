@@ -1,3 +1,5 @@
+// Merges the canvases and SVG elements into one canvas element which is then passed into the callback
+// (so you can choose to save it to disk, etc.)
 const mergeParcoords = pc => callback => {
   // Retina display, etc.
   const devicePixelRatio = window.devicePixelRatio || 1;

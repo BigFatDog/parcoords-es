@@ -1,6 +1,7 @@
 import { entries } from 'd3-collection';
 import { min } from 'd3-array';
 
+//draw dots with radius r on the axis line where data intersects
 const axisDots = (config, pc, position) => _r => {
   const r = _r || 0.1;
   const ctx = pc.ctx.marks;

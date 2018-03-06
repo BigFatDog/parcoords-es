@@ -8,6 +8,7 @@ const pathHighlight = (config, ctx, position) => (d, i) => {
   return colorPath(config, position, d, ctx.highlight);
 };
 
+// highlight an array of data
 const highlight = (config, pc, canvas, events, ctx, position) =>
   function(data = null) {
     if (data === null) {
