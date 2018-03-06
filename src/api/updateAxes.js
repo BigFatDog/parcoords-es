@@ -1,4 +1,5 @@
 import { select } from 'd3-selection';
+
 import dimensionLabels from '../util/dimensionLabels';
 import flipAxisAndUpdatePCP from '../util/flipAxisAndUpdatePCP';
 import rotateLabels from '../util/rotateLabels';

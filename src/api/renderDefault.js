@@ -1,8 +1,8 @@
 import colorPath from '../util/colorPath';
-import { _functor } from '../helper';
+import functor from '../util/functor';
 
 const pathForeground = (config, ctx, position) => (d, i) => {
-  ctx.foreground.strokeStyle = _functor(config.color)(d, i);
+  ctx.foreground.strokeStyle = functor(config.color)(d, i);
   return colorPath(config, position, d, ctx.foreground);
 };
 

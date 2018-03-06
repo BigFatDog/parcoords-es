@@ -1,8 +1,8 @@
 import { keys } from 'd3-collection';
 
 import toTypeCoerceNumbers from './toTypeCoerceNumbers';
-// attempt to determine types of each dimension based on first row of data
 
+// attempt to determine types of each dimension based on first row of data
 const detectDimensionTypes = data =>
   keys(data[0]).reduce((acc, cur) => {
     const key = isNaN(Number(cur)) ? cur : parseInt(cur);

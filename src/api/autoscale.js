@@ -1,6 +1,7 @@
 import { scaleLinear, scaleOrdinal, scalePoint, scaleTime } from 'd3-scale';
 import { keys } from 'd3-collection';
 import { extent } from 'd3-array';
+
 import getRange from '../util/getRange';
 import w from '../util/width';
 import h from '../util/height';

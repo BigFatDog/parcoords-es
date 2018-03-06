@@ -1,9 +1,15 @@
 // side effects for setters
-import { without } from './helper';
 import { keys } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
-import computeClusterCentroids from './util/computeClusterCentroids';
-import flipAxisAndUpdatePCP from './util/flipAxisAndUpdatePCP';
+import computeClusterCentroids from '../util/computeClusterCentroids';
+import flipAxisAndUpdatePCP from '../util/flipAxisAndUpdatePCP';
+
+const without = (arr, items) => {
+  items.forEach(el => {
+    delete arr[el];
+  });
+  return arr;
+};
 
 const sideEffects = (
   config,

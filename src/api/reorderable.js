@@ -1,5 +1,6 @@
 import { drag } from 'd3-drag';
 import { event, select } from 'd3-selection';
+
 import w from '../util/width';
 
 // Jason Davies, http://bl.ocks.org/1341281

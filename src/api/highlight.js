@@ -1,9 +1,10 @@
 import { selectAll } from 'd3-selection';
+
 import colorPath from '../util/colorPath';
-import { _functor } from '../helper';
+import functor from '../util/functor';
 
 const pathHighlight = (config, ctx, position) => (d, i) => {
-  ctx.highlight.strokeStyle = _functor(config.color)(d, i);
+  ctx.highlight.strokeStyle = functor(config.color)(d, i);
   return colorPath(config, position, d, ctx.highlight);
 };
 

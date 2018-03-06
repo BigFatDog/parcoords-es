@@ -1,7 +1,16 @@
 // side effects for setters
-import sideEffects from './sideEffects';
+import sideEffects from './state/sideEffects';
 import getset from './util/getset';
-import { _rebind } from './helper';
+
+const d3_rebind = (target, source, method) => () => {
+  const value = method.apply(source, arguments);
+  return value === source ? target : value;
+};
+
+const _rebind = (target, source, method) => {
+  target[method] = d3_rebind(target, source, source[method]);
+  return target;
+};
 
 const bindEvents = (
   __,

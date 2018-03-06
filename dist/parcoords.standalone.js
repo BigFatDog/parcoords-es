@@ -1347,7 +1347,6 @@ DragEvent.prototype.on = function () {
   return value === this._ ? this : value;
 };
 
-// Ignore right-click, since that should open the context menu.
 function defaultFilter$1() {
   return !event.button;
 }
@@ -4363,11 +4362,6 @@ function brush$1(dim) {
 }
 
 // brush mode: 1D-Axes
-// This function can be used for 'live' updates of brushes. That is, during the
-// specification of a brush, this method can be called to update the view.
-//
-// @param newSelection - The new set of data items that is currently contained
-//                       by the brushes
 var brushUpdated = function brushUpdated(config, pc, events) {
   return function (newSelection) {
     config.brushed = newSelection;
@@ -6847,7 +6841,6 @@ var formatTypes = {
   }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -9246,7 +9239,6 @@ var applyAxisConfig = function applyAxisConfig(axis, dimension) {
   return axisCfg;
 };
 
-// Jason Davies, http://bl.ocks.org/1341281
 var reorderable = function reorderable(config, pc, xscale, position, dragging, flags) {
   return function () {
     if (pc.g() === undefined) pc.createAxes();
@@ -9500,25 +9492,6 @@ var colorPath = function colorPath(config, position, d, ctx) {
   ctx.stroke();
 };
 
-var without = function without(arr, items) {
-  items.forEach(function (el) {
-    delete arr[el];
-  });
-  return arr;
-};
-
-var d3_rebind = function d3_rebind(target, source, method) {
-  return function () {
-    var value = method.apply(source, arguments);
-    return value === source ? target : value;
-  };
-};
-
-var _rebind = function _rebind(target, source, method) {
-  target[method] = d3_rebind(target, source, source[method]);
-  return target;
-};
-
 var _functor = function _functor(v) {
   return typeof v === 'function' ? v : function () {
     return v;
@@ -9694,12 +9667,9 @@ var renderDefaultQueue = function renderDefaultQueue(config, pc, foregroundQueue
   };
 };
 
-// try to coerce to number before returning type
 var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
   return parseFloat(v) == v && v != null ? 'number' : toType(v);
 };
-
-// attempt to determine types of each dimension based on first row of data
 
 var detectDimensionTypes = function detectDimensionTypes(data) {
   return keys(data[0]).reduce(function (acc, cur) {
@@ -9779,6 +9749,42 @@ var scale = function scale(config) {
 };
 
 var version = "1.0.3";
+
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = (typeof global === 'undefined' ? 'undefined' : _typeof(global)) == 'object' && global && global.Object === Object && global;
+
+var freeSelf = (typeof self === 'undefined' ? 'undefined' : _typeof(self)) == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root$2 = freeGlobal || freeSelf || Function('return this')();
+
+/** Used for built-in method references. */
+
+/**
+ * Checks if `value` is the
+ * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
+ * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+ * @example
+ *
+ * _.isObject({});
+ * // => true
+ *
+ * _.isObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isObject(_.noop);
+ * // => true
+ *
+ * _.isObject(null);
+ * // => false
+ */
 
 var DefaultConfig = {
   data: [],
@@ -9912,6 +9918,13 @@ var computeClusterCentroids = function computeClusterCentroids(config, d) {
 var _this$3 = undefined;
 
 // side effects for setters
+var without = function without(arr, items) {
+  items.forEach(function (el) {
+    delete arr[el];
+  });
+  return arr;
+};
+
 var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue) {
   return dispatch.apply(_this$3, keys(config)).on('composite', function (d) {
     ctx.foreground.globalCompositeOperation = d.value;
@@ -9986,7 +9999,20 @@ var getset = function getset(obj, state, events, side_effects) {
   });
 };
 
+var _arguments = arguments;
 // side effects for setters
+var d3_rebind = function d3_rebind(target, source, method) {
+  return function () {
+    var value = method.apply(source, _arguments);
+    return value === source ? target : value;
+  };
+};
+
+var _rebind = function _rebind(target, source, method) {
+  target[method] = d3_rebind(target, source, source[method]);
+  return target;
+};
+
 var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis) {
   var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
 
@@ -10001,9 +10027,6 @@ var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, f
 };
 
 // misc
-// brush
-// api
-//css
 var ParCoords = function ParCoords(userConfig) {
   var state = initState(userConfig);
   var __ = state.config,

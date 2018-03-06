@@ -1,13 +1,14 @@
+import { keys } from 'd3-collection';
+
 import isBrushed from '../util/isBrushed';
 import colorPath from '../util/colorPath';
-import { _functor } from '../helper';
-import { keys } from 'd3-collection';
+import functor from '../util/functor';
 
 const pathBrushed = (config, ctx, position) => (d, i) => {
   if (config.brushedColor !== null) {
-    ctx.brushed.strokeStyle = _functor(config.brushedColor)(d, i);
+    ctx.brushed.strokeStyle = functor(config.brushedColor)(d, i);
   } else {
-    ctx.brushed.strokeStyle = _functor(config.color)(d, i);
+    ctx.brushed.strokeStyle = functor(config.color)(d, i);
   }
   return colorPath(config, position, d, ctx.brushed);
 };
