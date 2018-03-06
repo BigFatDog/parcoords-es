@@ -1,6 +1,6 @@
 # parcoords-es
 
-ES6 module of Syntagmatic's [Parallel Coordinates](https://github.com/syntagmatic/parallel-coordinates) (aka. parcoords). This library is completely based on D3 V4 API. 
+ES6 module of Syntagmatic's [Parallel Coordinates](https://github.com/syntagmatic/parallel-coordinates) (aka. parcoords). This library is completely based on D3 V5 API. 
 
 ## Features
 

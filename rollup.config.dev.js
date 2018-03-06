@@ -6,11 +6,15 @@ import postcss from 'rollup-plugin-postcss'
 import localResolve from 'rollup-plugin-local-resolve';
 import livereload from 'rollup-plugin-livereload';
 import serve from 'rollup-plugin-serve';
-
+import json from 'rollup-plugin-json';
 
 export default {
-    entry: 'src/index.js',
+    input: 'src/index.js',
     plugins: [
+        json({
+            exclude: [ 'node_modules' ],
+            preferConst: true,
+        }),
         localResolve(),
         postcss({ extract: 'dist/parcoords.css' }),
         babel(babelrc()),
@@ -36,12 +40,12 @@ export default {
         })
     ],
     external: [],
-    targets: [
+    output: [
         {
-            dest: 'dist/parcoords.standalone.js',
+            file: 'dist/parcoords.standalone.js',
             format: 'umd',
-            moduleName: 'ParCoords',
-            sourceMap: true
+            name: 'ParCoords',
+            sourcemap: true
         }
     ]
 };

@@ -4,13 +4,18 @@ import resolve from 'rollup-plugin-node-resolve';
 import commonjs from 'rollup-plugin-commonjs';
 import postcss from 'rollup-plugin-postcss'
 import localResolve from 'rollup-plugin-local-resolve';
+import json from 'rollup-plugin-json';
 
 let pkg = require('./package.json');
 let external = Object.keys(pkg.dependencies);
 
 export default {
-    entry: 'src/index.js',
+    input: 'src/index.js',
     plugins: [
+        json({
+            exclude: [ 'node_modules' ],
+            preferConst: true,
+        }),
         localResolve(),
         postcss({ extract: 'dist/parcoords.css' }),
         babel(babelrc()),
@@ -25,17 +30,17 @@ export default {
 
     ],
     external: external,
-    targets: [
+    output: [
         {
-            dest: pkg.main,
+            file: pkg.main,
             format: 'umd',
-            moduleName: 'ParCoords',
-            sourceMap: true
+            name: 'ParCoords',
+            sourcemap: true
         },
         {
-            dest: pkg.module,
+            file: pkg.module,
             format: 'es',
-            sourceMap: true
+            sourcemap: true
         }
     ]
 };
