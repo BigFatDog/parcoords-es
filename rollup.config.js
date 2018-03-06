@@ -40,7 +40,7 @@ export default {
         {
             file: pkg.module,
             format: 'es',
-            sourceMap: true
+            sourcemap: true
         }
     ]
 };
