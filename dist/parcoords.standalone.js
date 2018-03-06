@@ -9295,7 +9295,7 @@ var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, f
 
 var ParCoords = function ParCoords(userConfig) {
   var state = initState(userConfig);
-  var __ = state.config,
+  var config = state.config,
       events = state.events,
       flags = state.flags,
       xscale = state.xscale,
@@ -9306,75 +9306,88 @@ var ParCoords = function ParCoords(userConfig) {
       brush = state.brush;
 
 
-  var pc = init$1(__, canvas, ctx);
+  var pc = init$1(config, canvas, ctx);
 
   var position = function position(d) {
     if (xscale.range().length === 0) {
-      xscale.range([0, w$1(__)], 1);
+      xscale.range([0, w$1(config)], 1);
     }
     return dragging[d] == null ? xscale(d) : dragging[d];
   };
 
-  var brushedQueue = renderQueue(pathBrushed(__, ctx, position)).rate(50).clear(function () {
+  var brushedQueue = renderQueue(pathBrushed(config, ctx, position)).rate(50).clear(function () {
     return pc.clear('brushed');
   });
 
-  var foregroundQueue = renderQueue(pathForeground(__, ctx, position)).rate(50).clear(function () {
+  var foregroundQueue = renderQueue(pathForeground(config, ctx, position)).rate(50).clear(function () {
     pc.clear('foreground');
     pc.clear('highlight');
   });
 
-  bindEvents(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis);
+  bindEvents(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis);
 
   // expose the state of the chart
-  pc.state = __;
+  pc.state = config;
   pc.flags = flags;
 
-  pc.autoscale = autoscale(__, pc, xscale, ctx);
-  pc.scale = scale(__);
-  pc.flip = flip(__);
-  pc.commonScale = commonScale(__, pc);
+  pc.autoscale = autoscale(config, pc, xscale, ctx);
+  pc.scale = scale(config);
+  pc.flip = flip(config);
+  pc.commonScale = commonScale(config, pc);
   pc.detectDimensions = detectDimensions(pc);
-  pc.applyDimensionDefaults = applyDimensionDefaults(__, pc);
-  pc.getOrderedDimensionKeys = getOrderedDimensionKeys(__);
-  pc.toType = toType;
-  pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
+  // attempt to determine types of each dimension based on first row of data
   pc.detectDimensionTypes = detectDimensionTypes;
-  pc.render = render(__, pc, events);
-  pc.renderBrushed = renderBrushed(__, pc, events);
-  pc.render.default = renderDefault(__, pc, ctx, position);
-  pc.render.queue = renderDefaultQueue(__, pc, foregroundQueue);
-  pc.renderBrushed.default = renderBrushedDefault(__, ctx, position, pc, brush);
-  pc.renderBrushed.queue = renderBrushedQueue(__, brush, brushedQueue);
-  pc.compute_real_centroids = computeRealCentroids(__.dimensions, position);
+  pc.applyDimensionDefaults = applyDimensionDefaults(config, pc);
+  pc.getOrderedDimensionKeys = getOrderedDimensionKeys(config);
+
+  //Renders the polylines.
+  pc.render = render(config, pc, events);
+  pc.renderBrushed = renderBrushed(config, pc, events);
+  pc.render.default = renderDefault(config, pc, ctx, position);
+  pc.render.queue = renderDefaultQueue(config, pc, foregroundQueue);
+  pc.renderBrushed.default = renderBrushedDefault(config, ctx, position, pc, brush);
+  pc.renderBrushed.queue = renderBrushedQueue(config, brush, brushedQueue);
+
+  pc.compute_real_centroids = computeRealCentroids(config.dimensions, position);
   pc.shadows = shadows(flags, pc);
-  pc.axisDots = axisDots(__, pc, position);
-  pc.clear = clear(__, pc, ctx, brush);
-  pc.createAxes = createAxes(__, pc, xscale, flags, axis);
+  pc.axisDots = axisDots(config, pc, position);
+  pc.clear = clear(config, pc, ctx, brush);
+  pc.createAxes = createAxes(config, pc, xscale, flags, axis);
   pc.removeAxes = removeAxes(pc);
-  pc.updateAxes = updateAxes(__, pc, position, axis, flags);
+  pc.updateAxes = updateAxes(config, pc, position, axis, flags);
   pc.applyAxisConfig = applyAxisConfig;
-  pc.brushable = brushable(__, pc, flags);
-  pc.brushReset = brushReset(__);
-  pc.selected = selected(__);
-  pc.reorderable = reorderable(__, pc, xscale, position, dragging, flags);
-  pc.reorder = reorder(__, pc, xscale);
-  pc.sortDimensionsByRowData = sortDimensionsByRowData(__);
-  pc.sortDimensions = sortDimensions(__, position);
+  pc.brushable = brushable(config, pc, flags);
+  pc.brushReset = brushReset(config);
+  pc.selected = selected(config);
+  pc.reorderable = reorderable(config, pc, xscale, position, dragging, flags);
+
+  // Reorder dimensions, such that the highest value (visually) is on the left and
+  // the lowest on the right. Visual values are determined by the data values in
+  // the given row.
+  pc.reorder = reorder(config, pc, xscale);
+  pc.sortDimensionsByRowData = sortDimensionsByRowData(config);
+  pc.sortDimensions = sortDimensions(config, position);
+
+  // pairs of adjacent dimensions
   pc.adjacent_pairs = adjacentPairs;
   pc.interactive = interactive(flags);
 
+  // expose internal state
   pc.xscale = xscale;
   pc.ctx = ctx;
   pc.canvas = canvas;
   pc.g = function () {
     return pc._g;
   };
-  pc.resize = resize(__, pc, flags, events);
+
+  // rescale for height, width and margins
+  // TODO currently assumes chart is brushable, and destroys old brushes
+  pc.resize = resize(config, pc, flags, events);
 
   // highlight an array of data
-  pc.highlight = highlight(__, pc, canvas, events, ctx, position);
-  pc.unhighlight = unhighlight(__, pc, canvas);
+  pc.highlight = highlight(config, pc, canvas, events, ctx, position);
+  // clear highlighting
+  pc.unhighlight = unhighlight(config, pc, canvas);
 
   // calculate 2d intersection of line a->b with line c->d
   // points are objects with x and y properties
@@ -9386,15 +9399,19 @@ var ParCoords = function ParCoords(userConfig) {
   pc.brushModes = function () {
     return Object.getOwnPropertyNames(brush.modes);
   };
-  pc.brushMode = brushMode(brush, __, pc);
+  pc.brushMode = brushMode(brush, config, pc);
 
-  install1DAxes(brush, __, pc, events);
-  install2DStrums(brush, __, pc, events, xscale);
-  installAngularBrush(brush, __, pc, events, xscale);
+  // install brushes
+  install1DAxes(brush, config, pc, events);
+  install2DStrums(brush, config, pc, events, xscale);
+  installAngularBrush(brush, config, pc, events, xscale);
 
   pc.version = version;
   // this descriptive text should live with other introspective methods
-  pc.toString = toString(__);
+  pc.toString = toString(config);
+  pc.toType = toType;
+  // try to coerce to number before returning type
+  pc.toTypeCoerceNumbers = toTypeCoerceNumbers;
 
   return pc;
 };
