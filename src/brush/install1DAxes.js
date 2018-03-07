@@ -17,7 +17,6 @@ const brushUpdated = (config, pc, events) => newSelection => {
 const install1DAxes = (brushGroup, config, pc, events) => {
   let brushes = {};
   let brushNodes = {};
-  let g = null;
 
   //https://github.com/d3/d3-brush/issues/10
   function is_brushed(p) {
@@ -109,7 +108,7 @@ const install1DAxes = (brushGroup, config, pc, events) => {
     } else {
       //first get all the brush selections
       let brushSelections = {};
-      g.selectAll('.brush').each(function(d) {
+      pc.g().selectAll('.brush').each(function(d) {
         brushSelections[d] = select(this);
       });
 
@@ -175,15 +174,15 @@ const install1DAxes = (brushGroup, config, pc, events) => {
   function brushReset(dimension) {
     if (dimension === undefined) {
       config.brushed = false;
-      if (g) {
-        g.selectAll('.brush').each(function(d) {
+      if (pc.g() !== undefined && pc.g() !== null) {
+        pc.g().selectAll('.brush').each(function(d) {
           select(this).call(brushes[d].move, null);
         });
         pc.renderBrushed();
       }
     } else {
-      if (g) {
-        g.selectAll('.brush').each(function(d) {
+      if (pc.g() !== undefined && pc.g() !== null) {
+        pc.g().selectAll('.brush').each(function(d) {
           if (d != dimension) return;
           select(this).call(brushes[d].move, null);
           brushes[d].event(select(this));
@@ -199,10 +198,8 @@ const install1DAxes = (brushGroup, config, pc, events) => {
       pc.createAxes();
     }
 
-    g = pc.g();
-
     // Add and store a brush for each axis.
-    let brush = g
+    const brush = pc.g()
       .append('svg:g')
       .attr('class', 'brush')
       .each(function(d) {
@@ -231,7 +228,7 @@ const install1DAxes = (brushGroup, config, pc, events) => {
   brushGroup.modes['1D-axes'] = {
     install: install,
     uninstall: function() {
-      g.selectAll('.brush').remove();
+      pc.g().selectAll('.brush').remove();
       brushes = {};
       delete pc.brushExtents;
       delete pc.brushReset;
