@@ -3,7 +3,7 @@ import { event, select } from 'd3-selection';
 
 const brushable = (config, pc, flags) =>
   function() {
-    if (!g) {
+    if (!pc.g()) {
       pc.createAxes();
     }
 
