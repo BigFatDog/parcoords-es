@@ -1,8 +1,8 @@
 import { keys } from 'd3-collection';
 import { brushSelection } from 'd3-brush';
 
-const brushExtents = (brushState, pc, g) => extents => {
-  const { brushes } = brushState;
+const brushExtents = (state, pc) => extents => {
+  const { brushes } = state;
 
   if (typeof extents === 'undefined') {
     return keys(config.dimensions).reduce((acc, cur) => {
@@ -16,10 +16,13 @@ const brushExtents = (brushState, pc, g) => extents => {
     }, {});
   } else {
     //first get all the brush selections
-    const brushSelections = g.selectAll('.brush').reduce(function(acc, cur) {
-      acc[cur] = select(this);
-      return acc;
-    });
+    const brushSelections = pc
+      .g()
+      .selectAll('.brush')
+      .reduce(function(acc, cur) {
+        acc[cur] = select(this);
+        return acc;
+      });
 
     // loop over each dimension and update appropriately (if it was passed in through extents)
     keys(config.dimensions).forEach(function(d) {
@@ -27,7 +30,7 @@ const brushExtents = (brushState, pc, g) => extents => {
         return;
       }
 
-      let brush = brushes[d];
+      const brush = brushes[d];
       if (brush !== undefined) {
         //update the extent
         brush.extent(extents[d]);
