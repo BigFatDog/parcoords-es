@@ -1,5 +1,4 @@
 import { drag } from 'd3-drag';
-import { keys } from 'd3-collection';
 import onDragEnd from './onDragEnd';
 import onDrag from './onDrag';
 import onDragStart from './onDragStart';
@@ -7,16 +6,8 @@ import removeStrum from './removeStrum';
 import brushReset from './brushReset';
 import w from '../../util/width';
 import h from '../../util/height';
+import consecutive from '../consecutive';
 
-// Checks if the first dimension is directly left of the second dimension.
-const consecutive = dimensions => (first, second) => {
-  const keys = keys(dimensions);
-
-  return keys.some(
-    (d, i) =>
-      d === first ? i + i < keys.length && dimensions[i + 1] === second : false
-  );
-};
 
 const install = (brushGroup, state, config, pc, events, xscale) => () => {
   if (pc.g() === undefined || pc.g() === null) {

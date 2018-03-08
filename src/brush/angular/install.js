@@ -8,17 +8,8 @@ import w from '../../util/width';
 import h from '../../util/height';
 
 import hypothenuse from './util/hypothenuse';
-import { keys } from 'd3-collection';
+import consecutive from '../consecutive';
 
-// Checks if the first dimension is directly left of the second dimension.
-const consecutive = dimensions => (first, second) => {
-  const keys = keys(dimensions);
-
-  return keys.some(
-    (d, i) =>
-      d === first ? i + i < keys.length && dimensions[i + 1] === second : false
-  );
-};
 
 // returns angles in [-PI/2, PI/2]
 const angle = (p1, p2) => {
