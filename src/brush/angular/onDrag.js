@@ -2,9 +2,7 @@ import { event, select } from 'd3-selection';
 import { drag } from 'd3-drag';
 import onDragEnd from './onDragEnd';
 
-const drawStrum = (brushGroup, state, config, pc, events, activePoint) => {
-  const arc = state.arcs[state.arcs.active];
-
+const drawStrum = (brushGroup, state, config, pc, events, arc, activePoint) => {
   const svg = pc.selection.select('svg').select('g#arcs'),
     id = arc.dims.i,
     points = [arc.p2, arc.p3],
@@ -69,7 +67,7 @@ const drawStrum = (brushGroup, state, config, pc, events, activePoint) => {
         }
       }
 
-      drawStrum(brushGroup, state, config, pc, events, i - 2);
+      drawStrum(brushGroup, state, config, pc, events, arc, i - 2);
     })
     .on('end', onDragEnd(brushGroup, state, config, pc, events));
 
@@ -107,7 +105,7 @@ const onDrag = (brushGroup, state, config, pc, events) => () => {
   );
   arc.p2[1] = Math.min(Math.max(arc.minY, ev.y - config.margin.top), arc.maxY);
   arc.p3 = arc.p2.slice();
-  drawStrum(brushGroup, state, config, pc, events, 1);
+  drawStrum(brushGroup, state, config, pc, events, arc, 1);
 };
 
 export default onDrag;

@@ -4829,9 +4829,7 @@ var onDragEnd$2 = function onDragEnd(brushGroup, state, config, pc, events) {
   };
 };
 
-var drawStrum$1 = function drawStrum(brushGroup, state, config, pc, events, activePoint) {
-  var arc = state.arcs[state.arcs.active];
-
+var drawStrum$1 = function drawStrum(brushGroup, state, config, pc, events, arc, activePoint) {
   var svg = pc.selection.select('svg').select('g#arcs'),
       id = arc.dims.i,
       points = [arc.p2, arc.p3],
@@ -4875,7 +4873,7 @@ var drawStrum$1 = function drawStrum(brushGroup, state, config, pc, events, acti
       }
     }
 
-    drawStrum(brushGroup, state, config, pc, events, i - 2);
+    drawStrum(brushGroup, state, config, pc, events, arc, i - 2);
   }).on('end', onDragEnd$2(brushGroup, state, config, pc, events));
 
   circles.enter().append('circle').attr('id', 'arc-' + id).attr('class', 'arc');
@@ -4902,7 +4900,7 @@ var onDrag$1 = function onDrag(brushGroup, state, config, pc, events) {
     arc.p2[0] = Math.min(Math.max(arc.minX + 1, ev.x - config.margin.left), arc.maxX);
     arc.p2[1] = Math.min(Math.max(arc.minY, ev.y - config.margin.top), arc.maxY);
     arc.p3 = arc.p2.slice();
-    drawStrum$1(brushGroup, state, config, pc, events, 1);
+    drawStrum$1(brushGroup, state, config, pc, events, arc, 1);
   };
 };
 
