@@ -3,8 +3,8 @@ import { brushSelection } from 'd3-brush';
 import { keys } from 'd3-collection';
 
 // data within extents
-const selected = (config, brush) => {
-  const { brushNodes } = brush;
+const selected = (state, config, brushGroup) => () => {
+  const { brushNodes } = state;
   const is_brushed = p => brushSelection(brushNodes[p]) !== null;
 
   const actives = keys(config.dimensions).filter(is_brushed);
@@ -61,7 +61,7 @@ const selected = (config, brush) => {
   };
 
   return config.data.filter(d => {
-    switch (brush.predicate) {
+    switch (brushGroup.predicate) {
       case 'AND':
         return actives.every(function(p, dimension) {
           return within[config.dimensions[p].type](d, p, dimension);
