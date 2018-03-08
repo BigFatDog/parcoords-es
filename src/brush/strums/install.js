@@ -66,7 +66,7 @@ const install = (brushGroup, state, config, pc, events, xscale) => () => {
     );
 
   // Install the required brushReset function
-  pc.brushReset = brushReset(brushGroup, config, pc, events);
+  pc.brushReset = brushReset(brushGroup, state, config, pc, events);
 
   _drag
     .on('start', onDragStart(state, config, pc, xscale))

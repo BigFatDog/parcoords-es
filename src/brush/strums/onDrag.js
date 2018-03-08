@@ -65,22 +65,21 @@ const drawStrum = (
     .call(_drag);
 };
 
-const onDrag = (brushGroup, state, config, pc, events) =>
-  function() {
-    const ev = event,
-      strum = state.strums[state.strums.active];
+const onDrag = (brushGroup, state, config, pc, events) => () => {
+  const ev = event,
+    strum = state.strums[state.strums.active];
 
-    // Make sure that the point is within the bounds
-    strum.p2[0] = Math.min(
-      Math.max(strum.minX + 1, ev.x - config.margin.left),
-      strum.maxX
-    );
-    strum.p2[1] = Math.min(
-      Math.max(strum.minY, ev.y - config.margin.top),
-      strum.maxY
-    );
+  // Make sure that the point is within the bounds
+  strum.p2[0] = Math.min(
+    Math.max(strum.minX + 1, ev.x - config.margin.left),
+    strum.maxX
+  );
+  strum.p2[1] = Math.min(
+    Math.max(strum.minY, ev.y - config.margin.top),
+    strum.maxY
+  );
 
-    drawStrum(brushGroup, state, config, pc, events, strum, 1);
-  };
+  drawStrum(brushGroup, state, config, pc, events, strum, 1);
+};
 
 export default onDrag;
