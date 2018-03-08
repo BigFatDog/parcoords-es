@@ -4165,7 +4165,7 @@ function brush$1(dim) {
   return brush;
 }
 
-var brushExtents = function brushExtents(state, pc) {
+var brushExtents = function brushExtents(state, config, pc) {
   return function (extents) {
     var brushes = state.brushes;
 
@@ -4361,18 +4361,20 @@ var install = function install(state, config, pc, events, brushGroup) {
 
     brush.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
 
-    pc.brushExtents = brushExtents(state, pc);
+    pc.brushExtents = brushExtents(state, config, pc);
     pc.brushReset = brushReset(state, config, pc);
     return pc;
   };
 };
 
 var uninstall = function uninstall(state, pc) {
-  if (pc.g() !== undefined && pc.g() !== null) pc.g().selectAll('.brush').remove();
+  return function () {
+    if (pc.g() !== undefined && pc.g() !== null) pc.g().selectAll('.brush').remove();
 
-  state.brushes = {};
-  delete pc.brushExtents;
-  delete pc.brushReset;
+    state.brushes = {};
+    delete pc.brushExtents;
+    delete pc.brushReset;
+  };
 };
 
 var BrushState = {
