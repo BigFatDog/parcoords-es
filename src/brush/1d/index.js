@@ -8,11 +8,15 @@ const BrushState = {
   brushNodes: {},
 };
 
-const install1DAxes = (brushObj, config, pc, g) => {
-  brushObj.modes['1D-axes'] = {
-    install: install,
-    uninstall: uninstall,
-    selected: selected,
-    brushState: brushExtents(pc, g),
+const install1DAxes = (brushGroup, config, pc, events) => {
+  const state = Object.assign({}, BrushState);
+
+  brushGroup.modes['1D-axes'] = {
+    install: install(state, config, pc, events, brushGroup),
+    uninstall: uninstall(state, pc),
+    selected: selected(state, config, brushGroup),
+    brushState: brushExtents(state, pc),
   };
 };
+
+export default install1DAxes;

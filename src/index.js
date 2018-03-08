@@ -3,7 +3,7 @@ import renderQueue from './util/renderQueue';
 import w from './util/width';
 
 // brush
-import install1DAxes from './brush/install1DAxes';
+import install1DAxes from './brush/1d';
 import install2DStrums from './brush/install2DStrums';
 import installAngularBrush from './brush/installAngularBrush';
 
