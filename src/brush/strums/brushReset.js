@@ -1,3 +1,6 @@
+import onDragEnd from './onDragEnd';
+import removeStrum from './removeStrum';
+
 const brushReset = (brushGroup, state, config, pc, events) => () => {
   const ids = Object.getOwnPropertyNames(state.strums).filter(d => !isNaN(d));
 

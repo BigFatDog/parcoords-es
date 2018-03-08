@@ -4465,7 +4465,7 @@ var selected$1 = function selected(brushGroup, state, config) {
   });
 };
 
-var removeStrum$1 = function removeStrum(state, pc) {
+var removeStrum = function removeStrum(state, pc) {
   var strum = state.strums[state.strums.active],
       svg = pc.selection.select('svg').select('g#strums');
 
@@ -4474,14 +4474,14 @@ var removeStrum$1 = function removeStrum(state, pc) {
   svg.selectAll('circle#strum-' + strum.dims.i).remove();
 };
 
-var onDragEnd$1 = function onDragEnd(brushGroup, state, config, pc, events) {
+var onDragEnd = function onDragEnd(brushGroup, state, config, pc, events) {
   return function () {
     var strum = state.strums[state.strums.active];
 
     // Okay, somewhat unexpected, but not totally unsurprising, a mousclick is
     // considered a drag without move. So we have to deal with that case
     if (strum && strum.p1[0] === strum.p2[0] && strum.p1[1] === strum.p2[1]) {
-      removeStrum$1(state, pc);
+      removeStrum(state, pc);
     }
 
     var brushed = selected$1(brushGroup, state, config);
@@ -4518,7 +4518,7 @@ var drawStrum = function drawStrum(brushGroup, state, config, pc, events, strum,
     strum['p' + i][0] = Math.min(Math.max(strum.minX + 1, ev.x), strum.maxX);
     strum['p' + i][1] = Math.min(Math.max(strum.minY, ev.y), strum.maxY);
     drawStrum(brushGroup, state, config, pc, events, strum, i - 1);
-  }).on('end', onDragEnd$1(brushGroup, state, config, pc, events));
+  }).on('end', onDragEnd(brushGroup, state, config, pc, events));
 
   circles.enter().append('circle').attr('id', 'strum-' + id).attr('class', 'strum');
 
@@ -4666,10 +4666,10 @@ var install$1 = function install(brushGroup, state, config, pc, events, xscale) 
           // If the two dimensions of the current strum are not next to each other
           // any more, than we'll need to remove the strum. Otherwise we keep it.
           if (!consecutive(config.dimensions)(dims.left, dims.right)) {
-            removeStrum$1(state, pc);
+            removeStrum(state, pc);
           }
         });
-        onDragEnd$1(brushGroup, state, config, pc, events)();
+        onDragEnd(brushGroup, state, config, pc, events)();
       }
     });
 
@@ -4679,7 +4679,7 @@ var install$1 = function install(brushGroup, state, config, pc, events, xscale) 
     // Install the required brushReset function
     pc.brushReset = brushReset$1(brushGroup, state, config, pc, events);
 
-    _drag.on('start', onDragStart(state, config, pc, xscale)).on('drag', onDrag(brushGroup, state, config, pc, events)).on('end', onDragEnd$1(brushGroup, state, config, pc, events));
+    _drag.on('start', onDragStart(state, config, pc, xscale)).on('drag', onDrag(brushGroup, state, config, pc, events)).on('end', onDragEnd(brushGroup, state, config, pc, events));
 
     // NOTE: The styling needs to be done here and not in the css. This is because
     //       for 1D brushing, the canvas layers should not listen to
@@ -4793,7 +4793,7 @@ var selected$2 = function selected(brushGroup, state, config) {
   });
 };
 
-var removeStrum$2 = function removeStrum(state, pc) {
+var removeStrum$1 = function removeStrum(state, pc) {
   var arc = state.arcs[state.arcs.active],
       svg = pc.selection.select('svg').select('g#arcs');
 
@@ -4804,14 +4804,14 @@ var removeStrum$2 = function removeStrum(state, pc) {
   svg.selectAll('path#arc-' + arc.dims.i).remove();
 };
 
-var onDragEnd$2 = function onDragEnd(brushGroup, state, config, pc, events) {
+var onDragEnd$1 = function onDragEnd(brushGroup, state, config, pc, events) {
   return function () {
     var arc = state.arcs[state.arcs.active];
 
     // Okay, somewhat unexpected, but not totally unsurprising, a mousclick is
     // considered a drag without move. So we have to deal with that case
     if (arc && arc.p1[0] === arc.p2[0] && arc.p1[1] === arc.p2[1]) {
-      removeStrum$2(state, pc);
+      removeStrum$1(state, pc);
     }
 
     if (arc) {
@@ -4874,7 +4874,7 @@ var drawStrum$1 = function drawStrum(brushGroup, state, config, pc, events, arc,
     }
 
     drawStrum(brushGroup, state, config, pc, events, arc, i - 2);
-  }).on('end', onDragEnd$2(brushGroup, state, config, pc, events));
+  }).on('end', onDragEnd$1(brushGroup, state, config, pc, events));
 
   circles.enter().append('circle').attr('id', 'arc-' + id).attr('class', 'arc');
 
@@ -5425,33 +5425,6 @@ ReflectContext.prototype = {
   }
 };
 
-var dimensionsForPoint$1 = function dimensionsForPoint(config, pc, xscale, p) {
-  var dims = { i: -1, left: undefined, right: undefined };
-  keys(config.dimensions).some(function (dim, i) {
-    if (xscale(dim) < p[0]) {
-      dims.i = i;
-      dims.left = dim;
-      dims.right = keys(config.dimensions)[pc.getOrderedDimensionKeys().indexOf(dim) + 1];
-      return false;
-    }
-    return true;
-  });
-
-  if (dims.left === undefined) {
-    // Event on the left side of the first axis.
-    dims.i = 0;
-    dims.left = pc.getOrderedDimensionKeys()[0];
-    dims.right = pc.getOrderedDimensionKeys()[1];
-  } else if (dims.right === undefined) {
-    // Event on the right side of the last axis
-    dims.i = keys(config.dimensions).length - 1;
-    dims.right = dims.left;
-    dims.left = pc.getOrderedDimensionKeys()[keys(config.dimensions).length - 2];
-  }
-
-  return dims;
-};
-
 // First we need to determine between which two axes the arc was started.
 // This will determine the freedom of movement, because a arc can
 // logically only happen between two axes, so no movement outside these axes
@@ -5463,7 +5436,7 @@ var onDragStart$1 = function onDragStart(state, config, pc, xscale) {
     p[0] = p[0] - config.margin.left;
     p[1] = p[1] - config.margin.top;
 
-    var dims = dimensionsForPoint$1(config, pc, xscale, p);
+    var dims = dimensionsForPoint(config, pc, xscale, p);
     var arc$$1 = {
       p1: p,
       dims: dims,
@@ -5494,9 +5467,9 @@ var brushReset$2 = function brushReset(brushGroup, state, config, pc, events) {
 
     ids.forEach(function (d) {
       state.arcs.active = d;
-      removeStrum(state, pc);
+      removeStrum$1(state, pc);
     });
-    onDragEnd$2(brushGroup, state, config, pc, events)();
+    onDragEnd$1(brushGroup, state, config, pc, events)();
   };
 };
 
@@ -5608,10 +5581,10 @@ var install$2 = function install(brushGroup, state, config, pc, events, xscale) 
           // If the two dimensions of the current arc are not next to each other
           // any more, than we'll need to remove the arc. Otherwise we keep it.
           if (!consecutive$1(dims)(dims.left, dims.right)) {
-            removeStrum$2(state, pc);
+            removeStrum$1(state, pc);
           }
         });
-        onDragEnd$2(brushGroup, state, config, pc, events)();
+        onDragEnd$1(brushGroup, state, config, pc, events)();
       }
     });
 
@@ -5621,7 +5594,7 @@ var install$2 = function install(brushGroup, state, config, pc, events, xscale) 
     // Install the required brushReset function
     pc.brushReset = brushReset$2(brushGroup, state, config, pc, events);
 
-    _drag.on('start', onDragStart$1(state, config, pc, xscale)).on('drag', onDrag$1(brushGroup, state, config, pc, events)).on('end', onDragEnd$2(brushGroup, state, config, pc, events));
+    _drag.on('start', onDragStart$1(state, config, pc, xscale)).on('drag', onDrag$1(brushGroup, state, config, pc, events)).on('end', onDragEnd$1(brushGroup, state, config, pc, events));
 
     // NOTE: The styling needs to be done here and not in the css. This is because
     //       for 1D brushing, the canvas layers should not listen to

@@ -130,7 +130,7 @@ const install = (brushGroup, state, config, pc, events, xscale) => () => {
 
   _drag
     .on('start', onDragStart(state, config, pc, xscale))
-    .on('drag', onDrag(brushGroup, state, config, pc, events))
+    .on('drag',onDrag(brushGroup, state, config, pc, events))
     .on('end', onDragEnd(brushGroup, state, config, pc, events));
 
   // NOTE: The styling needs to be done here and not in the css. This is because

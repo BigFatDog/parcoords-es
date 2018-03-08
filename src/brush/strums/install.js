@@ -37,7 +37,7 @@ const install = (brushGroup, state, config, pc, events, xscale) => () => {
       ? undefined
       : state.strums[id].maxX - state.strums[id].minX;
 
-  pc.on('axesreorder.strums', ()=> {
+  pc.on('axesreorder.strums', () => {
     const ids = Object.getOwnPropertyNames(state.strums).filter(d => !isNaN(d));
 
     if (ids.length > 0) {
