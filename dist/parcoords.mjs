@@ -539,14 +539,15 @@ var brushReset$1 = function brushReset(brushGroup, state, config, pc, events) {
 };
 
 // Checks if the first dimension is directly left of the second dimension.
-var consecutive = function consecutive(dimensions) {
-  return function (first, second) {
-    var keys$$1 = keys$$1(dimensions);
 
-    return keys$$1.some(function (d, i) {
-      return d === first ? i + i < keys$$1.length && dimensions[i + 1] === second : false;
-    });
-  };
+var consecutive = function consecutive(dimensions) {
+    return function (first, second) {
+        var keys$$1 = keys$$1(dimensions);
+
+        return keys$$1.some(function (d, i) {
+            return d === first ? i + i < keys$$1.length && dimensions[i + 1] === second : false;
+        });
+    };
 };
 
 var install$1 = function install(brushGroup, state, config, pc, events, xscale) {
@@ -867,17 +868,6 @@ var brushReset$2 = function brushReset(brushGroup, state, config, pc, events) {
   };
 };
 
-// Checks if the first dimension is directly left of the second dimension.
-var consecutive$1 = function consecutive(dimensions) {
-  return function (first, second) {
-    var keys$$1 = keys$$1(dimensions);
-
-    return keys$$1.some(function (d, i) {
-      return d === first ? i + i < keys$$1.length && dimensions[i + 1] === second : false;
-    });
-  };
-};
-
 // returns angles in [-PI/2, PI/2]
 var angle = function angle(p1, p2) {
   var a = p1[0] - p2[0],
@@ -974,7 +964,7 @@ var install$2 = function install(brushGroup, state, config, pc, events, xscale) 
           state.arcs.active = d;
           // If the two dimensions of the current arc are not next to each other
           // any more, than we'll need to remove the arc. Otherwise we keep it.
-          if (!consecutive$1(dims)(dims.left, dims.right)) {
+          if (!consecutive(dims)(dims.left, dims.right)) {
             removeStrum$1(state, pc);
           }
         });
