@@ -1,3 +1,5 @@
+import onDragEnd from './onDragEnd';
+
 const brushReset = (brushGroup, state, config, pc, events) => () => {
   const ids = Object.getOwnPropertyNames(state.arcs).filter(d => !isNaN(d));
 

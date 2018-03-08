@@ -107,7 +107,6 @@ const onDrag = (brushGroup, state, config, pc, events) => () => {
   );
   arc.p2[1] = Math.min(Math.max(arc.minY, ev.y - config.margin.top), arc.maxY);
   arc.p3 = arc.p2.slice();
-  console.log(state.arcs[state.arcs.active]);
   drawStrum(brushGroup, state, config, pc, events, 1);
 };
 

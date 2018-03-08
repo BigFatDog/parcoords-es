@@ -4902,7 +4902,6 @@ var onDrag$1 = function onDrag(brushGroup, state, config, pc, events) {
     arc.p2[0] = Math.min(Math.max(arc.minX + 1, ev.x - config.margin.left), arc.maxX);
     arc.p2[1] = Math.min(Math.max(arc.minY, ev.y - config.margin.top), arc.maxY);
     arc.p3 = arc.p2.slice();
-    console.log(state.arcs[state.arcs.active]);
     drawStrum$1(brushGroup, state, config, pc, events, 1);
   };
 };
@@ -5499,7 +5498,7 @@ var brushReset$2 = function brushReset(brushGroup, state, config, pc, events) {
       state.arcs.active = d;
       removeStrum(state, pc);
     });
-    onDragEnd(brushGroup, state, config, pc, events)();
+    onDragEnd$2(brushGroup, state, config, pc, events)();
   };
 };
 
