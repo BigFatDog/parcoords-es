@@ -1,6 +1,6 @@
 {
   "name": "parcoord-es",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "ES6 module of Parallel Coordinates, based on d3 v5 modules",
   "main": "dist/parcoords.js",
   "module": "dist/parcoords.mjs",
@@ -34,7 +34,7 @@
     "d3-selection": "^1.3.0",
     "d3-shape": "^1.2.0",
     "d3-transition": "^1.1.1",
-    "lodash-es": "^4.17.5",
+    "lodash-es": "^4.17.7",
     "requestanimationframe": "0.0.23"
   },
   "devDependencies": {
@@ -48,15 +48,15 @@
     "babelrc-rollup": "^3.0.0",
     "eslint": "^4.18.2",
     "istanbul": "^1.1.0-alpha.1",
-    "mocha": "^5.0.2",
+    "mocha": "^5.0.4",
     "prettier": "1.11.1",
-    "rollup": "^0.56.4",
+    "rollup": "^0.56.5",
     "rollup-plugin-babel": "^3.0.3",
     "rollup-plugin-commonjs": "^9.0.0",
     "rollup-plugin-json": "^2.3.0",
     "rollup-plugin-livereload": "^0.6.0",
     "rollup-plugin-local-resolve": "^1.0.7",
-    "rollup-plugin-node-resolve": "^3.0.3",
+    "rollup-plugin-node-resolve": "^3.2.0",
     "rollup-plugin-postcss": "^1.3.3",
     "rollup-plugin-serve": "^0.4.2",
     "rollup-watch": "^4.3.1"

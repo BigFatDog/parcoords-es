@@ -17,4 +17,4 @@ const onDragEnd = (brushGroup, state, config, pc, events) => () => {
   events.call('brushend', pc, config.brushed);
 };
 
-export default onDragEnd
+export default onDragEnd;

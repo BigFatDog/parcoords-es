@@ -4,8 +4,8 @@ import w from './util/width';
 
 // brush
 import install1DAxes from './brush/1d';
-import install2DStrums from './brush/install2DStrums';
-import installAngularBrush from './brush/installAngularBrush';
+import install2DStrums from './brush/strums';
+import installAngularBrush from './brush/angular';
 
 // api
 import intersection from './api/intersection';

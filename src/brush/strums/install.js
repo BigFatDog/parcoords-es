@@ -1,5 +1,4 @@
 import { drag } from 'd3-drag';
-import { keys } from 'd3-collection';
 import onDragEnd from './onDragEnd';
 import onDrag from './onDrag';
 import onDragStart from './onDragStart';
@@ -7,16 +6,8 @@ import removeStrum from './removeStrum';
 import brushReset from './brushReset';
 import w from '../../util/width';
 import h from '../../util/height';
+import consecutive from '../consecutive';
 
-// Checks if the first dimension is directly left of the second dimension.
-const consecutive = dimensions => (first, second) => {
-  const keys = keys(dimensions);
-
-  return keys.some(
-    (d, i) =>
-      d === first ? i + i < keys.length && dimensions[i + 1] === second : false
-  );
-};
 
 const install = (brushGroup, state, config, pc, events, xscale) => () => {
   if (pc.g() === undefined || pc.g() === null) {
@@ -37,7 +28,7 @@ const install = (brushGroup, state, config, pc, events, xscale) => () => {
       ? undefined
       : state.strums[id].maxX - state.strums[id].minX;
 
-  pc.on('axesreorder.strums', function() {
+  pc.on('axesreorder.strums', () => {
     const ids = Object.getOwnPropertyNames(state.strums).filter(d => !isNaN(d));
 
     if (ids.length > 0) {
@@ -66,7 +57,7 @@ const install = (brushGroup, state, config, pc, events, xscale) => () => {
     );
 
   // Install the required brushReset function
-  pc.brushReset = brushReset(brushGroup, config, pc, events);
+  pc.brushReset = brushReset(brushGroup, state, config, pc, events);
 
   _drag
     .on('start', onDragStart(state, config, pc, xscale))
