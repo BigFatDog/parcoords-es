@@ -9024,7 +9024,7 @@ var scale = function scale(config) {
   };
 };
 
-var version = "2.0.0";
+var version = "2.0.1";
 
 /** Detect free variable `global` from Node.js. */
 var freeGlobal = (typeof global === 'undefined' ? 'undefined' : _typeof(global)) == 'object' && global && global.Object === Object && global;
