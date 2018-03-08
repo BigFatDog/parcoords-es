@@ -1,4 +1,4 @@
-const uninstall = (state, pc) => {
+const uninstall = (state, pc) => ()=> {
   if (pc.g() !== undefined && pc.g() !== null)
     pc
       .g()

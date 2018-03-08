@@ -33,7 +33,7 @@ const install = (state, config, pc, events, brushGroup) => () => {
 
   brush.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
 
-  pc.brushExtents = brushExtents(state, pc);
+  pc.brushExtents = brushExtents(state, config, pc);
   pc.brushReset = brushReset(state, config, pc);
   return pc;
 };

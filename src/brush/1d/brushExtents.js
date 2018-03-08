@@ -1,7 +1,7 @@
 import { keys } from 'd3-collection';
 import { brushSelection } from 'd3-brush';
 
-const brushExtents = (state, pc) => extents => {
+const brushExtents = (state, config, pc) => extents => {
   const { brushes } = state;
 
   if (typeof extents === 'undefined') {
