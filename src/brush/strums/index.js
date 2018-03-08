@@ -1,22 +1,21 @@
-import brushExtents from './brushExtents';
+import uninstall from './uninstall';
 import install from './install';
 import selected from './selected';
-import uninstall from './uninstall';
 
 const BrushState = {
-  brushes: {},
-  brushNodes: {},
+  strums: {},
+  strumRect: {},
 };
 
-const install1DAxes = (brushGroup, config, pc, events) => {
+const install2DStrums = (brushGroup, config, pc, events, xscale) => {
   const state = Object.assign({}, BrushState);
 
-  brushGroup.modes['1D-axes'] = {
-    install: install(state, config, pc, events, brushGroup),
+  brushGroup.modes['2D-strums'] = {
+    install: install(brushGroup, state, config, pc, events, xscale),
     uninstall: uninstall(state, pc),
-    selected: selected(state, config, brushGroup),
-    brushState: brushExtents(state, pc),
+    selected: selected(brushGroup, state, config),
+    brushState: () => state.strums,
   };
 };
 
-export default install1DAxes;
+export default install2DStrums;
