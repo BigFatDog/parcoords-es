@@ -2,7 +2,6 @@ import { entries, keys } from 'd3-collection';
 import { axisLeft } from 'd3-axis';
 import { dispatch } from 'd3-dispatch';
 import { scalePoint } from 'd3-scale';
-import isFunction from 'lodash-es/isFunction';
 
 import DefaultConfig from './defaultConfig';
 
