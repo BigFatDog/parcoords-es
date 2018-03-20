@@ -15,7 +15,7 @@ const install1DAxes = (brushGroup, config, pc, events) => {
     install: install(state, config, pc, events, brushGroup),
     uninstall: uninstall(state, pc),
     selected: selected(state, config, brushGroup),
-    brushState: brushExtents(state, pc),
+    brushState: brushExtents(state, config, pc),
   };
 };
 

@@ -1,7 +1,7 @@
 import 'requestanimationframe';
 import { keys, entries, map } from 'd3-collection';
+import { select, event, mouse, selectAll } from 'd3-selection';
 import { brushSelection, brushY } from 'd3-brush';
-import { select as select$1, event, mouse, selectAll } from 'd3-selection';
 import { drag } from 'd3-drag';
 import { arc } from 'd3-shape';
 import { scaleLinear, scaleOrdinal, scalePoint, scaleTime } from 'd3-scale';
@@ -76,13 +76,14 @@ var renderQueue = function renderQueue(func) {
   return rq;
 };
 
-var w$1 = function w(config) {
+var w = function w(config) {
   return config.width - config.margin.right - config.margin.left;
 };
 
 var brushExtents = function brushExtents(state, config, pc) {
   return function (extents) {
-    var brushes = state.brushes;
+    var brushes = state.brushes,
+        brushNodes = state.brushNodes;
 
 
     if (typeof extents === 'undefined') {
@@ -97,9 +98,9 @@ var brushExtents = function brushExtents(state, config, pc) {
       }, {});
     } else {
       //first get all the brush selections
-      var brushSelections = pc.g().selectAll('.brush').reduce(function (acc, cur) {
-        acc[cur] = select(this);
-        return acc;
+      var brushSelections = {};
+      pc.g().selectAll('.brush').each(function (d) {
+        brushSelections[d] = select(this);
       });
 
       // loop over each dimension and update appropriately (if it was passed in through extents)
@@ -110,14 +111,20 @@ var brushExtents = function brushExtents(state, config, pc) {
 
         var brush = brushes[d];
         if (brush !== undefined) {
+          var dim = config.dimensions[d];
+          var yExtent = extents[d].map(dim.yscale);
+
           //update the extent
-          brush.extent(extents[d]);
+          //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
+          brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
 
           //redraw the brush
-          brushSelections[d].transition().duration(0).call(brush);
+          //https://github.com/d3/d3-brush#brush_move
+          // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
+          brushSelections[d].call(brush).call(brush.move, yExtent.reverse());
 
           //fire some events
-          brush.event(brushSelections[d]);
+          // brush.event(brushSelections[d]);
         }
       });
 
@@ -140,7 +147,7 @@ var brushReset = function brushReset(state, config, pc) {
       config.brushed = false;
       if (pc.g() !== undefined && pc.g() !== null) {
         pc.g().selectAll('.brush').each(function (d) {
-          select$1(this).call(brushes[d].move, null);
+          select(this).call(brushes[d].move, null);
         });
         pc.renderBrushed();
       }
@@ -148,8 +155,8 @@ var brushReset = function brushReset(state, config, pc) {
       if (pc.g() !== undefined && pc.g() !== null) {
         pc.g().selectAll('.brush').each(function (d) {
           if (d != dimension) return;
-          select$1(this).call(brushes[d].move, null);
-          brushes[d].event(select$1(this));
+          select(this).call(brushes[d].move, null);
+          brushes[d].event(select(this));
         });
         pc.renderBrushed();
       }
@@ -266,7 +273,7 @@ var install = function install(state, config, pc, events, brushGroup) {
 
     // Add and store a brush for each axis.
     var brush = pc.g().append('svg:g').attr('class', 'brush').each(function (d) {
-      select$1(this).call(brushFor(state, config, pc, events, brushGroup)(d, select$1(this)));
+      select(this).call(brushFor(state, config, pc, events, brushGroup)(d, select(this)));
     });
     brush.selectAll('rect').style('visibility', null).attr('x', -15).attr('width', 30);
 
@@ -304,7 +311,7 @@ var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
     install: install(state, config, pc, events, brushGroup),
     uninstall: uninstall(state, pc),
     selected: selected(state, config, brushGroup),
-    brushState: brushExtents(state, pc)
+    brushState: brushExtents(state, config, pc)
   };
 };
 
@@ -444,9 +451,9 @@ var drawStrum = function drawStrum(brushGroup, state, config, pc, events, strum,
   }).attr('r', 5).style('opacity', function (d, i) {
     return activePoint !== undefined && i === activePoint ? 0.8 : 0;
   }).on('mouseover', function () {
-    select$1(this).style('opacity', 0.8);
+    select(this).style('opacity', 0.8);
   }).on('mouseout', function () {
-    select$1(this).style('opacity', 0);
+    select(this).style('opacity', 0);
   }).call(_drag);
 };
 
@@ -463,7 +470,7 @@ var onDrag = function onDrag(brushGroup, state, config, pc, events) {
   };
 };
 
-var h$1 = function h(config) {
+var h = function h(config) {
   return config.height - config.margin.top - config.margin.bottom;
 };
 
@@ -512,7 +519,7 @@ var onDragStart = function onDragStart(state, config, pc, xscale) {
       minX: xscale(dims.left),
       maxX: xscale(dims.right),
       minY: 0,
-      maxY: h$1(config)
+      maxY: h(config)
     };
 
     // Make sure that the point is within the bounds
@@ -541,13 +548,13 @@ var brushReset$1 = function brushReset(brushGroup, state, config, pc, events) {
 // Checks if the first dimension is directly left of the second dimension.
 
 var consecutive = function consecutive(dimensions) {
-    return function (first, second) {
-        var keys$$1 = keys$$1(dimensions);
+  return function (first, second) {
+    var keys$$1 = keys$$1(dimensions);
 
-        return keys$$1.some(function (d, i) {
-            return d === first ? i + i < keys$$1.length && dimensions[i + 1] === second : false;
-        });
-    };
+    return keys$$1.some(function (d, i) {
+      return d === first ? i + i < keys$$1.length && dimensions[i + 1] === second : false;
+    });
+  };
 };
 
 var install$1 = function install(brushGroup, state, config, pc, events, xscale) {
@@ -600,7 +607,7 @@ var install$1 = function install(brushGroup, state, config, pc, events, xscale) 
     // NOTE: The styling needs to be done here and not in the css. This is because
     //       for 1D brushing, the canvas layers should not listen to
     //       pointer-events._.
-    state.strumRect = pc.selection.select('svg').insert('rect', 'g#strums').attr('id', 'strum-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w$1(config)).attr('height', h$1(config) + 2).style('opacity', 0).call(_drag);
+    state.strumRect = pc.selection.select('svg').insert('rect', 'g#strums').attr('id', 'strum-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w(config)).attr('height', h(config) + 2).style('opacity', 0).call(_drag);
   };
 };
 
@@ -801,9 +808,9 @@ var drawStrum$1 = function drawStrum(brushGroup, state, config, pc, events, arc$
   }).attr('r', 5).style('opacity', function (d, i) {
     return activePoint !== undefined && i === activePoint ? 0.8 : 0;
   }).on('mouseover', function () {
-    select$1(this).style('opacity', 0.8);
+    select(this).style('opacity', 0.8);
   }).on('mouseout', function () {
-    select$1(this).style('opacity', 0);
+    select(this).style('opacity', 0);
   }).call(_drag);
 };
 
@@ -838,7 +845,7 @@ var onDragStart$1 = function onDragStart(state, config, pc, xscale) {
       minX: xscale(dims.left),
       maxX: xscale(dims.right),
       minY: 0,
-      maxY: h$1(config),
+      maxY: h(config),
       startAngle: undefined,
       endAngle: undefined,
       arc: arc().innerRadius(0)
@@ -983,7 +990,7 @@ var install$2 = function install(brushGroup, state, config, pc, events, xscale) 
     // NOTE: The styling needs to be done here and not in the css. This is because
     //       for 1D brushing, the canvas layers should not listen to
     //       pointer-events._.
-    state.strumRect = pc.selection.select('svg').insert('rect', 'g#arcs').attr('id', 'arc-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w$1(config)).attr('height', h$1(config) + 2).style('opacity', 0).call(_drag);
+    state.strumRect = pc.selection.select('svg').insert('rect', 'g#arcs').attr('id', 'arc-events').attr('x', config.margin.left).attr('y', config.margin.top).attr('width', w(config)).attr('height', h(config) + 2).style('opacity', 0).call(_drag);
   };
 };
 
@@ -1283,7 +1290,7 @@ var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
   return function (dimension) {
     pc.flip(dimension);
     pc.brushReset(dimension);
-    select$1(this.parentElement).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
+    select(this.parentElement).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
     pc.render();
   };
 };
@@ -1315,7 +1322,7 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
     g_data.enter().append('svg:g').attr('class', 'dimension').attr('transform', function (p) {
       return 'translate(' + position(p) + ')';
     }).style('opacity', 0).append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
-      var axisElement = select$1(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+      var axisElement = select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
 
       axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
@@ -1331,7 +1338,7 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
     // Update
     g_data.attr('opacity', 0);
     g_data.select('.axis').transition().duration(animationTime).each(function (d) {
-      select$1(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+      select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
     });
     g_data.select('.label').transition().duration(animationTime).text(dimensionLabels(config)).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')');
 
@@ -1344,7 +1351,7 @@ var updateAxes = function updateAxes(config, pc, position, axis, flags) {
     }).style('opacity', 1);
 
     pc.svg.selectAll('.axis').transition().duration(animationTime).each(function (d) {
-      select$1(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+      select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
     });
 
     if (flags.brushable) pc.brushable();
@@ -1450,12 +1457,12 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
     });
 
     // xscale
-    xscale.range([0, w$1(config)], 1);
+    xscale.range([0, w(config)], 1);
     // Retina display, etc.
     var devicePixelRatio = window.devicePixelRatio || 1;
 
     // canvas sizes
-    pc.selection.selectAll('canvas').style('margin-top', config.margin.top + 'px').style('margin-left', config.margin.left + 'px').style('width', w$1(config) + 2 + 'px').style('height', h$1(config) + 2 + 'px').attr('width', (w$1(config) + 2) * devicePixelRatio).attr('height', (h$1(config) + 2) * devicePixelRatio);
+    pc.selection.selectAll('canvas').style('margin-top', config.margin.top + 'px').style('margin-left', config.margin.left + 'px').style('width', w(config) + 2 + 'px').style('height', h(config) + 2 + 'px').attr('width', (w(config) + 2) * devicePixelRatio).attr('height', (h(config) + 2) * devicePixelRatio);
     // default styles, needs to be set when canvas width changes
     ctx.foreground.strokeStyle = config.color;
     ctx.foreground.lineWidth = 1.4;
@@ -1485,8 +1492,8 @@ var brushable = function brushable(config, pc, flags) {
     // Add and store a brush for each axis.
     g.append('svg:g').attr('class', 'brush').each(function (d) {
       if (config.dimensions[d] !== undefined) {
-        config.dimensions[d]['brush'] = brushY(select$1(this)).extent([[-15, 0], [15, config.dimensions[d].yscale.range()[0]]]);
-        select$1(this).call(config.dimensions[d]['brush'].on('start', function () {
+        config.dimensions[d]['brush'] = brushY(select(this)).extent([[-15, 0], [15, config.dimensions[d].yscale.range()[0]]]);
+        select(this).call(config.dimensions[d]['brush'].on('start', function () {
           if (event.sourceEvent !== null && !event.sourceEvent.ctrlKey) {
             pc.brushReset();
           }
@@ -1500,9 +1507,9 @@ var brushable = function brushable(config, pc, flags) {
           // the html element of the selection,
           // to make a dummy selection element
           if (event.sourceEvent.ctrlKey) {
-            var html = select$1(this).select('.selection').nodes()[0].outerHTML;
+            var html = select(this).select('.selection').nodes()[0].outerHTML;
             html = html.replace('class="selection"', 'class="selection dummy' + ' selection-' + config.brushes.length + '"');
-            var dat = select$1(this).nodes()[0].__data__;
+            var dat = select(this).nodes()[0].__data__;
             var brush = {
               id: config.brushes.length,
               extent: brushSelection(this),
@@ -1510,16 +1517,16 @@ var brushable = function brushable(config, pc, flags) {
               data: dat
             };
             config.brushes.push(brush);
-            select$1(select$1(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
+            select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
             pc.brush();
-            config.dimensions[d].brush.move(select$1(this, null));
-            select$1(this).select('.selection').attr('style', 'display:none');
+            config.dimensions[d].brush.move(select(this, null));
+            select(this).select('.selection').attr('style', 'display:none');
             pc.brushable();
           } else {
             pc.brush();
           }
         }));
-        select$1(this).on('dblclick', function () {
+        select(this).on('dblclick', function () {
           pc.brushReset(d);
         });
       }
@@ -1585,12 +1592,6 @@ var computeRealCentroids = function computeRealCentroids(dimensions, position) {
   };
 };
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
-
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i];
@@ -1651,7 +1652,7 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
     });
     // Add an axis and title.
     pc._g.append('svg:g').attr('class', 'axis').attr('transform', 'translate(0,0)').each(function (d) {
-      var axisElement = select$1(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
+      var axisElement = select(this).call(pc.applyAxisConfig(axis, config.dimensions[d]));
 
       axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
@@ -1659,9 +1660,9 @@ var createAxes = function createAxes(config, pc, xscale, flags, axis) {
     }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
     if (config.nullValueSeparator == 'top') {
-      pc.svg.append('line').attr('x1', 0).attr('y1', 1 + config.nullValueSeparatorPadding.top).attr('x2', w()).attr('y2', 1 + config.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
+      pc.svg.append('line').attr('x1', 0).attr('y1', 1 + config.nullValueSeparatorPadding.top).attr('x2', w(config)).attr('y2', 1 + config.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
     } else if (config.nullValueSeparator == 'bottom') {
-      pc.svg.append('line').attr('x1', 0).attr('y1', h() + 1 - config.nullValueSeparatorPadding.bottom).attr('x2', w()).attr('y2', h() + 1 - config.nullValueSeparatorPadding.bottom).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
+      pc.svg.append('line').attr('x1', 0).attr('y1', h(config) + 1 - config.nullValueSeparatorPadding.bottom).attr('x2', w(config)).attr('y2', h(config) + 1 - config.nullValueSeparatorPadding.bottom).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
     }
 
     flags.axes = true;
@@ -1726,7 +1727,7 @@ var reorderable = function reorderable(config, pc, xscale, position, dragging, f
     g.style('cursor', 'move').call(drag().on('start', function (d) {
       dragging[d] = this.__origin__ = xscale(d);
     }).on('drag', function (d) {
-      dragging[d] = Math.min(w$1(__), Math.max(0, this.__origin__ += event.dx));
+      dragging[d] = Math.min(w(__), Math.max(0, this.__origin__ += event.dx));
       pc.sortDimensions();
       xscale.domain(pc.getOrderedDimensionKeys());
       pc.render();
@@ -1736,7 +1737,7 @@ var reorderable = function reorderable(config, pc, xscale, position, dragging, f
     }).on('end', function (d) {
       delete this.__origin__;
       delete dragging[d];
-      select$1(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
+      select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
       pc.render();
     }));
     flags.reorderable = true;
@@ -1853,7 +1854,7 @@ var isBrushed = function isBrushed(config, brushGroup) {
 
 var clear = function clear(config, pc, ctx, brushGroup) {
   return function (layer) {
-    ctx[layer].clearRect(0, 0, w$1(config) + 2, h$1(config) + 2);
+    ctx[layer].clearRect(0, 0, w(config) + 2, h(config) + 2);
 
     // This will make sure that the foreground items are transparent
     // without the need for changing the opacity style of the foreground canvas
@@ -1861,7 +1862,7 @@ var clear = function clear(config, pc, ctx, brushGroup) {
     if (layer === 'brushed' && isBrushed(config, brushGroup)) {
       ctx.brushed.fillStyle = pc.selection.style('background-color');
       ctx.brushed.globalAlpha = 1 - config.alphaOnBrushed;
-      ctx.brushed.fillRect(0, 0, w$1(config) + 2, h$1(config) + 2);
+      ctx.brushed.fillRect(0, 0, w(config) + 2, h(config) + 2);
       ctx.brushed.globalAlpha = config.alpha;
     }
     return this;
@@ -1941,13 +1942,13 @@ var singleCurve = function singleCurve(config, position, d, ctx) {
 // returns the y-position just beyond the separating null value line
 var getNullPosition = function getNullPosition(config) {
   if (config.nullValueSeparator == 'bottom') {
-    return h$1(config) + 1;
+    return h(config) + 1;
   } else if (config.nullValueSeparator == 'top') {
     return 1;
   } else {
     console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
   }
-  return h$1(config) + 1;
+  return h(config) + 1;
 };
 
 var singlePath = function singlePath(config, position, d, ctx) {
@@ -2036,8 +2037,8 @@ var brushReset$3 = function brushReset(config) {
       for (var i = 0; i < nodes.length; i++) {
         if (nodes[i].__data__ === dimension) {
           // remove all dummy brushes for this axis or the real brush
-          select$1(select$1(nodes[i]).nodes()[0].parentNode).selectAll('.dummy').remove();
-          config.dimensions[dimension].brush.move(select$1(nodes[i], null));
+          select(select(nodes[i]).nodes()[0].parentNode).selectAll('.dummy').remove();
+          config.dimensions[dimension].brush.move(select(nodes[i], null));
         }
       }
     }
@@ -2217,7 +2218,7 @@ var init = function init(config, canvas, ctx) {
    * @returns {pc} instance for chained api
    */
   var pc = function pc(selection) {
-    selection = pc.selection = select$1(selection);
+    selection = pc.selection = select(selection);
 
     config.width = selection.node().clientWidth;
     config.height = selection.node().clientHeight;
@@ -2261,53 +2262,7 @@ var scale = function scale(config) {
   };
 };
 
-var version = "2.0.2";
-
-/** Detect free variable `global` from Node.js. */
-var freeGlobal = (typeof global === 'undefined' ? 'undefined' : _typeof(global)) == 'object' && global && global.Object === Object && global;
-
-/** Detect free variable `self`. */
-var freeSelf = (typeof self === 'undefined' ? 'undefined' : _typeof(self)) == 'object' && self && self.Object === Object && self;
-
-/** Used as a reference to the global object. */
-var root = freeGlobal || freeSelf || Function('return this')();
-
-/** Built-in value references. */
-var _Symbol = root.Symbol;
-
-/** Built-in value references. */
-var symToStringTag = _Symbol ? _Symbol.toStringTag : undefined;
-
-/** Used for built-in method references. */
-
-/** Built-in value references. */
-var symToStringTag$1 = _Symbol ? _Symbol.toStringTag : undefined;
-
-/**
- * Checks if `value` is the
- * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
- * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
- *
- * @static
- * @memberOf _
- * @since 0.1.0
- * @category Lang
- * @param {*} value The value to check.
- * @returns {boolean} Returns `true` if `value` is an object, else `false`.
- * @example
- *
- * _.isObject({});
- * // => true
- *
- * _.isObject([1, 2, 3]);
- * // => true
- *
- * _.isObject(_.noop);
- * // => true
- *
- * _.isObject(null);
- * // => false
- */
+var version = "2.0.3";
 
 var DefaultConfig = {
   data: [],
@@ -2566,7 +2521,7 @@ var ParCoords = function ParCoords(userConfig) {
 
   var position = function position(d) {
     if (xscale.range().length === 0) {
-      xscale.range([0, w$1(config)], 1);
+      xscale.range([0, w(config)], 1);
     }
     return dragging[d] == null ? xscale(d) : dragging[d];
   };

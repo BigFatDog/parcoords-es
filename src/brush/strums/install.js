@@ -8,7 +8,6 @@ import w from '../../util/width';
 import h from '../../util/height';
 import consecutive from '../consecutive';
 
-
 const install = (brushGroup, state, config, pc, events, xscale) => () => {
   if (pc.g() === undefined || pc.g() === null) {
     pc.createAxes();
