@@ -4,6 +4,9 @@ import dimensionLabels from '../util/dimensionLabels';
 import flipAxisAndUpdatePCP from '../util/flipAxisAndUpdatePCP';
 import rotateLabels from '../util/rotateLabels';
 
+import w from '../util/width';
+import h from '../util/height';
+
 /**
  * Create static SVG axes with dimension names, ticks, and labels.
  *
@@ -72,7 +75,7 @@ const createAxes = (config, pc, xscale, flags, axis) =>
         .append('line')
         .attr('x1', 0)
         .attr('y1', 1 + config.nullValueSeparatorPadding.top)
-        .attr('x2', w())
+        .attr('x2', w(config))
         .attr('y2', 1 + config.nullValueSeparatorPadding.top)
         .attr('stroke-width', 1)
         .attr('stroke', '#777')
@@ -82,9 +85,9 @@ const createAxes = (config, pc, xscale, flags, axis) =>
       pc.svg
         .append('line')
         .attr('x1', 0)
-        .attr('y1', h() + 1 - config.nullValueSeparatorPadding.bottom)
-        .attr('x2', w())
-        .attr('y2', h() + 1 - config.nullValueSeparatorPadding.bottom)
+        .attr('y1', h(config) + 1 - config.nullValueSeparatorPadding.bottom)
+        .attr('x2', w(config))
+        .attr('y2', h(config) + 1 - config.nullValueSeparatorPadding.bottom)
         .attr('stroke-width', 1)
         .attr('stroke', '#777')
         .attr('fill', 'none')
