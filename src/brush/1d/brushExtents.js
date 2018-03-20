@@ -1,4 +1,5 @@
 import { keys } from 'd3-collection';
+import { select } from 'd3-selection';
 import { brushSelection } from 'd3-brush';
 
 const brushExtents = (state, config, pc) => extents => {
@@ -16,13 +17,10 @@ const brushExtents = (state, config, pc) => extents => {
     }, {});
   } else {
     //first get all the brush selections
-    const brushSelections = pc
-      .g()
-      .selectAll('.brush')
-      .reduce(function(acc, cur) {
-        acc[cur] = select(this);
-        return acc;
-      });
+    const brushSelections = {};
+    pc.g().selectAll('.brush').each(function (d) {
+        brushSelections[d] = select(this);
+    });
 
     // loop over each dimension and update appropriately (if it was passed in through extents)
     keys(config.dimensions).forEach(function(d) {
