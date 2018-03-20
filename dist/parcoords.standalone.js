@@ -8968,7 +8968,7 @@
       };
     };
 
-    var version = "2.0.2";
+    var version = "2.0.3";
 
     var DefaultConfig = {
       data: [],
