@@ -10,7 +10,6 @@ import h from '../../util/height';
 import hypothenuse from './util/hypothenuse';
 import consecutive from '../consecutive';
 
-
 // returns angles in [-PI/2, PI/2]
 const angle = (p1, p2) => {
   const a = p1[0] - p2[0],
@@ -121,7 +120,7 @@ const install = (brushGroup, state, config, pc, events, xscale) => () => {
 
   _drag
     .on('start', onDragStart(state, config, pc, xscale))
-    .on('drag',onDrag(brushGroup, state, config, pc, events))
+    .on('drag', onDrag(brushGroup, state, config, pc, events))
     .on('end', onDragEnd(brushGroup, state, config, pc, events));
 
   // NOTE: The styling needs to be done here and not in the css. This is because
