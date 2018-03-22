@@ -1,6 +1,6 @@
-import h from '../util/height';
-import w from '../util/width';
 import isBrushed from '../util/isBrushed';
+import w from '../util/width';
+import h from '../util/height';
 
 const clear = (config, pc, ctx, brushGroup) =>
   function(layer) {
