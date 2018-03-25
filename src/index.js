@@ -4,6 +4,7 @@ import w from './util/width';
 
 // brush
 import install1DAxes from './brush/1d';
+import install1DAxesMulti from './brush/multi';
 import install2DStrums from './brush/strums';
 import installAngularBrush from './brush/angular';
 
@@ -189,6 +190,7 @@ const ParCoords = userConfig => {
   install1DAxes(brush, config, pc, events);
   install2DStrums(brush, config, pc, events, xscale);
   installAngularBrush(brush, config, pc, events, xscale);
+  install1DAxesMulti(brush, config, pc, events);
 
   pc.version = version;
   // this descriptive text should live with other introspective methods
