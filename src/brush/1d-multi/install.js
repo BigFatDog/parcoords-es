@@ -3,20 +3,22 @@ import brushExtents from './brushExtents';
 import brushReset from './brushReset';
 import brushFor from './brushFor';
 
-const install = (state, config, pc, events) => () => {
+const install = (state, config, pc, events, brushGroup) => () => {
   if (!pc.g()) {
     pc.createAxes();
   }
 
   // Add and store a brush for each axis.
+    //
   const brush = pc
-      .g()
+    .g()
     .append('svg:g')
     .attr('class', 'brush')
     .each(function(d) {
-      select(this).call(brushFor(state, config, pc, events)(d, select(this)));
+      select(this).call(
+        brushFor(state, config, pc, events, brushGroup)(d, select(this))
+      );
     });
-
   brush
     .selectAll('rect')
     .style('visibility', null)

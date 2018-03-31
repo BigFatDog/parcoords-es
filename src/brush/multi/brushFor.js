@@ -1,5 +1,5 @@
 import { event } from 'd3-selection';
-
+import multibBrush from './multi-brush';
 import selected from './selected';
 
 const brushUpdated = (config, pc, events) => newSelection => {
@@ -8,8 +8,8 @@ const brushUpdated = (config, pc, events) => newSelection => {
   pc.renderBrushed();
 };
 
-const brushFor = (state, config, pc, events) => axis => {
-  const brush = multibBrush();
+const brushFor = (state, config, pc, events) => (axis, selector) => {
+  const brush = multibBrush(selector);
 
   brush
     .y(config.dimensions[axis].yscale)

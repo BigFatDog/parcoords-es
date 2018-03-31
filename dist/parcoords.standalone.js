@@ -4400,7 +4400,847 @@
       };
     };
 
+    var brushExtents$1 = function brushExtents(state, config, pc) {
+      return function (extents) {
+        var brushes = state.brushes;
+
+
+        if (typeof extents === 'undefined') {
+          return keys(config.dimensions).reduce(function (acc, cur) {
+            var brush = brushes[cur];
+            //todo: brush check
+            if (brush !== undefined && !brush.empty()) {
+              acc[d] = brush.extent();
+            }
+
+            return acc;
+          }, {});
+        } else {
+          //first get all the brush selections
+          var brushSelections = {};
+          pc.g().selectAll('.brush').each(function (d) {
+            brushSelections[d] = select(this);
+          });
+
+          // loop over each dimension and update appropriately (if it was passed in through extents)
+          keys(config.dimensions).forEach(function (d) {
+            if (extents[d] === undefined) {
+              return;
+            }
+
+            var brush = brushes[d];
+            if (brush !== undefined) {
+              var dim = config.dimensions[d];
+              var yExtent = extents[d].map(dim.yscale);
+
+              //update the extent
+              //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
+              brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
+
+              //redraw the brush
+              //https://github.com/d3/d3-brush#brush_move
+              // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
+              brushSelections[d].call(brush).call(brush.move, yExtent.reverse());
+
+              // //fire some events
+              // // brush.event(brushSelections[d]);
+              // //update the extent
+              // brush.extent(extents[d]);
+              //
+              // //redraw the brush
+              // brushSelections[d]
+              //     .transition()
+              //     .duration(0)
+              //     .call(brush);
+              //
+              // //fire some events
+              // brush.event(brushSelections[d]);
+            }
+          });
+
+          //redraw the chart
+          pc.renderBrushed();
+
+          return pc;
+        }
+      };
+    };
+
+    var _this$1 = undefined;
+
+    var brushReset$1 = function brushReset(state, config, pc) {
+      return function () {
+        var brushes = state.brushes;
+
+
+        config.brushed = false;
+        if (pc.g()) {
+          pc.g().selectAll('.brush').each(function (d) {
+            select(this).call(brushes[d].clear());
+          });
+          pc.renderBrushed();
+        }
+        return _this$1;
+      };
+    };
+
+    var d3_rebind = function d3_rebind(target, source, method) {
+        return function () {
+            var value = method.apply(source, arguments);
+            return value === source ? target : value;
+        };
+    };
+
+    var _rebind = function _rebind(target, source, method) {
+        target[method] = d3_rebind(target, source, source[method]);
+        return target;
+    };
+
+    var d3_svg_brushCursor = {
+        n: "ns-resize",
+        e: "ew-resize",
+        s: "ns-resize",
+        w: "ew-resize",
+        nw: "nwse-resize",
+        ne: "nesw-resize",
+        se: "nwse-resize",
+        sw: "nesw-resize"
+    };
+
+    var d3_svg_brushResizes = [["n", "e", "s", "w", "nw", "ne", "se", "sw"], ["e", "w"], ["n", "s"], []];
+
+    var multibrush = function multibrush(selector$$1) {
+
+        // From d3/scale/scale.js
+        function d3_scaleExtent(domain) {
+            var start = domain[0],
+                stop = domain[domain.length - 1];
+            return start < stop ? [start, stop] : [stop, start];
+        }
+        function d3_scaleRange(scale) {
+            return scale.rangeExtent ? scale.rangeExtent() : d3_scaleExtent(scale.range());
+        }
+
+        // From d3
+        var d3_document = selector$$1.node();
+        function d3_documentElement(node) {
+            return node && (node.ownerDocument || node.document || node).documentElement;
+        }
+        function d3_window(node) {
+            return node && (node.ownerDocument && node.ownerDocument.defaultView || node.document && node || node.defaultView);
+        }
+
+        var d3_array = function d3_array(list) {
+            var i = list.length,
+                array = new Array(i);
+            while (i--) {
+                array[i] = list[i];
+            }return array;
+        };
+
+        if (d3_document) {
+            try {
+                d3_array(d3_document.documentElement.childNodes)[0].nodeType;
+            } catch (e) {}
+        }
+
+        function d3_eventPreventDefault() {
+            event$$1.preventDefault();
+        }
+
+        function d3_vendorSymbol(object, name) {
+            if (name in object) return name;
+            name = name.charAt(0).toUpperCase() + name.slice(1);
+            for (var i = 0, n = d3_vendorPrefixes.length; i < n; ++i) {
+                var prefixName = d3_vendorPrefixes[i] + name;
+                if (prefixName in object) return prefixName;
+            }
+        }
+        var d3_vendorPrefixes = ["webkit", "ms", "moz", "Moz", "o", "O"];
+
+        var d3_event_dragSelect = "onselectstart" in document ? null : d3_vendorSymbol(document.documentElement.style, "userSelect"),
+            d3_event_dragId = 0;
+        function d3_event_dragSuppress(node) {
+            var name = ".dragsuppress-" + ++d3_event_dragId,
+                click = "click" + name,
+                w = select(d3_window(node)).on("touchmove" + name, d3_eventPreventDefault).on("dragstart" + name, d3_eventPreventDefault).on("selectstart" + name, d3_eventPreventDefault);
+            if (d3_event_dragSelect == null) {
+                d3_event_dragSelect = "onselectstart" in node ? false : d3_vendorSymbol(node.style, "userSelect");
+            }
+            if (d3_event_dragSelect) {
+                var _style = d3_documentElement(node).style,
+                    _select = _style[d3_event_dragSelect];
+                _style[d3_event_dragSelect] = "none";
+            }
+            return function (suppressClick) {
+                w.on(name, null);
+                if (d3_event_dragSelect) style[d3_event_dragSelect] = select;
+                if (suppressClick) {
+                    var off = function off() {
+                        w.on(click, null);
+                    };
+                    w.on(click, function () {
+                        d3_eventPreventDefault();
+                        off();
+                    }, true);
+                    setTimeout(off, 0);
+                }
+            };
+        }
+
+        var event$$1 = dispatch("brushstart", "brush", "brushend"),
+            brushElement = void 0,
+            x = null,
+            // x-scale, optional
+        y = null,
+            // y-scale, optional
+        xExtent = [[0, 0]],
+            // [x0, x1] in integer pixels
+        yExtent = [[0, 0]],
+            // [y0, y1] in integer pixels
+        xExtentDomain = [],
+            // x-extent in data space
+        yExtentDomain = [],
+            // y-extent in data space
+        xClamp = true,
+            // whether to clamp the x-extent to the range
+        yClamp = true,
+            // whether to clamp the y-extent to the range
+        resizes = d3_svg_brushResizes[0],
+            resizeAdaption = function resizeAdaption() {},
+            // Function to 'call' on new resize selection
+        extentAdaption = function extentAdaption() {}; // Function to 'call' on new extent selection
+
+        event$$1.of = function (thiz, argumentz) {
+            return function (e1) {
+                try {
+                    var _e = e1.sourceEvent = event$$1;
+                    e1.target = brush;
+                    event$$1 = e1;
+                    event$$1[e1.type].apply(thiz, argumentz);
+                } finally {
+                    event$$1 = e0;
+                }
+            };
+        };
+
+        function brush(g) {
+            g.each(function () {
+
+                // Prepare the brush container for events.
+                var g = select(this).style("pointer-events", "all").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)").on("mousedown.brush", brushstart).on("touchstart.brush", brushstart);
+
+                brushElement = g;
+
+                // An invisible, mouseable area for starting a new brush.
+                var background = g.selectAll(".background").data([0]);
+
+                background.enter().append("rect").attr("class", "background").style("visibility", "hidden").style("cursor", "crosshair");
+
+                drawExtents(g);
+
+                // When called on a transition, use a transition to update.
+                var gUpdate = transition(g),
+                    backgroundUpdate = transition(background),
+                    range = void 0;
+
+                // Initialize the background to fill the defined range.
+                // If the range isn't defined, you can post-process.
+                if (x) {
+                    range = d3_scaleRange(x);
+                    backgroundUpdate.attr("x", range[0]).attr("width", range[1] - range[0]);
+                    redrawX(gUpdate);
+                }
+                if (y) {
+                    range = d3_scaleRange(y);
+                    backgroundUpdate.attr("y", range[0]).attr("height", range[1] - range[0]);
+                    redrawY(gUpdate);
+                }
+                redraw(gUpdate);
+            });
+        }
+
+        function drawExtents(g) {
+            var ex = xExtent.length > yExtent.length ? xExtent : yExtent;
+            var i = ex.length;
+            var extentArr = ex.map(function (d, i) {
+                return i;
+            });
+            var extentResizes = ex.map(function (d, i) {
+                return resizes.map(function (r) {
+                    return [r, i];
+                });
+            }).reduce(function (acc, cur) {
+                acc = acc.concat(cur);
+                return acc;
+            }, []);
+            console.log(ex.map(function (d, i) {
+                return resizes.map(function (r) {
+                    return [r, i];
+                });
+            }));
+            // extentResizes = d3.merge(ex.map(function(d,i) { return resizes.map(function(r) { return [r, i]; }); }));
+            console.log(extentResizes);
+
+            if (!g) g = brushElement;
+
+            // The visible brush extent; style this as you like!
+            var extent = g.selectAll(".extent").data(extentArr, function (d) {
+                return d;
+            });
+
+            extent.exit().remove();
+
+            extent.enter().append("rect").attr("class", "extent").style("cursor", "move").call(extentAdaption);
+
+            // More invisible rects for resizing the extent.
+            var resize = g.selectAll(".resize").data(extentResizes, function (d) {
+                return d[0] + d[1];
+            });
+
+            // Remove any superfluous resizers.
+            resize.exit().remove();
+
+            var newResize = resize.enter().append("g").attr("class", function (d) {
+                return "resize " + d[0];
+            }).style("cursor", function (d) {
+                return d3_svg_brushCursor[d[0]];
+            });
+
+            newResize.append("rect").attr("x", function (d) {
+                return (/[ew]$/.test(d[0]) ? -3 : null
+                );
+            }).attr("y", function (d) {
+                return (/^[ns]/.test(d[0]) ? -3 : null
+                );
+            }).attr("width", 6).attr("height", 6).style("visibility", "hidden");
+
+            newResize.call(resizeAdaption);
+
+            // Show or hide the resizers.
+            resize.style("display", function (d) {
+                return brush.empty(d[1]) ? "none" : null;
+            });
+        }
+
+        brush.event = function (g) {
+            g.each(function () {
+                var event_ = event$$1.of(this, arguments),
+                    extent1 = { x: xExtent, y: yExtent, i: xExtentDomain, j: yExtentDomain },
+                    extent0 = this.__chart__ || extent1;
+                this.__chart__ = extent1;
+                event_({ type: "brushstart" });
+                event_({ type: "brush", mode: "resize" });
+                event_({ type: "brushend" });
+            });
+        };
+
+        function redraw(g) {
+            g.selectAll(".resize").attr("transform", function (d) {
+                return "translate(" + xExtent[d[1]][+/e$/.test(d[0])] + "," + yExtent[d[1]][+/^s/.test(d[0])] + ")";
+            });
+        }
+
+        function redrawX(g) {
+            g.selectAll(".extent").attr("x", function (d) {
+                return xExtent[d][0];
+            });
+            g.selectAll(".extent").attr("width", function (d) {
+                return xExtent[d][1] - xExtent[d][0];
+            });
+        }
+
+        function redrawY(g) {
+            g.selectAll(".extent").attr("y", function (d) {
+                return yExtent[d][0];
+            });
+            g.selectAll(".extent").attr("height", function (d) {
+                return yExtent[d][1] - yExtent[d][0];
+            });
+        }
+
+        function brushstart() {
+            var target = this,
+                eventTarget = select(event$$1.target),
+                event_ = event$$1.of(target, arguments),
+                g = select(target),
+                resizing = eventTarget.datum()[0],
+                resizingX = !/^(n|s)$/.test(resizing) && x,
+                resizingY = !/^(e|w)$/.test(resizing) && y,
+                dragging = eventTarget.classed("extent"),
+                dragRestore = d3_event_dragSuppress(target),
+                center = void 0,
+                origin = mouse(target),
+                offset = void 0,
+                i = void 0;
+
+            var w = select(window).on("keydown.brush", keydown).on("keyup.brush", keyup);
+
+            if (event$$1.changedTouches) {
+                w.on("touchmove.brush", brushmove).on("touchend.brush", brushend);
+            } else {
+                w.on("mousemove.brush", brushmove).on("mouseup.brush", brushend);
+            }
+
+            // Interrupt the transition, if any.
+            g.interrupt().selectAll("*").interrupt();
+
+            // If the extent was clicked on, drag rather than brush;
+            // store the point between the mouse and extent origin instead.
+            if (dragging) {
+                i = eventTarget.datum();
+                origin[0] = xExtent[i][0] - origin[0];
+                origin[1] = yExtent[i][0] - origin[1];
+            }
+
+            // If a resizer was clicked on, record which side is to be resized.
+            // Also, set the origin to the opposite side.
+            else if (resizing) {
+                    var ex = +/w$/.test(resizing),
+                        ey = +/^n/.test(resizing);
+
+                    i = eventTarget.datum()[1];
+                    offset = [xExtent[i][1 - ex] - origin[0], yExtent[i][1 - ey] - origin[1]];
+                    origin[0] = xExtent[i][ex];
+                    origin[1] = yExtent[i][ey];
+                } else {
+                    i = xExtent.length - 1; // Figure out the count of the new extent.
+                    xExtent.push([0, 0]);
+                    yExtent.push([0, 0]);
+
+                    // If the ALT key is down when starting a brush, the center is at the mouse.
+                    if (event$$1.altKey) center = origin.slice();
+                }
+
+            // Propagate the active cursor to the body for the drag duration.
+            g.style("pointer-events", "none");
+            select("body").style("cursor", eventTarget.style("cursor"));
+
+            // Show resizers as long as we're not dragging or resizing.
+            if (!dragging && !resizing) g.selectAll(".resize").style("display", null);
+
+            // Notify listeners.
+            event_({ type: "brushstart" });
+            brushmove();
+
+            function keydown() {
+                if (event$$1.keyCode == 32) {
+                    if (!dragging) {
+                        center = null;
+                        origin[0] -= xExtent[i][1];
+                        origin[1] -= yExtent[i][1];
+                        dragging = 2;
+                    }
+                    event$$1.preventDefault();
+                }
+            }
+
+            function keyup() {
+                if (event$$1.keyCode == 32 && dragging == 2) {
+                    origin[0] += xExtent[i][1];
+                    origin[1] += yExtent[i][1];
+                    dragging = 0;
+                    event$$1.preventDefault();
+                }
+            }
+
+            function brushmove() {
+                var point$$1 = mouse(target),
+                    moved = false;
+
+                // Preserve the offset for thick resizers.
+                if (offset) {
+                    point$$1[0] += offset[0];
+                    point$$1[1] += offset[1];
+                }
+
+                if (!dragging) {
+
+                    // If needed, determine the center from the current extent.
+                    if (event$$1.altKey) {
+                        if (!center) center = [(xExtent[i][0] + xExtent[i][1]) / 2, (yExtent[i][0] + yExtent[i][1]) / 2];
+
+                        // Update the origin, for when the ALT key is released.
+                        origin[0] = xExtent[i][+(point$$1[0] < center[0])];
+                        origin[1] = yExtent[i][+(point$$1[1] < center[1])];
+                    }
+
+                    // When the ALT key is released, we clear the center.
+                    else center = null;
+                }
+
+                // Update the brush extent for each dimension.
+                if (resizingX && move1(point$$1, x, 0)) {
+                    redrawX(g, i);
+                    moved = true;
+                }
+                if (resizingY && move1(point$$1, y, 1)) {
+                    redrawY(g, i);
+                    moved = true;
+                }
+
+                // Final redraw and notify listeners.
+                if (moved) {
+                    redraw(g);
+                    event_({ type: "brush", mode: dragging ? "move" : "resize" });
+                }
+            }
+
+            function move1(point$$1, scale, j) {
+                var range = d3_scaleRange(scale),
+                    r0 = range[0],
+                    r1 = range[1],
+                    position = origin[j],
+                    extent = j ? yExtent[i] : xExtent[i],
+                    size = extent[1] - extent[0],
+                    min = void 0,
+                    max = void 0;
+
+                // When dragging, reduce the range by the extent size and position.
+                if (dragging) {
+                    r0 -= position;
+                    r1 -= size + position;
+                }
+
+                // Clamp the point (unless clamp set to false) so that the extent fits within the range extent.
+                min = (j ? yClamp : xClamp) ? Math.max(r0, Math.min(r1, point$$1[j])) : point$$1[j];
+
+                // Compute the new extent bounds.
+                if (dragging) {
+                    max = (min += position) + size;
+                } else {
+
+                    // If the ALT key is pressed, then preserve the center of the extent.
+                    if (center) position = Math.max(r0, Math.min(r1, 2 * center[j] - min));
+
+                    // Compute the min and max of the position and point.
+                    if (position < min) {
+                        max = min;
+                        min = position;
+                    } else {
+                        max = position;
+                    }
+                }
+
+                // Update the stored bounds.
+                if (extent[0] != min || extent[1] != max) {
+                    if (j) yExtentDomain[i] = null;else xExtentDomain[i] = null;
+                    extent[0] = min;
+                    extent[1] = max;
+                    return true;
+                }
+            }
+
+            function brushend() {
+                brushmove();
+
+                // If the current extent is empty, clear everything.
+                if (x && xExtent[i][0] == xExtent[i][1] || y && yExtent[i][0] == yExtent[i][1]) {
+                    brush.clear();
+                }
+
+                // reset the cursor styles
+                g.style("pointer-events", "all").selectAll(".resize").style("display", function (d) {
+                    return brush.empty(d[1]) ? "none" : null;
+                });
+                select("body").style("cursor", null);
+
+                w.on("mousemove.brush", null).on("mouseup.brush", null).on("touchmove.brush", null).on("touchend.brush", null).on("keydown.brush", null).on("keyup.brush", null);
+
+                drawExtents();
+
+                dragRestore();
+                event_({ type: "brushend" });
+            }
+        }
+
+        brush.x = function (z) {
+            if (!arguments.length) return x;
+            x = z;
+            resizes = d3_svg_brushResizes[!x << 1 | !y]; // fore!
+            return brush;
+        };
+
+        brush.y = function (z) {
+            if (!arguments.length) return y;
+            y = z;
+            resizes = d3_svg_brushResizes[!x << 1 | !y]; // fore!
+            return brush;
+        };
+
+        brush.resizeAdaption = function (z) {
+            if (!arguments.length) return resizeAdaption;
+            resizeAdaption = z;
+            return brush;
+        };
+
+        brush.extentAdaption = function (z) {
+            if (!arguments.length) return extentAdaption;
+            extentAdaption = z;
+            return brush;
+        };
+
+        brush.clamp = function (z) {
+            if (!arguments.length) return x && y ? [xClamp, yClamp] : x ? xClamp : y ? yClamp : null;
+            if (x && y) xClamp = !!z[0], yClamp = !!z[1];else if (x) xClamp = !!z;else if (y) yClamp = !!z;
+            return brush;
+        };
+
+        brush.extent = function (z) {
+            var xOutput = void 0,
+                yOutput = void 0,
+                xyOutput = [];
+
+            // Invert the pixel extent to data-space.
+            if (!arguments.length) {
+                if (x) {
+                    if (xExtentDomain[0]) {
+                        xOutput = xExtentDomain;
+                    } else {
+                        xOutput = xExtent.map(function (d) {
+                            if (x.invert) return [x.invert(d[0]), x.invert(d[1])];
+                            return d;
+                        }).map(function (d) {
+                            if (d[1] < d[0]) return [d[1], d[0]];
+                            return d;
+                        }).filter(function (d) {
+                            return d[1] - d[0] != 0;
+                        });
+                    }
+                }
+                if (y) {
+                    if (yExtentDomain[0]) {
+                        yOutput = yExtentDomain;
+                    } else {
+                        yOutput = yExtent.map(function (d) {
+                            if (y.invert) return [y.invert(d[0]), y.invert(d[1])];
+                            return d;
+                        }).map(function (d) {
+                            if (d[1] < d[0]) return [d[1], d[0]];
+                            return d;
+                        }).filter(function (d) {
+                            return d[1] - d[0] != 0;
+                        });
+                    }
+                }
+                if (x && y) {
+                    xOutput.forEach(function (d, i) {
+                        xyOutput.push([[d[0], yOutput[i][0]], [d[1], yOutput[i][1]]]);
+                    });
+                }
+                return x && y ? xyOutput : x ? xOutput : y && yOutput;
+            }
+
+            // Scale the data-space extent to pixels.
+            if (x) {
+                xOutput = z;
+                if (y) xOutput = xOutput.map(function (d) {
+                    return [d[0][0], d[1][0]];
+                });
+                xExtentDomain = xOutput;
+                xOutput = xOutput.map(function (d) {
+                    if (x.invert) return [x(d[0]), x(d[1])];
+                    return d;
+                }).map(function (d) {
+                    if (d[1] < d[0]) return [d[1], d[0]];
+                    return d;
+                });
+                xExtent = xOutput;
+                if (!y) yExtent = xOutput.map(function () {
+                    return [0, 0];
+                });
+            }
+            if (y) {
+                yOutput = z;
+                if (x) yOutput = yOutput.map(function (d) {
+                    return [d[0][1], d[1][1]];
+                });
+                yExtentDomain = yOutput;
+                yOutput = yOutput.map(function (d) {
+                    if (y.invert) return [y(d[0]), y(d[1])];
+                    return d;
+                }).map(function (d) {
+                    if (d[1] < d[0]) return [d[1], d[0]];
+                    return d;
+                });
+                yExtent = yOutput;
+                if (!x) xExtent = yOutput.map(function () {
+                    return [0, 0];
+                });
+            }
+
+            // Handle the case where the extents are set to empty arrays.
+            if (xExtent.length === 0) xExtent = [[0, 0]];
+            if (yExtent.length === 0) yExtent = [[0, 0]];
+
+            return brush;
+        };
+
+        brush.clear = function () {
+            xExtent = [[0, 0]], yExtent = [[0, 0]];
+            xExtentDomain = yExtentDomain = [];
+            drawExtents();
+            if (x) redrawX(brushElement);
+            if (y) redrawY(brushElement);
+            return brush;
+        };
+
+        brush.empty = function (i) {
+            if (this.extent().length === 0) {
+                return true;
+            }
+            if (xExtent.length == 1 && yExtent.length == 1) i = 0;
+            if (i !== undefined) {
+                return !!x && xExtent[i][0] == xExtent[i][1] || !!y && yExtent[i][0] == yExtent[i][1];
+            } else {
+                return false;
+            }
+        };
+
+        return _rebind(brush, event$$1, "on");
+    };
+
+    //https://github.com/d3/d3-brush/issues/10
+
+    // data within extents
+    var selected$1 = function selected(state, config, brushGroup) {
+      return function () {
+        var brushNodes = state.brushNodes;
+
+        var is_brushed = function is_brushed(p) {
+          return !brushNodes[p].empty();
+        };
+
+        var actives = keys(config.dimensions).filter(is_brushed);
+        var extents = actives.map(function (p) {
+          return brushNodes[p].extent();
+        });
+        // We don't want to return the full data set when there are no axes brushed.
+        // Actually, when there are no axes brushed, by definition, no items are
+        // selected. So, let's avoid the filtering and just return false.
+        //if (actives.length === 0) return false;
+
+        // Resolves broken examples for now. They expect to get the full dataset back from empty brushes
+        if (actives.length === 0) return config.data;
+
+        // test if within range
+        var within = {
+          date: function date(d, p, dimension, b) {
+            if (typeof config.dimensions[p].yscale.rangePoints === 'function') {
+              // if it is ordinal
+              return b[0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= b[1];
+            } else {
+              return b[0] <= d[p] && d[p] <= b[1];
+            }
+          },
+          number: function number(d, p, dimension, b) {
+            if (typeof config.dimensions[p].yscale.rangePoints === 'function') {
+              // if it is ordinal
+              return b[0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= b[1];
+            } else {
+              return b[0] <= d[p] && d[p] <= b[1];
+            }
+          },
+          string: function string(d, p, dimension, b) {
+            return b[0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= b[1];
+          }
+        };
+
+        return config.data.filter(function (d) {
+          switch (brushGroup.predicate) {
+            case 'AND':
+              return actives.every(function (p, dimension) {
+                return extents[dimension].some(function (b) {
+                  return within[config.dimensions[p].type](d, p, dimension, b);
+                });
+              });
+            case 'OR':
+              return actives.some(function (p, dimension) {
+                return extents[dimension].some(function (b) {
+                  return within[config.dimensions[p].type](d, p, dimension, b);
+                });
+              });
+            default:
+              throw new Error('Unknown brush predicate ' + config.brushPredicate);
+          }
+        });
+      };
+    };
+
+    var brushFor$1 = function brushFor(state, config, pc, events) {
+      return function (axis, selector$$1) {
+        var brush = multibrush(selector$$1);
+
+        brush.y(config.dimensions[axis].yscale).on('brushstart', function () {
+          if (event.sourceEvent !== null) {
+            events.brushstart.call(pc, config.brushed);
+            event.sourceEvent.stopPropagation();
+          }
+        }).on('brush', function () {
+        }).on('brushend', function () {
+          events.brushend.call(pc, config.brushed);
+        }).extentAdaption(function (selection$$1) {
+          selection$$1.style('visibility', null).attr('x', -15).attr('width', 30).style('fill', 'rgba(255,255,255,0.25)').style('stroke', 'rgba(0,0,0,0.6)');
+        }).resizeAdaption(function (selection$$1) {
+          selection$$1.selectAll('rect').attr('x', -15).attr('width', 30).style('visibility', null).style('fill', 'rgba(0,0,0,0.1)');
+        });
+
+        state.brushes[axis] = brush;
+        return brush;
+      };
+    };
+
+    var install$1 = function install(state, config, pc, events) {
+      return function () {
+        if (!pc.g()) {
+          pc.createAxes();
+        }
+
+        // Add and store a brush for each axis.
+        var brush = pc.g().append('svg:g').attr('class', 'brush').each(function (d) {
+          select(this).call(brushFor$1(state, config, pc, events)(d, select(this)));
+        });
+
+        brush.selectAll('rect').style('visibility', null).attr('x', -15).attr('width', 30);
+
+        brush.selectAll('rect.background').style('fill', 'transparent');
+
+        brush.selectAll('rect.extent').style('fill', 'rgba(255,255,255,0.25)').style('stroke', 'rgba(0,0,0,0.6)');
+
+        brush.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
+
+        pc.brushExtents = brushExtents$1(state, config, pc);
+        pc.brushReset = brushReset$1(state, config, pc);
+        return pc;
+      };
+    };
+
     var uninstall$1 = function uninstall(state, pc) {
+      return function () {
+        if (pc.g() !== undefined && pc.g() !== null) pc.g().selectAll('.brush').remove();
+
+        state.brushes = {};
+        delete pc.brushExtents;
+        delete pc.brushReset;
+      };
+    };
+
+    var BrushState$1 = {
+      brushes: {}
+    };
+
+    var install1DAxes$1 = function install1DAxes(brushGroup, config, pc, events) {
+      var state = Object.assign({}, BrushState$1);
+
+      brushGroup.modes['1D-axes-multi'] = {
+        install: install$1(state, config, pc, events),
+        uninstall: uninstall$1(state, pc),
+        selected: selected$1(state, config),
+        brushState: brushExtents$1(state, config, pc)
+      };
+    };
+
+    var uninstall$2 = function uninstall(state, pc) {
       return function () {
         pc.selection.select('svg').select('g#strums').remove();
         pc.selection.select('svg').select('rect#strum-events').remove();
@@ -4443,7 +5283,7 @@
       };
     };
 
-    var selected$1 = function selected(brushGroup, state, config) {
+    var selected$2 = function selected(brushGroup, state, config) {
       // Get the ids of the currently active strums.
       var ids = Object.getOwnPropertyNames(state.strums).filter(function (d) {
         return !isNaN(d);
@@ -4491,7 +5331,7 @@
           removeStrum(state, pc);
         }
 
-        var brushed = selected$1(brushGroup, state, config);
+        var brushed = selected$2(brushGroup, state, config);
         state.strums.active = undefined;
         config.brushed = brushed;
         pc.renderBrushed();
@@ -4616,7 +5456,7 @@
       };
     };
 
-    var brushReset$1 = function brushReset(brushGroup, state, config, pc, events) {
+    var brushReset$2 = function brushReset(brushGroup, state, config, pc, events) {
       return function () {
         var ids = Object.getOwnPropertyNames(state.strums).filter(function (d) {
           return !isNaN(d);
@@ -4642,7 +5482,7 @@
       };
     };
 
-    var install$1 = function install(brushGroup, state, config, pc, events, xscale) {
+    var install$2 = function install(brushGroup, state, config, pc, events, xscale) {
       return function () {
         if (pc.g() === undefined || pc.g() === null) {
           pc.createAxes();
@@ -4685,7 +5525,7 @@
         pc.selection.select('svg').append('g').attr('id', 'strums').attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
 
         // Install the required brushReset function
-        pc.brushReset = brushReset$1(brushGroup, state, config, pc, events);
+        pc.brushReset = brushReset$2(brushGroup, state, config, pc, events);
 
         _drag.on('start', onDragStart(state, config, pc, xscale)).on('drag', onDrag(brushGroup, state, config, pc, events)).on('end', onDragEnd(brushGroup, state, config, pc, events));
 
@@ -4696,25 +5536,25 @@
       };
     };
 
-    var BrushState$1 = {
+    var BrushState$2 = {
       strums: {},
       strumRect: {}
     };
 
     var install2DStrums = function install2DStrums(brushGroup, config, pc, events, xscale) {
-      var state = Object.assign({}, BrushState$1);
+      var state = Object.assign({}, BrushState$2);
 
       brushGroup.modes['2D-strums'] = {
-        install: install$1(brushGroup, state, config, pc, events, xscale),
-        uninstall: uninstall$1(state, pc),
-        selected: selected$1(brushGroup, state, config),
+        install: install$2(brushGroup, state, config, pc, events, xscale),
+        uninstall: uninstall$2(state, pc),
+        selected: selected$2(brushGroup, state, config),
         brushState: function brushState() {
           return state.strums;
         }
       };
     };
 
-    var uninstall$2 = function uninstall(state, pc) {
+    var uninstall$3 = function uninstall(state, pc) {
       return function () {
         pc.selection.select('svg').select('g#arcs').remove();
         pc.selection.select('svg').select('rect#arc-events').remove();
@@ -4773,7 +5613,7 @@
       };
     };
 
-    var selected$2 = function selected(brushGroup, state, config) {
+    var selected$3 = function selected(brushGroup, state, config) {
       var ids = Object.getOwnPropertyNames(state.arcs).filter(function (d) {
         return !isNaN(d);
       });
@@ -4831,7 +5671,7 @@
         }
 
         state.arcs.active = undefined;
-        config.brushed = selected$2(brushGroup, state, config);
+        config.brushed = selected$3(brushGroup, state, config);
         pc.renderBrushed();
         events.call('brushend', pc, config.brushed);
       };
@@ -5467,7 +6307,7 @@
       };
     };
 
-    var brushReset$2 = function brushReset(brushGroup, state, config, pc, events) {
+    var brushReset$3 = function brushReset(brushGroup, state, config, pc, events) {
       return function () {
         var ids = Object.getOwnPropertyNames(state.arcs).filter(function (d) {
           return !isNaN(d);
@@ -5540,7 +6380,7 @@
       };
     };
 
-    var install$2 = function install(brushGroup, state, config, pc, events, xscale) {
+    var install$3 = function install(brushGroup, state, config, pc, events, xscale) {
       return function () {
         if (!pc.g()) {
           pc.createAxes();
@@ -5589,7 +6429,7 @@
         pc.selection.select('svg').append('g').attr('id', 'arcs').attr('transform', 'translate(' + config.margin.left + ',' + config.margin.top + ')');
 
         // Install the required brushReset function
-        pc.brushReset = brushReset$2(brushGroup, state, config, pc, events);
+        pc.brushReset = brushReset$3(brushGroup, state, config, pc, events);
 
         _drag.on('start', onDragStart$1(state, config, pc, xscale)).on('drag', onDrag$1(brushGroup, state, config, pc, events)).on('end', onDragEnd$1(brushGroup, state, config, pc, events));
 
@@ -5600,18 +6440,18 @@
       };
     };
 
-    var BrushState$2 = {
+    var BrushState$3 = {
       arcs: {},
       strumRect: {}
     };
 
     var installAngularBrush = function installAngularBrush(brushGroup, config, pc, events, xscale) {
-      var state = Object.assign({}, BrushState$2);
+      var state = Object.assign({}, BrushState$3);
 
       brushGroup.modes['angular'] = {
-        install: install$2(brushGroup, state, config, pc, events, xscale),
-        uninstall: uninstall$2(state, pc),
-        selected: selected$2(brushGroup, state, config),
+        install: install$3(brushGroup, state, config, pc, events, xscale),
+        uninstall: uninstall$3(state, pc),
+        selected: selected$3(brushGroup, state, config),
         brushState: function brushState() {
           return state.arcs;
         }
@@ -5669,7 +6509,7 @@
       };
     };
 
-    var selected$3 = function selected(config) {
+    var selected$4 = function selected(config) {
       var actives = [];
       var extents = [];
       var ranges = {};
@@ -5836,6 +6676,7 @@
         }
 
         brushGroup.predicate = predicate;
+        console.log(brushGroup.currentMode());
         config.brushed = brushGroup.currentMode().selected();
         pc.renderBrushed();
         return pc;
@@ -5913,7 +6754,7 @@
       event.preventDefault();
     };
 
-    var _this$1 = undefined;
+    var _this$2 = undefined;
 
     var updateAxes = function updateAxes(config, pc, position, axis, flags) {
       return function () {
@@ -5967,7 +6808,7 @@
           pc.brushMode('None');
           pc.brushMode(mode);
         }
-        return _this$1;
+        return _this$2;
       };
     };
 
@@ -8214,7 +9055,7 @@
       };
     };
 
-    var _this$2 = undefined;
+    var _this$3 = undefined;
 
     //draw dots with radius r on the axis line where data intersects
     var axisDots = function axisDots(config, pc, position) {
@@ -8232,7 +9073,7 @@
             ctx.fill();
           });
         });
-        return _this$2;
+        return _this$3;
       };
     };
 
@@ -8433,7 +9274,7 @@
         g.style('cursor', 'move').call(drag().on('start', function (d) {
           dragging[d] = this.__origin__ = xscale(d);
         }).on('drag', function (d) {
-          dragging[d] = Math.min(w(__), Math.max(0, this.__origin__ += event.dx));
+          dragging[d] = Math.min(w(config), Math.max(0, this.__origin__ += event.dx));
           pc.sortDimensions();
           xscale.domain(pc.getOrderedDimensionKeys());
           pc.render();
@@ -8726,7 +9567,7 @@
       };
     };
 
-    var brushReset$3 = function brushReset(config) {
+    var brushReset$4 = function brushReset(config) {
       return function (dimension) {
         var brushesToKeep = [];
         for (var j = 0; j < config.brushes.length; j++) {
@@ -8999,7 +9840,7 @@
       rotateLabels: false
     };
 
-    var _this$3 = undefined;
+    var _this$4 = undefined;
 
     var initState = function initState(userConfig) {
       var config = Object.assign({}, DefaultConfig, userConfig);
@@ -9019,7 +9860,7 @@
 
       var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(config));
 
-      var events = dispatch.apply(_this$3, eventTypes),
+      var events = dispatch.apply(_this$4, eventTypes),
           flags = {
         brushable: false,
         reorderable: false,
@@ -9099,7 +9940,7 @@
       return clusterCentroids;
     };
 
-    var _this$4 = undefined;
+    var _this$5 = undefined;
 
     var without = function without(arr, items) {
       items.forEach(function (el) {
@@ -9109,7 +9950,7 @@
     };
 
     var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue) {
-      return dispatch.apply(_this$4, keys(config)).on('composite', function (d) {
+      return dispatch.apply(_this$5, keys(config)).on('composite', function (d) {
         ctx.foreground.globalCompositeOperation = d.value;
         ctx.brushed.globalCompositeOperation = d.value;
       }).on('alpha', function (d) {
@@ -9183,15 +10024,15 @@
 
     // side effects for setters
 
-    var d3_rebind = function d3_rebind(target, source, method) {
+    var d3_rebind$1 = function d3_rebind(target, source, method) {
       return function () {
         var value = method.apply(source, arguments);
         return value === source ? target : value;
       };
     };
 
-    var _rebind = function _rebind(target, source, method) {
-      target[method] = d3_rebind(target, source, source[method]);
+    var _rebind$1 = function _rebind(target, source, method) {
+      target[method] = d3_rebind$1(target, source, source[method]);
       return target;
     };
 
@@ -9203,9 +10044,9 @@
 
       // expose events
       // getter/setter with event firing
-      _rebind(pc, events, 'on');
+      _rebind$1(pc, events, 'on');
 
-      _rebind(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
+      _rebind$1(pc, axis, 'ticks', 'orient', 'tickValues', 'tickSubdivide', 'tickSize', 'tickPadding', 'tickFormat');
     };
 
     // misc
@@ -9274,8 +10115,8 @@
       pc.updateAxes = updateAxes(config, pc, position, axis, flags);
       pc.applyAxisConfig = applyAxisConfig;
       pc.brushable = brushable(config, pc, flags);
-      pc.brushReset = brushReset$3(config);
-      pc.selected = selected$3(config);
+      pc.brushReset = brushReset$4(config);
+      pc.selected = selected$4(config);
       pc.reorderable = reorderable(config, pc, xscale, position, dragging, flags);
 
       // Reorder dimensions, such that the highest value (visually) is on the left and
@@ -9322,6 +10163,7 @@
       install1DAxes(brush, config, pc, events);
       install2DStrums(brush, config, pc, events, xscale);
       installAngularBrush(brush, config, pc, events, xscale);
+      install1DAxes$1(brush, config, pc, events);
 
       pc.version = version;
       // this descriptive text should live with other introspective methods
