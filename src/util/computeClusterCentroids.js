@@ -1,4 +1,4 @@
-import { keys, map } from 'd3-collection';
+import { map } from 'd3-collection';
 
 const computeClusterCentroids = (config, d) => {
   const clusterCentroids = map();
@@ -14,7 +14,7 @@ const computeClusterCentroids = (config, d) => {
   });
 
   config.data.forEach(function(row) {
-    keys(config.dimensions).map(p => {
+      Object.keys(config.dimensions).map(p => {
       let scaled = config.dimensions[d].yscale(row[d]);
       if (!clusterCentroids.has(scaled)) {
         let _map = map();

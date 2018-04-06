@@ -1,5 +1,3 @@
-import { keys } from 'd3-collection';
-
 /**
  * Renders the polylines.
  * If no dimensions have been specified, it will attempt to detect quantitative
@@ -14,7 +12,7 @@ import { keys } from 'd3-collection';
 const render = (config, pc, events) =>
   function() {
     // try to autodetect dimensions and create scales
-    if (!keys(config.dimensions).length) {
+    if (!Object.keys(config.dimensions).length) {
       pc.detectDimensions();
     }
     pc.autoscale();

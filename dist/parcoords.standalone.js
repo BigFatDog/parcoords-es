@@ -140,150 +140,6 @@
       return config.width - config.margin.right - config.margin.left;
     };
 
-    var prefix = "$";
-
-    function Map() {}
-
-    Map.prototype = map.prototype = {
-      constructor: Map,
-      has: function has(key) {
-        return prefix + key in this;
-      },
-      get: function get(key) {
-        return this[prefix + key];
-      },
-      set: function set(key, value) {
-        this[prefix + key] = value;
-        return this;
-      },
-      remove: function remove(key) {
-        var property = prefix + key;
-        return property in this && delete this[property];
-      },
-      clear: function clear() {
-        for (var property in this) {
-          if (property[0] === prefix) delete this[property];
-        }
-      },
-      keys: function keys() {
-        var keys = [];
-        for (var property in this) {
-          if (property[0] === prefix) keys.push(property.slice(1));
-        }return keys;
-      },
-      values: function values() {
-        var values = [];
-        for (var property in this) {
-          if (property[0] === prefix) values.push(this[property]);
-        }return values;
-      },
-      entries: function entries() {
-        var entries = [];
-        for (var property in this) {
-          if (property[0] === prefix) entries.push({ key: property.slice(1), value: this[property] });
-        }return entries;
-      },
-      size: function size() {
-        var size = 0;
-        for (var property in this) {
-          if (property[0] === prefix) ++size;
-        }return size;
-      },
-      empty: function empty() {
-        for (var property in this) {
-          if (property[0] === prefix) return false;
-        }return true;
-      },
-      each: function each(f) {
-        for (var property in this) {
-          if (property[0] === prefix) f(this[property], property.slice(1), this);
-        }
-      }
-    };
-
-    function map(object, f) {
-      var map = new Map();
-
-      // Copy constructor.
-      if (object instanceof Map) object.each(function (value, key) {
-        map.set(key, value);
-      });
-
-      // Index array by numeric index or specified key function.
-      else if (Array.isArray(object)) {
-          var i = -1,
-              n = object.length,
-              o;
-
-          if (f == null) while (++i < n) {
-            map.set(i, object[i]);
-          } else while (++i < n) {
-            map.set(f(o = object[i], i, object), o);
-          }
-        }
-
-        // Convert object to map.
-        else if (object) for (var key in object) {
-            map.set(key, object[key]);
-          }return map;
-    }
-
-    function Set() {}
-
-    var proto = map.prototype;
-
-    Set.prototype = set.prototype = {
-      constructor: Set,
-      has: proto.has,
-      add: function add(value) {
-        value += "";
-        this[prefix + value] = value;
-        return this;
-      },
-      remove: proto.remove,
-      clear: proto.clear,
-      values: proto.keys,
-      size: proto.size,
-      empty: proto.empty,
-      each: proto.each
-    };
-
-    function set(object, f) {
-      var set = new Set();
-
-      // Copy constructor.
-      if (object instanceof Set) object.each(function (value) {
-        set.add(value);
-      });
-
-      // Otherwise, assume it’s an array.
-      else if (object) {
-          var i = -1,
-              n = object.length;
-          if (f == null) while (++i < n) {
-            set.add(object[i]);
-          } else while (++i < n) {
-            set.add(f(object[i], i, object));
-          }
-        }
-
-      return set;
-    }
-
-    function keys (map) {
-      var keys = [];
-      for (var key in map) {
-        keys.push(key);
-      }return keys;
-    }
-
-    function entries (map) {
-      var entries = [];
-      for (var key in map) {
-        entries.push({ key: key, value: map[key] });
-      }return entries;
-    }
-
     var xhtml = "http://www.w3.org/1999/xhtml";
 
     var namespaces = {
@@ -1237,8 +1093,8 @@
         // Otherwise, if a null callback was specified, remove callbacks of the given name.
         if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
         while (++i < n) {
-          if (t = (typename = T[i]).type) _[t] = set$1(_[t], typename.name, callback);else if (callback == null) for (t in _) {
-            _[t] = set$1(_[t], typename.name, null);
+          if (t = (typename = T[i]).type) _[t] = set(_[t], typename.name, callback);else if (callback == null) for (t in _) {
+            _[t] = set(_[t], typename.name, null);
           }
         }
 
@@ -1275,7 +1131,7 @@
       }
     }
 
-    function set$1(type, name, callback) {
+    function set(type, name, callback) {
       for (var i = 0, n = type.length; i < n; ++i) {
         if (type[i].name === name) {
           type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
@@ -2477,7 +2333,7 @@
       return schedule;
     }
 
-    function set$3(node, id) {
+    function set$2(node, id) {
       var schedule = get$2(node, id);
       if (schedule.state > STARTING) throw new Error("too late; already started");
       return schedule;
@@ -2630,7 +2486,7 @@
     function tweenRemove(id, name) {
       var tween0, tween1;
       return function () {
-        var schedule$$1 = set$3(this, id),
+        var schedule$$1 = set$2(this, id),
             tween = schedule$$1.tween;
 
         // If this node shared tween with the previous node,
@@ -2655,7 +2511,7 @@
       var tween0, tween1;
       if (typeof value !== "function") throw new Error();
       return function () {
-        var schedule$$1 = set$3(this, id),
+        var schedule$$1 = set$2(this, id),
             tween = schedule$$1.tween;
 
         // If this node shared tween with the previous node,
@@ -2698,7 +2554,7 @@
       var id = transition._id;
 
       transition.each(function () {
-        var schedule$$1 = set$3(this, id);
+        var schedule$$1 = set$2(this, id);
         (schedule$$1.value || (schedule$$1.value = {}))[name] = value.apply(this, arguments);
       });
 
@@ -3296,13 +3152,13 @@
 
     function durationFunction(id, value) {
       return function () {
-        set$3(this, id).duration = +value.apply(this, arguments);
+        set$2(this, id).duration = +value.apply(this, arguments);
       };
     }
 
     function durationConstant(id, value) {
       return value = +value, function () {
-        set$3(this, id).duration = value;
+        set$2(this, id).duration = value;
       };
     }
 
@@ -3315,7 +3171,7 @@
     function easeConstant(id, value) {
       if (typeof value !== "function") throw new Error();
       return function () {
-        set$3(this, id).ease = value;
+        set$2(this, id).ease = value;
       };
     }
 
@@ -3368,7 +3224,7 @@
     function onFunction(id, name, listener) {
       var on0,
           on1,
-          sit = start(name) ? init : set$3;
+          sit = start(name) ? init : set$2;
       return function () {
         var schedule$$1 = sit(this, id),
             on = schedule$$1.on;
@@ -4172,7 +4028,7 @@
 
 
         if (typeof extents === 'undefined') {
-          return keys(config.dimensions).reduce(function (acc, cur) {
+          return Object.keys(config.dimensions).reduce(function (acc, cur) {
             var brush = brushes[cur];
             //todo: brush check
             if (brush !== undefined && brushSelection(brushNodes[cur]) !== null) {
@@ -4189,7 +4045,7 @@
           });
 
           // loop over each dimension and update appropriately (if it was passed in through extents)
-          keys(config.dimensions).forEach(function (d) {
+          Object.keys(config.dimensions).forEach(function (d) {
             if (extents[d] === undefined) {
               return;
             }
@@ -4250,6 +4106,8 @@
       };
     };
 
+    //https://github.com/d3/d3-brush/issues/10
+
     // data within extents
     var selected = function selected(state, config, brushGroup) {
       return function () {
@@ -4259,7 +4117,7 @@
           return brushSelection(brushNodes[p]) !== null;
         };
 
-        var actives = keys(config.dimensions).filter(is_brushed);
+        var actives = Object.keys(config.dimensions).filter(is_brushed);
         var extents = actives.map(function (p) {
           var _brushRange = brushSelection(brushNodes[p]);
 
@@ -4406,9 +4264,8 @@
 
 
         if (typeof extents === 'undefined') {
-          return keys(config.dimensions).reduce(function (acc, cur) {
+          return Object.keys(config.dimensions).reduce(function (acc, cur) {
             var axisBrushes = brushes[cur];
-            //todo: brush check
 
             if (brush === undefined || brush === null) {
               acc[cur] = [];
@@ -4433,7 +4290,7 @@
           });
 
           // loop over each dimension and update appropriately (if it was passed in through extents)
-          keys(config.dimensions).forEach(function (d) {
+          Object.keys(config.dimensions).forEach(function (d) {
             if (extents[d] === undefined) {
               return;
             }
@@ -4478,6 +4335,8 @@
             pc.g().selectAll('.brush').each(function (d) {
               select(this).call(brushes[d].move, null);
             });
+
+            keys();
             pc.renderBrushed();
           }
         } else {
@@ -4538,7 +4397,7 @@
         return false;
       };
 
-      var actives = keys(config.dimensions).filter(is_brushed);
+      var actives = Object.keys(config.dimensions).filter(is_brushed);
       console.log(actives);
       var extents = actives.map(function (p) {
         var axisBrushes = brushes[p];
@@ -5040,11 +4899,11 @@
 
     var dimensionsForPoint = function dimensionsForPoint(config, pc, xscale, p) {
       var dims = { i: -1, left: undefined, right: undefined };
-      keys(config.dimensions).some(function (dim, i) {
+      Object.keys(config.dimensions).some(function (dim, i) {
         if (xscale(dim) < p[0]) {
           dims.i = i;
           dims.left = dim;
-          dims.right = keys(config.dimensions)[pc.getOrderedDimensionKeys().indexOf(dim) + 1];
+          dims.right = Object.keys(config.dimensions)[pc.getOrderedDimensionKeys().indexOf(dim) + 1];
           return false;
         }
         return true;
@@ -5057,9 +4916,9 @@
         dims.right = pc.getOrderedDimensionKeys()[1];
       } else if (dims.right === undefined) {
         // Event on the right side of the last axis
-        dims.i = keys(config.dimensions).length - 1;
+        dims.i = Object.keys(config.dimensions).length - 1;
         dims.right = dims.left;
-        dims.left = pc.getOrderedDimensionKeys()[keys(config.dimensions).length - 2];
+        dims.left = pc.getOrderedDimensionKeys()[Object.keys(config.dimensions).length - 2];
       }
 
       return dims;
@@ -5110,13 +4969,12 @@
     };
 
     // Checks if the first dimension is directly left of the second dimension.
-
     var consecutive = function consecutive(dimensions) {
       return function (first, second) {
-        var keys$$1 = keys$$1(dimensions);
+        var keys = Object.keys(dimensions);
 
-        return keys$$1.some(function (d, i) {
-          return d === first ? i + i < keys$$1.length && dimensions[i + 1] === second : false;
+        return keys.some(function (d, i) {
+          return d === first ? i + i < keys.length && dimensions[i + 1] === second : false;
         });
       };
     };
@@ -6631,6 +6489,150 @@
       return min;
     }
 
+    var prefix = "$";
+
+    function Map() {}
+
+    Map.prototype = map$1.prototype = {
+      constructor: Map,
+      has: function has(key) {
+        return prefix + key in this;
+      },
+      get: function get(key) {
+        return this[prefix + key];
+      },
+      set: function set(key, value) {
+        this[prefix + key] = value;
+        return this;
+      },
+      remove: function remove(key) {
+        var property = prefix + key;
+        return property in this && delete this[property];
+      },
+      clear: function clear() {
+        for (var property in this) {
+          if (property[0] === prefix) delete this[property];
+        }
+      },
+      keys: function keys() {
+        var keys = [];
+        for (var property in this) {
+          if (property[0] === prefix) keys.push(property.slice(1));
+        }return keys;
+      },
+      values: function values() {
+        var values = [];
+        for (var property in this) {
+          if (property[0] === prefix) values.push(this[property]);
+        }return values;
+      },
+      entries: function entries() {
+        var entries = [];
+        for (var property in this) {
+          if (property[0] === prefix) entries.push({ key: property.slice(1), value: this[property] });
+        }return entries;
+      },
+      size: function size() {
+        var size = 0;
+        for (var property in this) {
+          if (property[0] === prefix) ++size;
+        }return size;
+      },
+      empty: function empty() {
+        for (var property in this) {
+          if (property[0] === prefix) return false;
+        }return true;
+      },
+      each: function each(f) {
+        for (var property in this) {
+          if (property[0] === prefix) f(this[property], property.slice(1), this);
+        }
+      }
+    };
+
+    function map$1(object, f) {
+      var map = new Map();
+
+      // Copy constructor.
+      if (object instanceof Map) object.each(function (value, key) {
+        map.set(key, value);
+      });
+
+      // Index array by numeric index or specified key function.
+      else if (Array.isArray(object)) {
+          var i = -1,
+              n = object.length,
+              o;
+
+          if (f == null) while (++i < n) {
+            map.set(i, object[i]);
+          } else while (++i < n) {
+            map.set(f(o = object[i], i, object), o);
+          }
+        }
+
+        // Convert object to map.
+        else if (object) for (var key in object) {
+            map.set(key, object[key]);
+          }return map;
+    }
+
+    function Set() {}
+
+    var proto = map$1.prototype;
+
+    Set.prototype = set$3.prototype = {
+      constructor: Set,
+      has: proto.has,
+      add: function add(value) {
+        value += "";
+        this[prefix + value] = value;
+        return this;
+      },
+      remove: proto.remove,
+      clear: proto.clear,
+      values: proto.keys,
+      size: proto.size,
+      empty: proto.empty,
+      each: proto.each
+    };
+
+    function set$3(object, f) {
+      var set = new Set();
+
+      // Copy constructor.
+      if (object instanceof Set) object.each(function (value) {
+        set.add(value);
+      });
+
+      // Otherwise, assume it’s an array.
+      else if (object) {
+          var i = -1,
+              n = object.length;
+          if (f == null) while (++i < n) {
+            set.add(object[i]);
+          } else while (++i < n) {
+            set.add(f(object[i], i, object));
+          }
+        }
+
+      return set;
+    }
+
+    function keys$1 (map) {
+      var keys = [];
+      for (var key in map) {
+        keys.push(key);
+      }return keys;
+    }
+
+    function entries (map) {
+      var entries = [];
+      for (var key in map) {
+        entries.push({ key: key, value: map[key] });
+      }return entries;
+    }
+
     var array$2 = Array.prototype;
 
     var map$2 = array$2.map;
@@ -6639,7 +6641,7 @@
     var implicit = { name: "implicit" };
 
     function ordinal(range) {
-      var index = map(),
+      var index = map$1(),
           domain = [],
           unknown = implicit;
 
@@ -6657,7 +6659,7 @@
 
       scale.domain = function (_) {
         if (!arguments.length) return domain.slice();
-        domain = [], index = map();
+        domain = [], index = map$1();
         var i = -1,
             n = _.length,
             d,
@@ -8490,7 +8492,7 @@
             return ordinal().domain(domain).range(categoricalRange);
           }
         };
-        keys(config.dimensions).forEach(function (k) {
+        Object.keys(config.dimensions).forEach(function (k) {
           config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
         });
 
@@ -8583,13 +8585,13 @@
         }
 
         // try to autodetect dimensions and create scales
-        if (!keys(config.dimensions).length) {
+        if (!Object.keys(config.dimensions).length) {
           pc.detectDimensions();
         }
         pc.autoscale();
 
         // scales of the same type
-        var scales = keys(config.dimensions).filter(function (p) {
+        var scales = Object.keys(config.dimensions).filter(function (p) {
           return config.dimensions[p].type == t;
         });
 
@@ -8622,7 +8624,7 @@
 
     var computeRealCentroids = function computeRealCentroids(dimensions, position) {
       return function (row) {
-        return keys(dimensions).map(function (d) {
+        return Object.keys(dimensions).map(function (d) {
           var x = position(d);
           var y = dimensions[d].yscale(row[d]);
           return [x, y];
@@ -8633,7 +8635,7 @@
     var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
       return function (dims) {
         var types = pc.detectDimensionTypes(config.data);
-        dims = dims ? dims : keys(types);
+        dims = dims ? dims : Object.keys(types);
 
         return dims.reduce(function (acc, cur, i) {
           var k = config.dimensions[cur] ? config.dimensions[cur] : {};
@@ -8995,7 +8997,7 @@
     var sortDimensions = function sortDimensions(config, position) {
       return function () {
         var copy = Object.assign({}, config.dimensions);
-        var positionSortedKeys = keys(config.dimensions).sort(function (a, b) {
+        var positionSortedKeys = Object.keys(config.dimensions).sort(function (a, b) {
           return position(a) - position(b) === 0 ? 1 : position(a) - position(b);
         });
         config.dimensions = {};
@@ -9009,7 +9011,7 @@
     var sortDimensionsByRowData = function sortDimensionsByRowData(config) {
       return function (rowdata) {
         var copy = Object.assign({}, config.dimensions);
-        var positionSortedKeys = keys(config.dimensions).sort(function (a, b) {
+        var positionSortedKeys = Object.keys(config.dimensions).sort(function (a, b) {
           var pixelDifference = config.dimensions[a].yscale(rowdata[a]) - config.dimensions[b].yscale(rowdata[b]);
 
           // Array.sort is not necessarily stable, this means that if pixelDifference is zero
@@ -9058,7 +9060,7 @@
     var computeCentroids = function computeCentroids(config, position, row) {
       var centroids = [];
 
-      var p = keys(config.dimensions);
+      var p = Object.keys(config.dimensions);
       var cols = p.length;
       var a = 0.5; // center between axes
       for (var i = 0; i < cols; ++i) {
@@ -9198,7 +9200,7 @@
 
     var renderBrushed = function renderBrushed(config, pc, events) {
       return function () {
-        if (!keys(config.dimensions).length) pc.detectDimensions();
+        if (!Object.keys(config.dimensions).length) pc.detectDimensions();
 
         pc.renderBrushed[config.mode]();
         events.call('render', this);
@@ -9240,9 +9242,9 @@
 
     // this descriptive text should live with other introspective methods
     var toString = function toString(config) {
-      return function () {
-        return 'Parallel Coordinates: ' + keys(config.dimensions).length + ' dimensions (' + keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
-      };
+        return function () {
+            return 'Parallel Coordinates: ' + Object.keys(config.dimensions).length + ' dimensions (' + Object.keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
+        };
     };
 
     // pairs of adjacent dimensions
@@ -9312,7 +9314,7 @@
     var render = function render(config, pc, events) {
       return function () {
         // try to autodetect dimensions and create scales
-        if (!keys(config.dimensions).length) {
+        if (!Object.keys(config.dimensions).length) {
           pc.detectDimensions();
         }
         pc.autoscale();
@@ -9356,7 +9358,7 @@
 
     // attempt to determine types of each dimension based on first row of data
     var detectDimensionTypes = function detectDimensionTypes(data) {
-      return keys(data[0]).reduce(function (acc, cur) {
+      return Object.keys(data[0]).reduce(function (acc, cur) {
         var key = isNaN(Number(cur)) ? cur : parseInt(cur);
         acc[key] = toTypeCoerceNumbers(data[0][cur]);
 
@@ -9366,7 +9368,7 @@
 
     var getOrderedDimensionKeys = function getOrderedDimensionKeys(config) {
       return function () {
-        return keys(config.dimensions).sort(function (x, y) {
+        return Object.keys(config.dimensions).sort(function (x, y) {
           return ascending$2(config.dimensions[x].index, config.dimensions[y].index);
         });
       };
@@ -9497,7 +9499,7 @@
         });
       }
 
-      var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(config));
+      var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys$1(config));
 
       var events = dispatch.apply(_this$4, eventTypes),
           flags = {
@@ -9548,8 +9550,8 @@
     };
 
     var computeClusterCentroids = function computeClusterCentroids(config, d) {
-      var clusterCentroids = map();
-      var clusterCounts = map();
+      var clusterCentroids = map$1();
+      var clusterCounts = map$1();
       // determine clusterCounts
       config.data.forEach(function (row) {
         var scaled = config.dimensions[d].yscale(row[d]);
@@ -9561,10 +9563,10 @@
       });
 
       config.data.forEach(function (row) {
-        keys(config.dimensions).map(function (p) {
+        Object.keys(config.dimensions).map(function (p) {
           var scaled = config.dimensions[d].yscale(row[d]);
           if (!clusterCentroids.has(scaled)) {
-            var _map = map();
+            var _map = map$1();
             clusterCentroids.set(scaled, _map);
           }
           if (!clusterCentroids.get(scaled).has(p)) {
@@ -9589,7 +9591,7 @@
     };
 
     var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue) {
-      return dispatch.apply(_this$5, keys(config)).on('composite', function (d) {
+      return dispatch.apply(_this$5, Object.keys(config)).on('composite', function (d) {
         ctx.foreground.globalCompositeOperation = d.value;
         ctx.brushed.globalCompositeOperation = d.value;
       }).on('alpha', function (d) {
@@ -9607,17 +9609,17 @@
         brushedQueue.rate(d.value);
         foregroundQueue.rate(d.value);
       }).on('dimensions', function (d) {
-        config.dimensions = pc.applyDimensionDefaults(keys(d.value));
+        config.dimensions = pc.applyDimensionDefaults(Object.keys(d.value));
         xscale.domain(pc.getOrderedDimensionKeys());
         pc.sortDimensions();
         if (flags.interactive) {
           pc.render().updateAxes();
         }
       }).on('bundleDimension', function (d) {
-        if (!keys(config.dimensions).length) pc.detectDimensions();
+        if (!Object.keys(config.dimensions).length) pc.detectDimensions();
         pc.autoscale();
         if (typeof d.value === 'number') {
-          if (d.value < keys(config.dimensions).length) {
+          if (d.value < Object.keys(config.dimensions).length) {
             config.bundleDimension = config.dimensions[d.value];
           } else if (d.value < config.hideAxis.length) {
             config.bundleDimension = config.hideAxis[d.value];
@@ -9643,7 +9645,7 @@
     };
 
     var getset = function getset(obj, state, events, side_effects, pc) {
-      keys(state).forEach(function (key) {
+      Object.keys(state).forEach(function (key) {
         obj[key] = function (x) {
           if (!arguments.length) {
             return state[key];

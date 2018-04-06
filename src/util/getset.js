@@ -1,7 +1,5 @@
-import { keys } from 'd3-collection';
-
 const getset = (obj, state, events, side_effects, pc) => {
-  keys(state).forEach(function(key) {
+    Object.keys(state).forEach(function(key) {
     obj[key] = function(x) {
       if (!arguments.length) {
         return state[key];

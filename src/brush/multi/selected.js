@@ -1,12 +1,10 @@
-//https://github.com/d3/d3-brush/issues/10
-import { keys } from 'd3-collection';
 
 // data within extents
 const selected = (state, config, brushGroup) => () => {
   const { brushNodes } = state;
   const is_brushed = p => !brushNodes[p].empty();
 
-  const actives = keys(config.dimensions).filter(is_brushed);
+  const actives = Object.keys(config.dimensions).filter(is_brushed);
   const extents = actives.map(p => brushNodes[p].extent());
   // We don't want to return the full data set when there are no axes brushed.
   // Actually, when there are no axes brushed, by definition, no items are

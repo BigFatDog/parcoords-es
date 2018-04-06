@@ -1,5 +1,4 @@
 import { brushSelection } from 'd3-brush';
-import { keys } from 'd3-collection';
 
 // data within extents
 const selected = (state, config, pc, events, brushGroup) => {
@@ -19,7 +18,7 @@ const selected = (state, config, pc, events, brushGroup) => {
     return false;
   };
 
-  const actives = keys(config.dimensions).filter(is_brushed);
+  const actives = Object.keys(config.dimensions).filter(is_brushed);
   console.log(actives);
   const extents = actives.map(p => {
     const axisBrushes = brushes[p];

@@ -1,4 +1,3 @@
-import { keys } from 'd3-collection';
 import { select } from 'd3-selection';
 import { brushSelection } from 'd3-brush';
 
@@ -6,9 +5,8 @@ const brushExtents = (state, config, pc) => extents => {
   const { brushes } = state;
 
   if (typeof extents === 'undefined') {
-    return keys(config.dimensions).reduce((acc, cur) => {
+    return Object.keys(config.dimensions).reduce((acc, cur) => {
       const axisBrushes = brushes[cur];
-      //todo: brush check
 
       if (brush === undefined || brush === null) {
         acc[cur] = [];
@@ -38,7 +36,7 @@ const brushExtents = (state, config, pc) => extents => {
       });
 
     // loop over each dimension and update appropriately (if it was passed in through extents)
-    keys(config.dimensions).forEach(d => {
+      Object.keys(config.dimensions).forEach(d => {
       if (extents[d] === undefined) {
         return;
       }

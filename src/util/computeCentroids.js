@@ -1,9 +1,7 @@
-import { keys } from 'd3-collection';
-
 const computeCentroids = (config, position, row) => {
   const centroids = [];
 
-  const p = keys(config.dimensions);
+  const p = Object.keys(config.dimensions);
   const cols = p.length;
   const a = 0.5; // center between axes
   for (let i = 0; i < cols; ++i) {

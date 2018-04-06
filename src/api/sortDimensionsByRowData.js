@@ -1,8 +1,6 @@
-import { keys } from 'd3-collection';
-
 const sortDimensionsByRowData = config => rowdata => {
   const copy = Object.assign({}, config.dimensions);
-  const positionSortedKeys = keys(config.dimensions).sort((a, b) => {
+  const positionSortedKeys = Object.keys(config.dimensions).sort((a, b) => {
     const pixelDifference =
       config.dimensions[a].yscale(rowdata[a]) -
       config.dimensions[b].yscale(rowdata[b]);
