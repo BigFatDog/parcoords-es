@@ -4803,7 +4803,6 @@
         }).on('end', function () {
           // Figure out if our latest brush has a selection
           var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-          console.log('---');
           var lastBrush = document.getElementById('brush-' + axis + '-' + lastBrushID);
           var selection$$1 = brushSelection(lastBrush);
 
@@ -4815,11 +4814,7 @@
           // Always draw brushes
           drawBrushes(brushes[axis], pc, axis, _selector);
 
-          // brushUpdated(
-          //     config,
-          //     pc,
-          //     events
-          // )(selected(state, config, pc, events, brushGroup)(axis, _selector));
+          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup)(axis, _selector));
           events.call('brushend', pc, config.brushed);
         });
 
@@ -4842,26 +4837,9 @@
           pc.createAxes();
         }
 
-        // Add and store a brush for each axis.
-        //
         pc.g().append('svg:g').attr('class', 'brush').each(function (d) {
           brushFor$1(state, config, pc, events, brushGroup)(d, select(this));
         });
-
-        // brush
-        //   .selectAll('rect')
-        //   .style('visibility', null)
-        //   .attr('x', -15)
-        //   .attr('width', 30);
-        //
-        // brush.selectAll('rect.background').style('fill', 'transparent');
-        //
-        // brush
-        //   .selectAll('rect.extent')
-        //   .style('fill', 'rgba(255,255,255,0.25)')
-        //   .style('stroke', 'rgba(0,0,0,0.6)');
-        //
-        // brush.selectAll('.resize rect').style('fill', 'rgba(0,0,0,0.1)');
 
         pc.brushExtents = brushExtents$1(state, config, pc);
         pc.brushReset = brushReset$1(state, config, pc);
