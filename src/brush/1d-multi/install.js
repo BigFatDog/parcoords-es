@@ -18,7 +18,7 @@ const install = (state, config, pc, events, brushGroup) => () => {
       brushFor(state, config, pc, events, brushGroup)(d, select(this));
     });
 
-  pc.brushExtents = brushExtents(state, config, pc);
+  pc.brushExtents = brushExtents(state, config, pc, events, brushGroup);
   pc.brushReset = brushReset(state, config, pc);
   return pc;
 };

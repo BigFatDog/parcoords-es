@@ -4745,7 +4745,7 @@
           brushFor$1(state, config, pc, events, brushGroup)(d, select(this));
         });
 
-        pc.brushExtents = brushExtents$1(state, config, pc);
+        pc.brushExtents = brushExtents$1(state, config, pc, events, brushGroup);
         pc.brushReset = brushReset$1(state, config, pc);
         return pc;
       };
