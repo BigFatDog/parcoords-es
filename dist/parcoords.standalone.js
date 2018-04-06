@@ -4512,82 +4512,250 @@
 
     // data within extents
     var selected$1 = function selected(state, config, pc, events, brushGroup) {
-      return function (axis, _selector) {
-        var brushes = state.brushes,
-            brushNodes = state.brushNodes;
+        return function (axis, _selector) {
+            var brushes = state.brushes,
+                brushNodes = state.brushNodes;
 
 
-        var is_brushed = function is_brushed(p) {
-          var axisBrushes = brushes[p];
+            var is_brushed = function is_brushed(p) {
+                var axisBrushes = brushes[p];
 
-          for (var i = 0; i < axisBrushes.length; i++) {
-            var brush$$1 = document.getElementById('brush-' + p + '-' + i);
+                for (var i = 0; i < axisBrushes.length; i++) {
+                    var brush$$1 = document.getElementById('brush-' + p + '-' + i);
 
-            if (brushSelection(brush$$1) !== null) {
-              return true;
-            }
-          }
+                    if (brushSelection(brush$$1) !== null) {
+                        return true;
+                    }
+                }
 
-          return false;
+                return false;
+            };
+
+            var actives = keys(config.dimensions).filter(is_brushed);
+            console.log(actives);
+            var extents = actives.map(function (p) {
+                var axisBrushes = brushes[p];
+
+                return axisBrushes.map(function (d, i) {
+                    return brushSelection(document.getElementById('brush-' + p + '-' + i));
+                }).map(function (d, i) {
+                    if (d === null || d === undefined) {
+                        return null;
+                    } else if (typeof config.dimensions[p].yscale.invert === 'function') {
+                        return [config.dimensions[p].yscale.invert(d[1]), config.dimensions[p].yscale.invert(d[0])];
+                    } else {
+                        return d;
+                    }
+                });
+            });
+
+            // We don't want to return the full data set when there are no axes brushed.
+            // Actually, when there are no axes brushed, by definition, no items are
+            // selected. So, let's avoid the filtering and just return false.
+            //if (actives.length === 0) return false;
+
+            // Resolves broken examples for now. They expect to get the full dataset back from empty brushes
+            if (actives.length === 0) return config.data;
+
+            // test if within range
+            var within = {
+                date: function date(d, p, i) {
+                    var dimExt = extents[i];
+
+                    if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
+                        // if it is ordinal
+                        var _iteratorNormalCompletion = true;
+                        var _didIteratorError = false;
+                        var _iteratorError = undefined;
+
+                        try {
+                            for (var _iterator = dimExt[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                                var e = _step.value;
+
+                                if (e === null || e === undefined) {
+                                    continue;
+                                }
+
+                                if (e[0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= e[1]) {
+                                    return true;
+                                }
+                            }
+                        } catch (err) {
+                            _didIteratorError = true;
+                            _iteratorError = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion && _iterator.return) {
+                                    _iterator.return();
+                                }
+                            } finally {
+                                if (_didIteratorError) {
+                                    throw _iteratorError;
+                                }
+                            }
+                        }
+
+                        return false;
+                    } else {
+                        var _iteratorNormalCompletion2 = true;
+                        var _didIteratorError2 = false;
+                        var _iteratorError2 = undefined;
+
+                        try {
+                            for (var _iterator2 = dimExt[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                var _e = _step2.value;
+
+                                if (_e === null || _e === undefined) {
+                                    continue;
+                                }
+
+                                if (_e[0] <= d[p] && d[p] <= _e[1]) {
+                                    return true;
+                                }
+                            }
+                        } catch (err) {
+                            _didIteratorError2 = true;
+                            _iteratorError2 = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                    _iterator2.return();
+                                }
+                            } finally {
+                                if (_didIteratorError2) {
+                                    throw _iteratorError2;
+                                }
+                            }
+                        }
+
+                        return false;
+                    }
+                },
+                number: function number(d, p, i) {
+                    var dimExt = extents[i];
+
+                    if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
+                        // if it is ordinal
+                        var _iteratorNormalCompletion3 = true;
+                        var _didIteratorError3 = false;
+                        var _iteratorError3 = undefined;
+
+                        try {
+                            for (var _iterator3 = dimExt[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                                var e = _step3.value;
+
+                                if (e === null || e === undefined) {
+                                    continue;
+                                }
+
+                                if (e[0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= e[1]) {
+                                    return true;
+                                }
+                            }
+                        } catch (err) {
+                            _didIteratorError3 = true;
+                            _iteratorError3 = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                    _iterator3.return();
+                                }
+                            } finally {
+                                if (_didIteratorError3) {
+                                    throw _iteratorError3;
+                                }
+                            }
+                        }
+
+                        return false;
+                    } else {
+                        var _iteratorNormalCompletion4 = true;
+                        var _didIteratorError4 = false;
+                        var _iteratorError4 = undefined;
+
+                        try {
+                            for (var _iterator4 = dimExt[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                                var _e2 = _step4.value;
+
+                                if (_e2 === null || _e2 === undefined) {
+                                    continue;
+                                }
+
+                                if (_e2[0] <= d[p] && d[p] <= _e2[1]) {
+                                    return true;
+                                }
+                            }
+                        } catch (err) {
+                            _didIteratorError4 = true;
+                            _iteratorError4 = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                                    _iterator4.return();
+                                }
+                            } finally {
+                                if (_didIteratorError4) {
+                                    throw _iteratorError4;
+                                }
+                            }
+                        }
+
+                        return false;
+                    }
+                },
+                string: function string(d, p, i) {
+                    var dimExt = extents[i];
+
+                    var _iteratorNormalCompletion5 = true;
+                    var _didIteratorError5 = false;
+                    var _iteratorError5 = undefined;
+
+                    try {
+                        for (var _iterator5 = dimExt[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                            var e = _step5.value;
+
+                            if (e === null || e === undefined) {
+                                continue;
+                            }
+
+                            if (e[0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= e[1]) {
+                                return true;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError5 = true;
+                        _iteratorError5 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                                _iterator5.return();
+                            }
+                        } finally {
+                            if (_didIteratorError5) {
+                                throw _iteratorError5;
+                            }
+                        }
+                    }
+
+                    return false;
+                }
+            };
+
+            return config.data.filter(function (d) {
+                switch (brushGroup.predicate) {
+                    case 'AND':
+                        return actives.every(function (p, i) {
+                            return within[config.dimensions[p].type](d, p, i);
+                        });
+                    case 'OR':
+                        return actives.some(function (p, i) {
+                            return within[config.dimensions[p].type](d, p, i);
+                        });
+                    default:
+                        throw new Error('Unknown brush predicate ' + config.brushPredicate);
+                }
+            });
         };
-
-        var actives = keys(config.dimensions).filter(is_brushed);
-        console.log(actives);
-        var extents = actives.map(function (p) {
-          var _brushRange = brushSelection(brushNodes[p][brushNodes[p].length - 1].node);
-
-          if (typeof config.dimensions[p].yscale.invert === 'function') {
-            return [config.dimensions[p].yscale.invert(_brushRange[1]), config.dimensions[p].yscale.invert(_brushRange[0])];
-          } else {
-            return _brushRange;
-          }
-        });
-        // We don't want to return the full data set when there are no axes brushed.
-        // Actually, when there are no axes brushed, by definition, no items are
-        // selected. So, let's avoid the filtering and just return false.
-        //if (actives.length === 0) return false;
-
-        // Resolves broken examples for now. They expect to get the full dataset back from empty brushes
-        if (actives.length === 0) return config.data;
-
-        // test if within range
-        var within = {
-          date: function date(d, p, dimension) {
-            if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
-              // if it is ordinal
-              return extents[dimension][0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= extents[dimension][1];
-            } else {
-              return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-            }
-          },
-          number: function number(d, p, dimension) {
-            if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
-              // if it is ordinal
-              return extents[dimension][0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= extents[dimension][1];
-            } else {
-              return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-            }
-          },
-          string: function string(d, p, dimension) {
-            return extents[dimension][0] <= config.dimensions[p].yscale(d[p]) && config.dimensions[p].yscale(d[p]) <= extents[dimension][1];
-          }
-        };
-
-        return config.data.filter(function (d) {
-          switch (brushGroup.predicate) {
-            case 'AND':
-              return actives.every(function (p, dimension) {
-                return within[config.dimensions[p].type](d, p, dimension);
-              });
-            case 'OR':
-              return actives.some(function (p, dimension) {
-                return within[config.dimensions[p].type](d, p, dimension);
-              });
-            default:
-              throw new Error('Unknown brush predicate ' + config.brushPredicate);
-          }
-        });
-      };
     };
 
     var brushUpdated$1 = function brushUpdated(config, pc, events) {

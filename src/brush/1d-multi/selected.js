@@ -30,19 +30,26 @@ const selected = (state, config, pc, events, brushGroup) => (
   const actives = keys(config.dimensions).filter(is_brushed);
   console.log(actives);
   const extents = actives.map(p => {
-    const _brushRange = brushSelection(
-      brushNodes[p][brushNodes[p].length - 1].node
-    );
+      const axisBrushes = brushes[p];
 
-    if (typeof config.dimensions[p].yscale.invert === 'function') {
-      return [
-        config.dimensions[p].yscale.invert(_brushRange[1]),
-        config.dimensions[p].yscale.invert(_brushRange[0]),
-      ];
-    } else {
-      return _brushRange;
-    }
+      return axisBrushes
+          .map((d, i) => brushSelection(document.getElementById(
+            'brush-' + p + '-' + i
+          )))
+          .map((d, i) => {
+              if (d === null || d === undefined) {
+                  return null;
+              } else if (typeof config.dimensions[p].yscale.invert === 'function' ){
+                  return [
+                      config.dimensions[p].yscale.invert(d[1]),
+                      config.dimensions[p].yscale.invert(d[0]),
+                  ];
+              } else {
+                  return d;
+              }
+          });
   });
+
   // We don't want to return the full data set when there are no axes brushed.
   // Actually, when there are no axes brushed, by definition, no items are
   // selected. So, let's avoid the filtering and just return false.
@@ -53,46 +60,94 @@ const selected = (state, config, pc, events, brushGroup) => (
 
   // test if within range
   const within = {
-    date: (d, p, dimension) => {
-      if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
-        // if it is ordinal
-        return (
-          extents[dimension][0] <= config.dimensions[p].yscale(d[p]) &&
-          config.dimensions[p].yscale(d[p]) <= extents[dimension][1]
-        );
-      } else {
-        return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-      }
+      date: (d, p, i) => {
+          const dimExt = extents[i];
+
+          if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
+              // if it is ordinal
+              for (const e of dimExt) {
+                  if (e === null || e === undefined) {
+                      continue;
+                  }
+
+                  if (e[0] <= config.dimensions[p].yscale(d[p]) &&
+                      config.dimensions[p].yscale(d[p]) <= e[1]){
+                      return true;
+                  }
+              }
+
+              return false;
+
+          } else {
+              for (const e of dimExt) {
+                  if (e === null || e === undefined) {
+                      continue;
+                  }
+
+                  if (e[0] <= d[p] && d[p] <= e[1]){
+                      return true;
+                  }
+              }
+
+              return false;
+          }
+      },
+    number: (d, p, i) => {
+        const dimExt = extents[i];
+
+        if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
+            // if it is ordinal
+            for (const e of dimExt) {
+                if (e === null || e === undefined) {
+                    continue;
+                }
+
+                if (e[0] <= config.dimensions[p].yscale(d[p]) &&
+                    config.dimensions[p].yscale(d[p]) <= e[1]){
+                    return true;
+                }
+            }
+
+            return false;
+
+        } else {
+            for (const e of dimExt) {
+                if (e === null || e === undefined) {
+                    continue;
+                }
+
+                if (e[0] <= d[p] && d[p] <= e[1]){
+                    return true;
+                }
+            }
+
+            return false;
+        }
     },
-    number: (d, p, dimension) => {
-      if (typeof config.dimensions[p].yscale.bandwidth === 'function') {
-        // if it is ordinal
-        return (
-          extents[dimension][0] <= config.dimensions[p].yscale(d[p]) &&
-          config.dimensions[p].yscale(d[p]) <= extents[dimension][1]
-        );
-      } else {
-        return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-      }
-    },
-    string: (d, p, dimension) => {
-      return (
-        extents[dimension][0] <= config.dimensions[p].yscale(d[p]) &&
-        config.dimensions[p].yscale(d[p]) <= extents[dimension][1]
-      );
+    string: (d, p, i) => {
+        const dimExt = extents[i];
+
+        for (const e of dimExt) {
+            if (e === null || e === undefined) {
+                continue;
+            }
+
+            if (e[0] <= config.dimensions[p].yscale(d[p]) &&
+                config.dimensions[p].yscale(d[p]) <= e[1]){
+                return true;
+            }
+        }
+
+        return false;
     },
   };
 
   return config.data.filter(d => {
     switch (brushGroup.predicate) {
       case 'AND':
-        return actives.every(function(p, dimension) {
-          return within[config.dimensions[p].type](d, p, dimension);
-        });
+        return actives.every((p, i)=> within[config.dimensions[p].type](d, p, i));
       case 'OR':
-        return actives.some(function(p, dimension) {
-          return within[config.dimensions[p].type](d, p, dimension);
-        });
+        return actives.some((p, i)=> within[config.dimensions[p].type](d, p, i));
       default:
         throw new Error('Unknown brush predicate ' + config.brushPredicate);
     }
