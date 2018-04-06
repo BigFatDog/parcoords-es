@@ -4635,67 +4635,67 @@
     };
 
     var brushUpdated$1 = function brushUpdated(config, pc, events) {
-      return function (newSelection) {
-        config.brushed = newSelection;
-        events.call('brush', pc, config.brushed);
-        pc.renderBrushed();
-      };
+        return function (newSelection) {
+            config.brushed = newSelection;
+            events.call('brush', pc, config.brushed);
+            pc.renderBrushed();
+        };
     };
 
     var newBrush = function newBrush(state, config, pc, events, brushGroup) {
-      return function (axis, _selector) {
-        var brushes = state.brushes,
-            brushNodes = state.brushNodes;
+        return function (axis, _selector) {
+            var brushes = state.brushes,
+                brushNodes = state.brushNodes;
 
 
-        var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
+            var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
 
-        var brush$$1 = brushY().extent([[-15, 0], [15, brushRangeMax]]);
+            var brush$$1 = brushY().extent([[-15, 0], [15, brushRangeMax]]);
 
-        if (brushes[axis]) {
-          brushes[axis].push({
-            id: brushes[axis].length,
-            brush: brush$$1,
-            node: _selector.node()
-          });
-        } else {
-          brushes[axis] = [{ id: 0, brush: brush$$1, node: _selector.node() }];
-        }
+            if (brushes[axis]) {
+                brushes[axis].push({
+                    id: brushes[axis].length,
+                    brush: brush$$1,
+                    node: _selector.node()
+                });
+            } else {
+                brushes[axis] = [{ id: 0, brush: brush$$1, node: _selector.node() }];
+            }
 
-        if (brushNodes[axis]) {
-          brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
-        } else {
-          brushNodes[axis] = [{ id: 0, node: _selector.node() }];
-        }
+            if (brushNodes[axis]) {
+                brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
+            } else {
+                brushNodes[axis] = [{ id: 0, node: _selector.node() }];
+            }
 
-        brush$$1.on('start', function () {
-          if (event.sourceEvent !== null) {
-            events.call('brushstart', pc, config.brushed);
-            event.sourceEvent.stopPropagation();
-          }
-        }).on('brush', function () {
-          // record selections
-          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-        }).on('end', function () {
-          // Figure out if our latest brush has a selection
-          var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-          var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
-          var selection$$1 = brushSelection(lastBrush);
+            brush$$1.on('start', function () {
+                if (event.sourceEvent !== null) {
+                    events.call('brushstart', pc, config.brushed);
+                    event.sourceEvent.stopPropagation();
+                }
+            }).on('brush', function () {
+                // record selections
+                brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+            }).on('end', function () {
+                // Figure out if our latest brush has a selection
+                var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
+                var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
+                var selection$$1 = brushSelection(lastBrush);
 
-          // If it does, that means we need another one
-          if (selection$$1 && selection$$1[0] !== selection$$1[1]) {
-            newBrush(state, config, pc, events, brushGroup)(axis, _selector);
-          }
+                // If it does, that means we need another one
+                if (selection$$1 && selection$$1[0] !== selection$$1[1]) {
+                    newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+                }
 
-          // Always draw brushes
-          drawBrushes(brushes[axis], config, pc, axis, _selector);
+                // Always draw brushes
+                drawBrushes(brushes[axis], config, pc, axis, _selector);
 
-          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-          events.call('brushend', pc, config.brushed);
-        });
+                brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+                events.call('brushend', pc, config.brushed);
+            });
 
-        drawBrushes(brushes[axis], config, pc, axis, _selector);
-      };
+            drawBrushes(brushes[axis], config, pc, axis, _selector);
+        };
     };
 
     var brushFor$1 = function brushFor(state, config, pc, events, brushGroup) {
