@@ -11,14 +11,12 @@ const install = (state, config, pc, events, brushGroup) => () => {
 
   // Add and store a brush for each axis.
   //
-  const brush = pc
+  pc
     .g()
     .append('svg:g')
     .attr('class', 'brush')
     .each(function(d) {
-      select(this).call(
         brushFor(state, config, pc, events, brushGroup)(d, select(this))
-      );
     });
 
   // brush

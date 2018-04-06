@@ -50,11 +50,11 @@ const newBrush = (state, config, pc, events, brushGroup) => (
     })
     .on('brush', function() {
       // record selections
-      // brushUpdated(
-      //   config,
-      //   pc,
-      //   events
-      // )(selected(state, config, pc, events, brushGroup)(axis, _selector));
+      brushUpdated(
+        config,
+        pc,
+        events
+      )(selected(state, config, pc, events, brushGroup)(axis, _selector));
     })
     .on('end', function() {
       // Figure out if our latest brush has a selection
@@ -88,6 +88,7 @@ const brushFor = (state, config, pc, events, brushGroup) => (
   axis,
   _selector
 ) => {
+  const { brushes } = state;
   newBrush(state, config, pc, events, brushGroup)(axis, _selector);
   drawBrushes(brushes[axis], pc, axis, _selector);
 };

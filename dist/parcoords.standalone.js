@@ -4516,23 +4516,23 @@
         var brushes = state.brushes,
             brushNodes = state.brushNodes;
 
-        var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-        var lastBrush = brushes[axis][brushes[axis].length - 1].node;
-
-        var _brushSelection = brushSelection(lastBrush);
-
-        console.log('-----');
-        drawBrushes(brushes, pc);
-
-        if (_brushSelection && _brushSelection[0] !== _brushSelection[1]) {
-          brushFor$1(state, config, pc, events, brushGroup)(axis, _selector);
-        }
 
         var is_brushed = function is_brushed(p) {
-          return _brushSelection !== null;
+          var axisBrushes = brushes[p];
+
+          for (var i = 0; i < axisBrushes.length; i++) {
+            var brush$$1 = document.getElementById('brush-' + p + '-' + i);
+
+            if (brushSelection(brush$$1) !== null) {
+              return true;
+            }
+          }
+
+          return false;
         };
 
         var actives = keys(config.dimensions).filter(is_brushed);
+        console.log(actives);
         var extents = actives.map(function (p) {
           var _brushRange = brushSelection(brushNodes[p][brushNodes[p].length - 1].node);
 
@@ -4587,8 +4587,14 @@
               throw new Error('Unknown brush predicate ' + config.brushPredicate);
           }
         });
+      };
+    };
 
-        return config.data;
+    var brushUpdated$1 = function brushUpdated(config, pc, events) {
+      return function (newSelection) {
+        config.brushed = newSelection;
+        events.call('brush', pc, config.brushed);
+        pc.renderBrushed();
       };
     };
 
@@ -4625,11 +4631,7 @@
           }
         }).on('brush', function () {
           // record selections
-          // brushUpdated(
-          //   config,
-          //   pc,
-          //   events
-          // )(selected(state, config, pc, events, brushGroup)(axis, _selector));
+          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup)(axis, _selector));
         }).on('end', function () {
           // Figure out if our latest brush has a selection
           var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
@@ -4659,6 +4661,8 @@
 
     var brushFor$1 = function brushFor(state, config, pc, events, brushGroup) {
       return function (axis, _selector) {
+        var brushes = state.brushes;
+
         newBrush(state, config, pc, events, brushGroup)(axis, _selector);
         drawBrushes(brushes[axis], pc, axis, _selector);
       };
@@ -4672,8 +4676,8 @@
 
         // Add and store a brush for each axis.
         //
-        var brush = pc.g().append('svg:g').attr('class', 'brush').each(function (d) {
-          select(this).call(brushFor$1(state, config, pc, events, brushGroup)(d, select(this)));
+        pc.g().append('svg:g').attr('class', 'brush').each(function (d) {
+          brushFor$1(state, config, pc, events, brushGroup)(d, select(this));
         });
 
         // brush

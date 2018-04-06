@@ -10,21 +10,25 @@ const selected = (state, config, pc, events, brushGroup) => (
   _selector
 ) => {
   const { brushes, brushNodes } = state;
-  const lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-  const lastBrush = brushes[axis][brushes[axis].length - 1].node;
 
-  const _brushSelection = brushSelection(lastBrush);
+  const is_brushed = p => {
+      const axisBrushes = brushes[p];
 
-  console.log('-----');
-  drawBrushes(brushes, pc);
+      for (let i = 0; i < axisBrushes.length; i++) {
+          const brush = document.getElementById(
+              'brush-' + p + '-' + i
+          );
 
-  if (_brushSelection && _brushSelection[0] !== _brushSelection[1]) {
-    brushFor(state, config, pc, events, brushGroup)(axis, _selector);
-  }
+        if (brushSelection(brush) !== null) {
+          return true;
+        }
+      }
 
-  const is_brushed = p => _brushSelection !== null;
+      return false;
+  };
 
   const actives = keys(config.dimensions).filter(is_brushed);
+  console.log(actives);
   const extents = actives.map(p => {
     const _brushRange = brushSelection(
       brushNodes[p][brushNodes[p].length - 1].node
@@ -93,8 +97,6 @@ const selected = (state, config, pc, events, brushGroup) => (
         throw new Error('Unknown brush predicate ' + config.brushPredicate);
     }
   });
-
-  return config.data;
 };
 
 export default selected;
