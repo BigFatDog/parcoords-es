@@ -19,7 +19,6 @@ const selected = (state, config, pc, events, brushGroup) => {
   };
 
   const actives = Object.keys(config.dimensions).filter(is_brushed);
-  console.log(actives);
   const extents = actives.map(p => {
     const axisBrushes = brushes[p];
 
