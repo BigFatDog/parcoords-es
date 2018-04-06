@@ -3,15 +3,26 @@ import { select } from 'd3-selection';
 import { brushSelection } from 'd3-brush';
 
 const brushExtents = (state, config, pc) => extents => {
-  console.log('-------')
-  const { brushes, brushNodes } = state;
+  const { brushes } = state;
 
   if (typeof extents === 'undefined') {
     return keys(config.dimensions).reduce((acc, cur) => {
-      const brush = brushes[cur];
+      const axisBrushes = brushes[cur];
       //todo: brush check
-      if (brush !== undefined && brushSelection(brushNodes[cur]) !== null) {
-        acc[d] = brush.extent();
+
+      if (brush === undefined || brush === null) {
+        acc[cur] = [];
+      } else {
+        acc[cur] = axisBrushes.reduce((d, p, i) => {
+          const range = brushSelection(
+            document.getElementById('brush-' + cur + '-' + i)
+          );
+          if (range !== null) {
+            d = d.push(range);
+          }
+
+          return d;
+        }, []);
       }
 
       return acc;

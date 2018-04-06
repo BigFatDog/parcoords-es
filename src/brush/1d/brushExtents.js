@@ -10,7 +10,7 @@ const brushExtents = (state, config, pc) => extents => {
       const brush = brushes[cur];
       //todo: brush check
       if (brush !== undefined && brushSelection(brushNodes[cur]) !== null) {
-        acc[d] = brush.extent();
+        acc[cur] = brush.extent();
       }
 
       return acc;
