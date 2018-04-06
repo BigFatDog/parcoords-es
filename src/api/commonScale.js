@@ -1,4 +1,3 @@
-import { keys } from 'd3-collection';
 import { extent } from 'd3-array';
 
 const commonScale = (config, pc) =>
@@ -9,13 +8,13 @@ const commonScale = (config, pc) =>
     }
 
     // try to autodetect dimensions and create scales
-    if (!keys(config.dimensions).length) {
+    if (!Object.keys(config.dimensions).length) {
       pc.detectDimensions();
     }
     pc.autoscale();
 
     // scales of the same type
-    const scales = keys(config.dimensions).filter(
+    const scales = Object.keys(config.dimensions).filter(
       p => config.dimensions[p].type == t
     );
 

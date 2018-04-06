@@ -1,5 +1,4 @@
 // side effects for setters
-import { keys } from 'd3-collection';
 import { dispatch } from 'd3-dispatch';
 import computeClusterCentroids from '../util/computeClusterCentroids';
 import flipAxisAndUpdatePCP from '../util/flipAxisAndUpdatePCP';
@@ -21,7 +20,7 @@ const sideEffects = (
   foregroundQueue
 ) =>
   dispatch
-    .apply(this, keys(config))
+    .apply(this, Object.keys(config))
     .on('composite', d => {
       ctx.foreground.globalCompositeOperation = d.value;
       ctx.brushed.globalCompositeOperation = d.value;
@@ -41,7 +40,7 @@ const sideEffects = (
       foregroundQueue.rate(d.value);
     })
     .on('dimensions', d => {
-      config.dimensions = pc.applyDimensionDefaults(keys(d.value));
+      config.dimensions = pc.applyDimensionDefaults(Object.keys(d.value));
       xscale.domain(pc.getOrderedDimensionKeys());
       pc.sortDimensions();
       if (flags.interactive) {
@@ -49,10 +48,10 @@ const sideEffects = (
       }
     })
     .on('bundleDimension', d => {
-      if (!keys(config.dimensions).length) pc.detectDimensions();
+      if (!Object.keys(config.dimensions).length) pc.detectDimensions();
       pc.autoscale();
       if (typeof d.value === 'number') {
-        if (d.value < keys(config.dimensions).length) {
+        if (d.value < Object.keys(config.dimensions).length) {
           config.bundleDimension = config.dimensions[d.value];
         } else if (d.value < config.hideAxis.length) {
           config.bundleDimension = config.hideAxis[d.value];

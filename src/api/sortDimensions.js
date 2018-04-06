@@ -1,8 +1,6 @@
-import { keys } from 'd3-collection';
-
 const sortDimensions = (config, position) => () => {
   const copy = Object.assign({}, config.dimensions);
-  const positionSortedKeys = keys(config.dimensions).sort(
+  const positionSortedKeys = Object.keys(config.dimensions).sort(
     (a, b) => (position(a) - position(b) === 0 ? 1 : position(a) - position(b))
   );
   config.dimensions = {};

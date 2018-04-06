@@ -1,5 +1,3 @@
-import { keys } from 'd3-collection';
-
 import isBrushed from '../util/isBrushed';
 import colorPath from '../util/colorPath';
 import functor from '../util/functor';
@@ -31,7 +29,7 @@ const renderBrushedQueue = (config, brushGroup, brushedQueue) => () => {
 
 const renderBrushed = (config, pc, events) =>
   function() {
-    if (!keys(config.dimensions).length) pc.detectDimensions();
+    if (!Object.keys(config.dimensions).length) pc.detectDimensions();
 
     pc.renderBrushed[config.mode]();
     events.call('render', this);

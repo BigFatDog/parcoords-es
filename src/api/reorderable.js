@@ -16,7 +16,7 @@ const reorderable = (config, pc, xscale, position, dragging, flags) =>
         })
         .on('drag', function(d) {
           dragging[d] = Math.min(
-            w(__),
+            w(config),
             Math.max(0, (this.__origin__ += event.dx))
           );
           pc.sortDimensions();

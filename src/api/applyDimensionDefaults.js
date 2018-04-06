@@ -1,9 +1,7 @@
-import { keys } from 'd3-collection';
-
 const applyDimensionDefaults = (config, pc) =>
   function(dims) {
     const types = pc.detectDimensionTypes(config.data);
-    dims = dims ? dims : keys(types);
+    dims = dims ? dims : Object.keys(types);
 
     return dims.reduce((acc, cur, i) => {
       const k = config.dimensions[cur] ? config.dimensions[cur] : {};

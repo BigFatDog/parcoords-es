@@ -1,7 +1,7 @@
 import { mouse } from 'd3-selection';
-import h from '../../util/height';
 import { arc as d3Arc } from 'd3-shape';
 import dimensionsForPoint from '../dimensionsForPoint';
+import h from '../../util/height';
 
 // First we need to determine between which two axes the arc was started.
 // This will determine the freedom of movement, because a arc can
