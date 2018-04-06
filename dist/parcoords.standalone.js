@@ -4347,11 +4347,17 @@
           }
         } else {
           if (pc.g() !== undefined && pc.g() !== null) {
-            pc.g().selectAll('.brush').each(function (d) {
-              if (d != dimension) return;
-              select(this).call(brushes[d].move, null);
-              brushes[d].event(select(this));
+            var axisBrush = brushes[dimension];
+            var pos = Object.keys(config.dimensions).indexOf(dimension);
+
+            axisBrush.forEach(function (e, i) {
+              var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
+              if (brushSelection(brush$$1) !== null) {
+                pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
+                e.event(select('#brush-' + pos + '-' + i));
+              }
             });
+
             pc.renderBrushed();
           }
         }
@@ -9247,9 +9253,9 @@
 
     // this descriptive text should live with other introspective methods
     var toString = function toString(config) {
-        return function () {
-            return 'Parallel Coordinates: ' + Object.keys(config.dimensions).length + ' dimensions (' + Object.keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
-        };
+      return function () {
+        return 'Parallel Coordinates: ' + Object.keys(config.dimensions).length + ' dimensions (' + Object.keys(config.data[0]).length + ' total) , ' + config.data.length + ' rows';
+      };
     };
 
     // pairs of adjacent dimensions

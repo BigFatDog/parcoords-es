@@ -24,7 +24,7 @@ const brushExtents = (state, config, pc) => extents => {
       });
 
     // loop over each dimension and update appropriately (if it was passed in through extents)
-      Object.keys(config.dimensions).forEach(d => {
+    Object.keys(config.dimensions).forEach(d => {
       if (extents[d] === undefined) {
         return;
       }

@@ -1,4 +1,3 @@
-
 // data within extents
 const selected = (state, config, brushGroup) => () => {
   const { brushNodes } = state;

@@ -24,7 +24,11 @@ const selected = (state, config, pc, events, brushGroup) => {
 
     return axisBrushes
       .map((d, i) =>
-        brushSelection(document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(p) + '-' + i))
+        brushSelection(
+          document.getElementById(
+            'brush-' + Object.keys(config.dimensions).indexOf(p) + '-' + i
+          )
+        )
       )
       .map((d, i) => {
         if (d === null || d === undefined) {

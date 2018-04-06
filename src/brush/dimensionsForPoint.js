@@ -22,7 +22,7 @@ const dimensionsForPoint = (config, pc, xscale, p) => {
     dims.i = Object.keys(config.dimensions).length - 1;
     dims.right = dims.left;
     dims.left = pc.getOrderedDimensionKeys()[
-    Object.keys(config.dimensions).length - 2
+      Object.keys(config.dimensions).length - 2
     ];
   }
 

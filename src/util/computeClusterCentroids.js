@@ -12,7 +12,7 @@ const computeClusterCentroids = (config, d) => {
   });
 
   config.data.forEach(function(row) {
-      Object.keys(config.dimensions).map(p => {
+    Object.keys(config.dimensions).map(p => {
       let scaled = config.dimensions[d].yscale(row[d]);
       if (!clusterCentroids.has(scaled)) {
         const _map = new Map();
