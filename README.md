@@ -2,12 +2,6 @@
 
 ES6 module of Syntagmatic's [Parallel Coordinates](https://github.com/syntagmatic/parallel-coordinates) (aka. parcoords). This library is completely based on D3 V5 API. 
 
-***
-## Note
-parcoords-es v2.0.0 has identical features to v1.0.3. If you are using v1.0.3, there is no need to upgrade for now.
-
-Starting with v2.0.0, parcoords-es internally has been refactored to api modules. Please refer to [release notes](https://github.com/BigFatDog/parcoords-es/releases/tag/v2.0.0) for details.
-***
 
 ## Features
 
@@ -20,7 +14,22 @@ npm install
 npm run dev
 ```
 
-Limitation: parcoords-es doesn't have multi-brush mode. (all other brush modes work properly)
+## API Deviation
+
+brushExtents supports 1D multi brushes:
+
+1D brush [<>](https://github.com/BigFatDog/parcoords-es/blob/master/demo/setterForBrushes.html "Source")
+```javascript
+  .brushMode("1D-axes")
+  .brushExtents({"2": [3,4]});
+```
+
+1D multi brush [<>](https://github.com/BigFatDog/parcoords-es/blob/master/demo/setterForMultiBrushes.html "Source")
+```javascript
+  .brushMode("1D-axes-multi")
+  .brushExtents({"2": [[3,4], [6,8], [10, 14]]});
+
+
 
 ## Usage
 
@@ -84,12 +93,6 @@ run all unit tests and generate test coverage report.
 npm run test:cover
 ```
 
-## Release Notes
-1.0.1 Bugfix: 
-* SVG is scaled along with canvas if Retina devices are detected. 
-* Events are exposed
-
-1.0.0 initial release
 ## Built With
 
 * [D3 V4](http://www.dropwizard.io/1.0.2/docs/) - D3 modules are used
