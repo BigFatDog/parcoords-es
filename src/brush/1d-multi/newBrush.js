@@ -82,7 +82,7 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       events.call('brushend', pc, config.brushed);
     });
 
-  drawBrushes(brushes[axis], config, pc, axis, _selector);
+  return brush;
 };
 
 export default newBrush;

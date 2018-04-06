@@ -4587,7 +4587,7 @@
           events.call('brushend', pc, config.brushed);
         });
 
-        drawBrushes(brushes[axis], config, pc, axis, _selector);
+        return brush$$1;
       };
     };
 
