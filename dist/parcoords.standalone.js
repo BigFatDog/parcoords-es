@@ -4626,14 +4626,6 @@
           }, {});
         } else {
           // //first get all the brush selections
-          // const brushSelections = {};
-          // pc
-          //   .g()
-          //   .selectAll('.brush')
-          //   .each(function(d) {
-          //     brushSelections[d] = select(this);
-          //   });
-
           // loop over each dimension and update appropriately (if it was passed in through extents)
           Object.keys(config.dimensions).forEach(function (d, pos) {
             if (extents[d] === undefined || extents[d] === null) {
