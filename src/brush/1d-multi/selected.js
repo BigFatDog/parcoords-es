@@ -1,15 +1,34 @@
 import { brushSelection } from 'd3-brush';
+import brushFor from './brushFor';
 //https://github.com/d3/d3-brush/issues/10
 import { keys } from 'd3-collection';
+import drawBrushes from './drawBrushes';
 
 // data within extents
-const selected = (state, config, brushGroup) => () => {
-  const { brushNodes } = state;
-  const is_brushed = p => brushSelection(brushNodes[p]) !== null;
+const selected = (state, config, pc, events, brushGroup) => (
+  axis,
+  _selector
+) => {
+  const { brushes, brushNodes } = state;
+  const lastBrushID = brushes[axis][brushes[axis].length - 1].id;
+  const lastBrush = brushes[axis][brushes[axis].length - 1].node;
+
+  const _brushSelection = brushSelection(lastBrush);
+
+  console.log('-----');
+  drawBrushes(brushes, pc);
+
+  if (_brushSelection && _brushSelection[0] !== _brushSelection[1]) {
+    brushFor(state, config, pc, events, brushGroup)(axis, _selector);
+  }
+
+  const is_brushed = p => _brushSelection !== null;
 
   const actives = keys(config.dimensions).filter(is_brushed);
   const extents = actives.map(p => {
-    const _brushRange = brushSelection(brushNodes[p]);
+    const _brushRange = brushSelection(
+      brushNodes[p][brushNodes[p].length - 1].node
+    );
 
     if (typeof config.dimensions[p].yscale.invert === 'function') {
       return [
@@ -74,6 +93,8 @@ const selected = (state, config, brushGroup) => () => {
         throw new Error('Unknown brush predicate ' + config.brushPredicate);
     }
   });
+
+  return config.data;
 };
 
 export default selected;

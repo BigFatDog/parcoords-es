@@ -4,7 +4,7 @@ import w from './util/width';
 
 // brush
 import install1DAxes from './brush/1d';
-import install1DAxesMulti from './brush/multi';
+import install1DAxesMulti from './brush/1d-multi';
 import install2DStrums from './brush/strums';
 import installAngularBrush from './brush/angular';
 

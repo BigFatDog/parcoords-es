@@ -10,7 +10,7 @@ const install = (state, config, pc, events) => () => {
 
   // Add and store a brush for each axis.
   const brush = pc
-      .g()
+    .g()
     .append('svg:g')
     .attr('class', 'brush')
     .each(function(d) {

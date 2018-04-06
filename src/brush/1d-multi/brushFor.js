@@ -1,5 +1,6 @@
-import { brushY } from 'd3-brush';
-import { event } from 'd3-selection';
+import { brushY, brushSelection } from 'd3-brush';
+import { event, select } from 'd3-selection';
+import drawBrushes from './drawBrushes';
 
 import selected from './selected';
 
@@ -9,10 +10,12 @@ const brushUpdated = (config, pc, events) => newSelection => {
   pc.renderBrushed();
 };
 
-const brushFor = (state, config, pc, events, brushGroup) => (
+const newBrush = (state, config, pc, events, brushGroup) => (
   axis,
   _selector
 ) => {
+  const { brushes, brushNodes } = state;
+
   const brushRangeMax =
     config.dimensions[axis].type === 'string'
       ? config.dimensions[axis].yscale.range()[
@@ -20,7 +23,23 @@ const brushFor = (state, config, pc, events, brushGroup) => (
         ]
       : config.dimensions[axis].yscale.range()[0];
 
-  const brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
+  const brush = brushY().extent([[-15, 0], [15, brushRangeMax]]);
+
+  if (brushes[axis]) {
+    brushes[axis].push({
+      id: brushes[axis].length,
+      brush,
+      node: _selector.node(),
+    });
+  } else {
+    brushes[axis] = [{ id: 0, brush, node: _selector.node() }];
+  }
+
+  if (brushNodes[axis]) {
+    brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
+  } else {
+    brushNodes[axis] = [{ id: 0, node: _selector.node() }];
+  }
 
   brush
     .on('start', function() {
@@ -30,25 +49,47 @@ const brushFor = (state, config, pc, events, brushGroup) => (
       }
     })
     .on('brush', function() {
-      brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
+      // record selections
+      // brushUpdated(
+      //   config,
+      //   pc,
+      //   events
+      // )(selected(state, config, pc, events, brushGroup)(axis, _selector));
     })
     .on('end', function() {
-      brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
+      // Figure out if our latest brush has a selection
+      const lastBrushID = brushes[axis][brushes[axis].length - 1].id;
+      console.log('---');
+      const lastBrush = document.getElementById(
+        'brush-' + axis + '-' + lastBrushID
+      );
+      const selection = brushSelection(lastBrush);
+
+      // If it does, that means we need another one
+      if (selection && selection[0] !== selection[1]) {
+        newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+      }
+
+      // Always draw brushes
+      drawBrushes(brushes[axis], pc, axis, _selector);
+
+      // brushUpdated(
+      //     config,
+      //     pc,
+      //     events
+      // )(selected(state, config, pc, events, brushGroup)(axis, _selector));
       events.call('brushend', pc, config.brushed);
     });
 
-  if (state.brushes[axis]) {
-      state.brushes[axis].push({id: state.brushes.length, brush});
-  } else {
-      state.brushes[axis] = [brush];
-  }
+  drawBrushes(brushes[axis], pc, axis, _selector);
+};
 
-  if (state.brushNodes[axis]) {
-      state.brushNodes[axis].push({id: state.brushes.length, node: _selector.node()})
-  }
-  state.brushNodes[axis] = [_selector.node()];
-
-  return brush;
+const brushFor = (state, config, pc, events, brushGroup) => (
+  axis,
+  _selector
+) => {
+  newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+  drawBrushes(brushes[axis], pc, axis, _selector);
 };
 
 export default brushFor;
