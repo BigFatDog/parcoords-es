@@ -4667,7 +4667,7 @@
             //https://github.com/d3/d3-brush#brush_move
             // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
             _bs.forEach(function (f, k) {
-              select('#brush-group-' + pos).call(f.brush).call(f.brush.move, f.ext.reverse());
+              select('#brush-' + pos + '-' + k).call(f.brush).call(f.brush.move, f.ext.reverse());
             });
           });
 
