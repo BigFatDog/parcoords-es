@@ -13,7 +13,6 @@ const brushReset = (state, config, pc) => dimension => {
           select(this).call(brushes[d].move, null);
         });
 
-      keys()
       pc.renderBrushed();
     }
   } else {

@@ -8,7 +8,7 @@ const selected = (state, config, pc, events, brushGroup) => {
     const axisBrushes = brushes[p];
 
     for (let i = 0; i < axisBrushes.length; i++) {
-      const brush = document.getElementById('brush-' + p + '-' + i);
+      const brush = document.getElementById('brush-' + p.split(' ').join('_') + '-' + i);
 
       if (brushSelection(brush) !== null) {
         return true;
@@ -25,7 +25,7 @@ const selected = (state, config, pc, events, brushGroup) => {
 
     return axisBrushes
       .map((d, i) =>
-        brushSelection(document.getElementById('brush-' + p + '-' + i))
+        brushSelection(document.getElementById('brush-' + p.split(' ').join('_') + '-' + i))
       )
       .map((d, i) => {
         if (d === null || d === undefined) {

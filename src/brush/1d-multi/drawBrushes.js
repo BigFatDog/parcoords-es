@@ -7,7 +7,8 @@ const drawBrushes = (brushes, pc, axis, selector) => {
     .enter()
     .insert('g', '.brush')
     .attr('class', 'brush')
-    .attr('id', b => 'brush-' + axis + '-' + b.id)
+    .attr('dimension', axis)
+    .attr('id', b => 'brush-' + axis.split(' ').join('_') + '-' + b.id)
     .each(function(brushObject) {
       brushObject.brush(select(this));
     });

@@ -4271,7 +4271,7 @@
               acc[cur] = [];
             } else {
               acc[cur] = axisBrushes.reduce(function (d, p, i) {
-                var range = brushSelection(document.getElementById('brush-' + cur + '-' + i));
+                var range = brushSelection(document.getElementById('brush-' + cur.split(' ').join('_') + '-' + i));
                 if (range !== null) {
                   d = d.push(range);
                 }
@@ -4336,7 +4336,6 @@
               select(this).call(brushes[d].move, null);
             });
 
-            keys();
             pc.renderBrushed();
           }
         } else {
@@ -4358,8 +4357,8 @@
         return d.id;
       });
 
-      brushSelection.enter().insert('g', '.brush').attr('class', 'brush').attr('id', function (b) {
-        return 'brush-' + axis + '-' + b.id;
+      brushSelection.enter().insert('g', '.brush').attr('class', 'brush').attr('dimension', axis).attr('id', function (b) {
+        return 'brush-' + axis.split(' ').join('_') + '-' + b.id;
       }).each(function (brushObject) {
         brushObject.brush(select(this));
       });
@@ -4387,7 +4386,7 @@
         var axisBrushes = brushes[p];
 
         for (var i = 0; i < axisBrushes.length; i++) {
-          var brush = document.getElementById('brush-' + p + '-' + i);
+          var brush = document.getElementById('brush-' + p.split(' ').join('_') + '-' + i);
 
           if (brushSelection(brush) !== null) {
             return true;
@@ -4403,7 +4402,7 @@
         var axisBrushes = brushes[p];
 
         return axisBrushes.map(function (d, i) {
-          return brushSelection(document.getElementById('brush-' + p + '-' + i));
+          return brushSelection(document.getElementById('brush-' + p.split(' ').join('_') + '-' + i));
         }).map(function (d, i) {
           if (d === null || d === undefined) {
             return null;
@@ -4668,7 +4667,7 @@
         }).on('end', function () {
           // Figure out if our latest brush has a selection
           var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-          var lastBrush = document.getElementById('brush-' + axis + '-' + lastBrushID);
+          var lastBrush = document.getElementById('brush-' + axis.split(' ').join('_') + '-' + lastBrushID);
           var selection$$1 = brushSelection(lastBrush);
 
           // If it does, that means we need another one
@@ -6619,7 +6618,7 @@
       return set;
     }
 
-    function keys$1 (map) {
+    function keys (map) {
       var keys = [];
       for (var key in map) {
         keys.push(key);
@@ -9499,7 +9498,7 @@
         });
       }
 
-      var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys$1(config));
+      var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(keys(config));
 
       var events = dispatch.apply(_this$4, eventTypes),
           flags = {

@@ -13,7 +13,7 @@ const brushExtents = (state, config, pc) => extents => {
       } else {
         acc[cur] = axisBrushes.reduce((d, p, i) => {
           const range = brushSelection(
-            document.getElementById('brush-' + cur + '-' + i)
+            document.getElementById('brush-' + cur.split(' ').join('_') + '-' + i)
           );
           if (range !== null) {
             d = d.push(range);
