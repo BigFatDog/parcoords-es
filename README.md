@@ -29,7 +29,7 @@ brushExtents supports 1D multi brushes:
   .brushMode("1D-axes-multi")
   .brushExtents({"2": [[3,4], [6,8], [10, 14]]});
 
-
+```
 
 ## Usage
 
