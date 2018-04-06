@@ -1,13 +1,12 @@
 import { brushSelection } from 'd3-brush';
 //https://github.com/d3/d3-brush/issues/10
-import { keys } from 'd3-collection';
 
 // data within extents
 const selected = (state, config, brushGroup) => () => {
   const { brushNodes } = state;
   const is_brushed = p => brushSelection(brushNodes[p]) !== null;
 
-  const actives = keys(config.dimensions).filter(is_brushed);
+  const actives = Object.keys(config.dimensions).filter(is_brushed);
   const extents = actives.map(p => {
     const _brushRange = brushSelection(brushNodes[p]);
 

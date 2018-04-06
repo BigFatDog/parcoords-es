@@ -1,5 +1,4 @@
 import { scaleLinear, scaleOrdinal, scalePoint, scaleTime } from 'd3-scale';
-import { keys } from 'd3-collection';
 import { extent } from 'd3-array';
 
 import getRange from '../util/getRange';
@@ -83,7 +82,7 @@ const autoscale = (config, pc, xscale, ctx) =>
           .range(categoricalRange);
       },
     };
-    keys(config.dimensions).forEach(function(k) {
+    Object.keys(config.dimensions).forEach(function(k) {
       config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
     });
 
