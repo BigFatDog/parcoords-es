@@ -3,6 +3,7 @@ import { select } from 'd3-selection';
 import { brushSelection } from 'd3-brush';
 
 const brushExtents = (state, config, pc) => extents => {
+  console.log('-------')
   const { brushes, brushNodes } = state;
 
   if (typeof extents === 'undefined') {

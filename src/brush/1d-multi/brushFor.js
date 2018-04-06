@@ -54,7 +54,7 @@ const newBrush = (state, config, pc, events, brushGroup) => (
         config,
         pc,
         events
-      )(selected(state, config, pc, events, brushGroup)(axis, _selector));
+      )(selected(state, config, pc, events, brushGroup));
     })
     .on('end', function() {
       // Figure out if our latest brush has a selection
@@ -76,7 +76,7 @@ const newBrush = (state, config, pc, events, brushGroup) => (
         config,
         pc,
         events
-      )(selected(state, config, pc, events, brushGroup)(axis, _selector));
+      )(selected(state, config, pc, events, brushGroup));
       events.call('brushend', pc, config.brushed);
     });
 

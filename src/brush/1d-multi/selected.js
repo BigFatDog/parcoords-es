@@ -1,15 +1,9 @@
 import { brushSelection } from 'd3-brush';
-import brushFor from './brushFor';
-//https://github.com/d3/d3-brush/issues/10
 import { keys } from 'd3-collection';
-import drawBrushes from './drawBrushes';
 
 // data within extents
-const selected = (state, config, pc, events, brushGroup) => (
-  axis,
-  _selector
-) => {
-  const { brushes, brushNodes } = state;
+const selected = (state, config, pc, events, brushGroup) => {
+  const { brushes } = state;
 
   const is_brushed = p => {
     const axisBrushes = brushes[p];
