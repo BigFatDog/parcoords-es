@@ -4753,7 +4753,7 @@
 
     var uninstall$1 = function uninstall(state, pc) {
       return function () {
-        if (pc.g() !== undefined && pc.g() !== null) pc.g().selectAll('.brush').remove();
+        if (pc.g() !== undefined && pc.g() !== null) pc.g().selectAll('.brush-group').remove();
 
         state.brushes = {};
         delete pc.brushExtents;

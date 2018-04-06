@@ -2,7 +2,7 @@ const uninstall = (state, pc) => () => {
   if (pc.g() !== undefined && pc.g() !== null)
     pc
       .g()
-      .selectAll('.brush')
+      .selectAll('.brush-group')
       .remove();
 
   state.brushes = {};
