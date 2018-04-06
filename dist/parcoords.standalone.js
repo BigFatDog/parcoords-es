@@ -4258,113 +4258,6 @@
       };
     };
 
-    var brushExtents$1 = function brushExtents(state, config, pc) {
-      return function (extents) {
-        var brushes = state.brushes;
-
-
-        if (typeof extents === 'undefined') {
-          return Object.keys(config.dimensions).reduce(function (acc, cur, pos) {
-            var axisBrushes = brushes[cur];
-
-            if (axisBrushes === undefined || axisBrushes === null) {
-              acc[cur] = [];
-            } else {
-              acc[cur] = axisBrushes.reduce(function (d, p, i) {
-                var range = brushSelection(document.getElementById('brush-' + pos + '-' + i));
-                if (range !== null) {
-                  d = d.push(range);
-                }
-
-                return d;
-              }, []);
-            }
-
-            return acc;
-          }, {});
-        } else {
-          //first get all the brush selections
-          var brushSelections = {};
-          pc.g().selectAll('.brush').each(function (d) {
-            brushSelections[d] = select(this);
-          });
-
-          // loop over each dimension and update appropriately (if it was passed in through extents)
-          Object.keys(config.dimensions).forEach(function (d) {
-            if (extents[d] === undefined) {
-              return;
-            }
-
-            var brush$$1 = brushes[d];
-            if (brush$$1 !== undefined) {
-              var dim = config.dimensions[d];
-              var yExtent = extents[d].map(dim.yscale);
-
-              //update the extent
-              //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
-              brush$$1.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
-
-              //redraw the brush
-              //https://github.com/d3/d3-brush#brush_move
-              // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
-              brushSelections[d].call(brush$$1).call(brush$$1.move, yExtent.reverse());
-
-              //fire some events
-              // brush.event(brushSelections[d]);
-            }
-          });
-
-          //redraw the chart
-          pc.renderBrushed();
-
-          return pc;
-        }
-      };
-    };
-
-    var _this$1 = undefined;
-
-    var brushReset$1 = function brushReset(state, config, pc) {
-      return function (dimension) {
-        var brushes = state.brushes;
-
-
-        if (dimension === undefined) {
-          config.brushed = false;
-          if (pc.g() !== undefined && pc.g() !== null) {
-            Object.keys(config.dimensions).forEach(function (d, pos) {
-              var axisBrush = brushes[d];
-
-              axisBrush.forEach(function (e, i) {
-                var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
-                if (brushSelection(brush$$1) !== null) {
-                  pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
-                }
-              });
-            });
-
-            pc.renderBrushed();
-          }
-        } else {
-          if (pc.g() !== undefined && pc.g() !== null) {
-            var axisBrush = brushes[dimension];
-            var pos = Object.keys(config.dimensions).indexOf(dimension);
-
-            axisBrush.forEach(function (e, i) {
-              var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
-              if (brushSelection(brush$$1) !== null) {
-                pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
-                e.event(select('#brush-' + pos + '-' + i));
-              }
-            });
-
-            pc.renderBrushed();
-          }
-        }
-        return _this$1;
-      };
-    };
-
     var drawBrushes = function drawBrushes(brushes, config, pc, axis, selector$$1) {
       var brushSelection = selector$$1.selectAll('.brush').data(brushes, function (d) {
         return d.id;
@@ -4635,67 +4528,198 @@
     };
 
     var brushUpdated$1 = function brushUpdated(config, pc, events) {
-        return function (newSelection) {
-            config.brushed = newSelection;
-            events.call('brush', pc, config.brushed);
-            pc.renderBrushed();
-        };
+      return function (newSelection) {
+        config.brushed = newSelection;
+        events.call('brush', pc, config.brushed);
+        pc.renderBrushed();
+      };
     };
 
     var newBrush = function newBrush(state, config, pc, events, brushGroup) {
-        return function (axis, _selector) {
-            var brushes = state.brushes,
-                brushNodes = state.brushNodes;
+      return function (axis, _selector) {
+        var brushes = state.brushes,
+            brushNodes = state.brushNodes;
 
 
-            var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
+        var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
 
-            var brush$$1 = brushY().extent([[-15, 0], [15, brushRangeMax]]);
+        var brush$$1 = brushY().extent([[-15, 0], [15, brushRangeMax]]);
 
-            if (brushes[axis]) {
-                brushes[axis].push({
-                    id: brushes[axis].length,
-                    brush: brush$$1,
-                    node: _selector.node()
-                });
+        if (brushes[axis]) {
+          brushes[axis].push({
+            id: brushes[axis].length,
+            brush: brush$$1,
+            node: _selector.node()
+          });
+        } else {
+          brushes[axis] = [{ id: 0, brush: brush$$1, node: _selector.node() }];
+        }
+
+        if (brushNodes[axis]) {
+          brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
+        } else {
+          brushNodes[axis] = [{ id: 0, node: _selector.node() }];
+        }
+
+        brush$$1.on('start', function () {
+          if (event.sourceEvent !== null) {
+            events.call('brushstart', pc, config.brushed);
+            event.sourceEvent.stopPropagation();
+          }
+        }).on('brush', function () {
+          // record selections
+          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+        }).on('end', function () {
+          // Figure out if our latest brush has a selection
+          var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
+          var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
+          var selection$$1 = brushSelection(lastBrush);
+
+          // If it does, that means we need another one
+          if (selection$$1 && selection$$1[0] !== selection$$1[1]) {
+            newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+          }
+
+          // Always draw brushes
+          drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+          events.call('brushend', pc, config.brushed);
+        });
+
+        drawBrushes(brushes[axis], config, pc, axis, _selector);
+      };
+    };
+
+    /**
+     *
+     * extents are in format of [[2,6], [3,5]]
+     *
+     * * @param state
+     * @param config
+     * @param pc
+     * @returns {Function}
+     */
+    var brushExtents$1 = function brushExtents(state, config, pc, events, brushGroup) {
+      return function (extents) {
+        var brushes = state.brushes;
+
+
+        if (typeof extents === 'undefined') {
+          return Object.keys(config.dimensions).reduce(function (acc, cur, pos) {
+            var axisBrushes = brushes[cur];
+
+            if (axisBrushes === undefined || axisBrushes === null) {
+              acc[cur] = [];
             } else {
-                brushes[axis] = [{ id: 0, brush: brush$$1, node: _selector.node() }];
+              acc[cur] = axisBrushes.reduce(function (d, p, i) {
+                var range = brushSelection(document.getElementById('brush-' + pos + '-' + i));
+                if (range !== null) {
+                  d = d.push(range);
+                }
+
+                return d;
+              }, []);
             }
 
-            if (brushNodes[axis]) {
-                brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
-            } else {
-                brushNodes[axis] = [{ id: 0, node: _selector.node() }];
+            return acc;
+          }, {});
+        } else {
+          // //first get all the brush selections
+          // const brushSelections = {};
+          // pc
+          //   .g()
+          //   .selectAll('.brush')
+          //   .each(function(d) {
+          //     brushSelections[d] = select(this);
+          //   });
+
+          // loop over each dimension and update appropriately (if it was passed in through extents)
+          Object.keys(config.dimensions).forEach(function (d, pos) {
+            if (extents[d] === undefined || extents[d] === null) {
+              return;
             }
 
-            brush$$1.on('start', function () {
-                if (event.sourceEvent !== null) {
-                    events.call('brushstart', pc, config.brushed);
-                    event.sourceEvent.stopPropagation();
-                }
-            }).on('brush', function () {
-                // record selections
-                brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-            }).on('end', function () {
-                // Figure out if our latest brush has a selection
-                var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-                var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
-                var selection$$1 = brushSelection(lastBrush);
+            var dim = config.dimensions[d];
 
-                // If it does, that means we need another one
-                if (selection$$1 && selection$$1[0] !== selection$$1[1]) {
-                    newBrush(state, config, pc, events, brushGroup)(axis, _selector);
-                }
-
-                // Always draw brushes
-                drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-                brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-                events.call('brushend', pc, config.brushed);
+            var yExtents = extents[d].map(function (e) {
+              return e.map(dim.yscale);
             });
 
-            drawBrushes(brushes[axis], config, pc, axis, _selector);
-        };
+            var _bs = yExtents.map(function (e, j) {
+              var _brush = newBrush(state, config, pc, events, brushGroup)(d, select('#brush-group-' + pos));
+              //update the extent
+              //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
+              _brush.extent([[-15, e[1]], [15, e[0]]]);
+
+              return {
+                id: j,
+                brush: _brush,
+                ext: e
+              };
+            });
+
+            brushes[d] = _bs;
+
+            drawBrushes(_bs, config, pc, d, select('#brush-group-' + pos));
+
+            //redraw the brush
+            //https://github.com/d3/d3-brush#brush_move
+            // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
+            _bs.forEach(function (f, k) {
+              select('#brush-group-' + pos).call(f.brush).call(f.brush.move, f.ext.reverse());
+            });
+          });
+
+          //redraw the chart
+          pc.renderBrushed();
+
+          return pc;
+        }
+      };
+    };
+
+    var _this$1 = undefined;
+
+    var brushReset$1 = function brushReset(state, config, pc) {
+      return function (dimension) {
+        var brushes = state.brushes;
+
+
+        if (dimension === undefined) {
+          config.brushed = false;
+          if (pc.g() !== undefined && pc.g() !== null) {
+            Object.keys(config.dimensions).forEach(function (d, pos) {
+              var axisBrush = brushes[d];
+
+              axisBrush.forEach(function (e, i) {
+                var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
+                if (brushSelection(brush$$1) !== null) {
+                  pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
+                }
+              });
+            });
+
+            pc.renderBrushed();
+          }
+        } else {
+          if (pc.g() !== undefined && pc.g() !== null) {
+            var axisBrush = brushes[dimension];
+            var pos = Object.keys(config.dimensions).indexOf(dimension);
+
+            axisBrush.forEach(function (e, i) {
+              var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
+              if (brushSelection(brush$$1) !== null) {
+                pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
+                e.event(select('#brush-' + pos + '-' + i));
+              }
+            });
+
+            pc.renderBrushed();
+          }
+        }
+        return _this$1;
+      };
     };
 
     var brushFor$1 = function brushFor(state, config, pc, events, brushGroup) {
@@ -4713,7 +4737,11 @@
           pc.createAxes();
         }
 
-        pc.g().append('svg:g').attr('class', 'brush').each(function (d) {
+        pc.g().append('svg:g').attr('id', function (d, i) {
+          return 'brush-group-' + i;
+        }).attr('class', 'brush-group').attr('dimension', function (d) {
+          return d;
+        }).each(function (d) {
           brushFor$1(state, config, pc, events, brushGroup)(d, select(this));
         });
 

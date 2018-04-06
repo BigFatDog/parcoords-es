@@ -1,7 +1,18 @@
 import { select } from 'd3-selection';
 import { brushSelection } from 'd3-brush';
+import newBrush from './newBrush';
+import drawBrushes from './drawBrushes';
 
-const brushExtents = (state, config, pc) => extents => {
+/**
+ *
+ * extents are in format of [[2,6], [3,5]]
+ *
+ * * @param state
+ * @param config
+ * @param pc
+ * @returns {Function}
+ */
+const brushExtents = (state, config, pc, events, brushGroup) => extents => {
   const { brushes } = state;
 
   if (typeof extents === 'undefined') {
@@ -26,38 +37,53 @@ const brushExtents = (state, config, pc) => extents => {
       return acc;
     }, {});
   } else {
-    //first get all the brush selections
-    const brushSelections = {};
-    pc
-      .g()
-      .selectAll('.brush')
-      .each(function(d) {
-        brushSelections[d] = select(this);
-      });
+    // //first get all the brush selections
+    // const brushSelections = {};
+    // pc
+    //   .g()
+    //   .selectAll('.brush')
+    //   .each(function(d) {
+    //     brushSelections[d] = select(this);
+    //   });
 
     // loop over each dimension and update appropriately (if it was passed in through extents)
-    Object.keys(config.dimensions).forEach(d => {
-      if (extents[d] === undefined) {
+    Object.keys(config.dimensions).forEach((d, pos) => {
+      if (extents[d] === undefined || extents[d] === null) {
         return;
       }
 
-      const brush = brushes[d];
-      if (brush !== undefined) {
-        const dim = config.dimensions[d];
-        const yExtent = extents[d].map(dim.yscale);
+      const dim = config.dimensions[d];
 
+      const yExtents = extents[d].map(e => e.map(dim.yscale));
+
+      const _bs = yExtents.map((e, j) => {
+        const _brush = newBrush(state, config, pc, events, brushGroup)(
+          d,
+          select('#brush-group-' + pos)
+        );
         //update the extent
         //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
-        brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
+        _brush.extent([[-15, e[1]], [15, e[0]]]);
 
-        //redraw the brush
-        //https://github.com/d3/d3-brush#brush_move
-        // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
-        brushSelections[d].call(brush).call(brush.move, yExtent.reverse());
+        return {
+          id: j,
+          brush: _brush,
+          ext: e,
+        };
+      });
 
-        //fire some events
-        // brush.event(brushSelections[d]);
-      }
+      brushes[d] = _bs;
+
+      drawBrushes(_bs, config, pc, d, select('#brush-group-' + pos));
+
+      //redraw the brush
+      //https://github.com/d3/d3-brush#brush_move
+      // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
+      _bs.forEach((f, k) => {
+        select('#brush-group-' + pos)
+          .call(f.brush)
+          .call(f.brush.move, f.ext.reverse());
+      });
     });
 
     //redraw the chart

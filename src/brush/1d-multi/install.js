@@ -11,7 +11,9 @@ const install = (state, config, pc, events, brushGroup) => () => {
   pc
     .g()
     .append('svg:g')
-    .attr('class', 'brush')
+    .attr('id', (d, i) => 'brush-group-' + i)
+    .attr('class', 'brush-group')
+    .attr('dimension', d => d)
     .each(function(d) {
       brushFor(state, config, pc, events, brushGroup)(d, select(this));
     });
