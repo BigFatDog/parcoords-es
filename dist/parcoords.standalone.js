@@ -6491,10 +6491,10 @@
 
     var prefix = "$";
 
-    function Map() {}
+    function Map$1() {}
 
-    Map.prototype = map$1.prototype = {
-      constructor: Map,
+    Map$1.prototype = map$1.prototype = {
+      constructor: Map$1,
       has: function has(key) {
         return prefix + key in this;
       },
@@ -6551,10 +6551,10 @@
     };
 
     function map$1(object, f) {
-      var map = new Map();
+      var map = new Map$1();
 
       // Copy constructor.
-      if (object instanceof Map) object.each(function (value, key) {
+      if (object instanceof Map$1) object.each(function (value, key) {
         map.set(key, value);
       });
 
@@ -9550,8 +9550,8 @@
     };
 
     var computeClusterCentroids = function computeClusterCentroids(config, d) {
-      var clusterCentroids = map$1();
-      var clusterCounts = map$1();
+      var clusterCentroids = new Map();
+      var clusterCounts = new Map();
       // determine clusterCounts
       config.data.forEach(function (row) {
         var scaled = config.dimensions[d].yscale(row[d]);
@@ -9566,7 +9566,7 @@
         Object.keys(config.dimensions).map(function (p) {
           var scaled = config.dimensions[d].yscale(row[d]);
           if (!clusterCentroids.has(scaled)) {
-            var _map = map$1();
+            var _map = new Map();
             clusterCentroids.set(scaled, _map);
           }
           if (!clusterCentroids.get(scaled).has(p)) {
