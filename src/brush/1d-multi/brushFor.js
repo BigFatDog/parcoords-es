@@ -60,7 +60,7 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       // Figure out if our latest brush has a selection
       const lastBrushID = brushes[axis][brushes[axis].length - 1].id;
       const lastBrush = document.getElementById(
-        'brush-' + axis.split(' ').join('_') + '-' + lastBrushID
+        'brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID
       );
       const selection = brushSelection(lastBrush);
 
@@ -70,7 +70,7 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       }
 
       // Always draw brushes
-      drawBrushes(brushes[axis], pc, axis, _selector);
+      drawBrushes(brushes[axis], config, pc, axis, _selector);
 
       brushUpdated(
         config,
@@ -80,7 +80,7 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       events.call('brushend', pc, config.brushed);
     });
 
-  drawBrushes(brushes[axis], pc, axis, _selector);
+  drawBrushes(brushes[axis], config, pc, axis, _selector);
 };
 
 const brushFor = (state, config, pc, events, brushGroup) => (
@@ -89,7 +89,7 @@ const brushFor = (state, config, pc, events, brushGroup) => (
 ) => {
   const { brushes } = state;
   newBrush(state, config, pc, events, brushGroup)(axis, _selector);
-  drawBrushes(brushes[axis], pc, axis, _selector);
+  drawBrushes(brushes[axis], config, pc, axis, _selector);
 };
 
 export default brushFor;

@@ -4,17 +4,16 @@ import {brushSelection} from "d3-brush";
 const brushReset = (state, config, pc) => dimension => {
   const { brushes } = state;
 
-  console.log('------')
   if (dimension === undefined) {
     config.brushed = false;
     if (pc.g() !== undefined && pc.g() !== null) {
-      Object.keys(config.dimensions).forEach(d=> {
+      Object.keys(config.dimensions).forEach((d, pos )=> {
           const axisBrush = brushes[d];
 
           axisBrush.forEach((e ,i) => {
-              const brush = document.getElementById('brush-' + d.split(' ').join('_') + '-' + i);
+              const brush = document.getElementById('brush-' + pos + '-' + i);
               if (brushSelection(brush) !== null) {
-                  pc.g().select('#brush-' + d.split(' ').join('_') + '-' + i).call(e.brush.move, null);
+                  pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
 
               }
           })

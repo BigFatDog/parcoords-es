@@ -4,11 +4,11 @@ import { brushSelection } from 'd3-brush';
 const selected = (state, config, pc, events, brushGroup) => {
   const { brushes } = state;
 
-  const is_brushed = p => {
+  const is_brushed = (p, pos) => {
     const axisBrushes = brushes[p];
 
     for (let i = 0; i < axisBrushes.length; i++) {
-      const brush = document.getElementById('brush-' + p.split(' ').join('_') + '-' + i);
+      const brush = document.getElementById('brush-' + pos + '-' + i);
 
       if (brushSelection(brush) !== null) {
         return true;
@@ -24,7 +24,7 @@ const selected = (state, config, pc, events, brushGroup) => {
 
     return axisBrushes
       .map((d, i) =>
-        brushSelection(document.getElementById('brush-' + p.split(' ').join('_') + '-' + i))
+        brushSelection(document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(p) + '-' + i))
       )
       .map((d, i) => {
         if (d === null || d === undefined) {

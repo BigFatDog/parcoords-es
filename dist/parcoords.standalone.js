@@ -3632,10 +3632,10 @@
     }
 
     function brushY() {
-      return brush$2(Y);
+      return brush$1(Y);
     }
 
-    function brush$2(dim) {
+    function brush$1(dim) {
       var extent = defaultExtent,
           filter = defaultFilter$1,
           listeners = dispatch(brush, "start", "brush", "end"),
@@ -4029,10 +4029,10 @@
 
         if (typeof extents === 'undefined') {
           return Object.keys(config.dimensions).reduce(function (acc, cur) {
-            var brush = brushes[cur];
+            var brush$$1 = brushes[cur];
             //todo: brush check
-            if (brush !== undefined && brushSelection(brushNodes[cur]) !== null) {
-              acc[cur] = brush.extent();
+            if (brush$$1 !== undefined && brushSelection(brushNodes[cur]) !== null) {
+              acc[cur] = brush$$1.extent();
             }
 
             return acc;
@@ -4050,19 +4050,19 @@
               return;
             }
 
-            var brush = brushes[d];
-            if (brush !== undefined) {
+            var brush$$1 = brushes[d];
+            if (brush$$1 !== undefined) {
               var dim = config.dimensions[d];
               var yExtent = extents[d].map(dim.yscale);
 
               //update the extent
               //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
-              brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
+              brush$$1.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
 
               //redraw the brush
               //https://github.com/d3/d3-brush#brush_move
               // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
-              brushSelections[d].call(brush).call(brush.move, yExtent.reverse());
+              brushSelections[d].call(brush$$1).call(brush$$1.move, yExtent.reverse());
 
               //fire some events
               // brush.event(brushSelections[d]);
@@ -4264,14 +4264,14 @@
 
 
         if (typeof extents === 'undefined') {
-          return Object.keys(config.dimensions).reduce(function (acc, cur) {
+          return Object.keys(config.dimensions).reduce(function (acc, cur, pos) {
             var axisBrushes = brushes[cur];
 
-            if (brush === undefined || brush === null) {
+            if (axisBrushes === undefined || axisBrushes === null) {
               acc[cur] = [];
             } else {
               acc[cur] = axisBrushes.reduce(function (d, p, i) {
-                var range = brushSelection(document.getElementById('brush-' + cur.split(' ').join('_') + '-' + i));
+                var range = brushSelection(document.getElementById('brush-' + pos + '-' + i));
                 if (range !== null) {
                   d = d.push(range);
                 }
@@ -4295,19 +4295,19 @@
               return;
             }
 
-            var brush = brushes[d];
-            if (brush !== undefined) {
+            var brush$$1 = brushes[d];
+            if (brush$$1 !== undefined) {
               var dim = config.dimensions[d];
               var yExtent = extents[d].map(dim.yscale);
 
               //update the extent
               //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
-              brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
+              brush$$1.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
 
               //redraw the brush
               //https://github.com/d3/d3-brush#brush_move
               // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
-              brushSelections[d].call(brush).call(brush.move, yExtent.reverse());
+              brushSelections[d].call(brush$$1).call(brush$$1.move, yExtent.reverse());
 
               //fire some events
               // brush.event(brushSelections[d]);
@@ -4329,17 +4329,16 @@
         var brushes = state.brushes;
 
 
-        console.log('------');
         if (dimension === undefined) {
           config.brushed = false;
           if (pc.g() !== undefined && pc.g() !== null) {
-            Object.keys(config.dimensions).forEach(function (d) {
+            Object.keys(config.dimensions).forEach(function (d, pos) {
               var axisBrush = brushes[d];
 
               axisBrush.forEach(function (e, i) {
-                var brush = document.getElementById('brush-' + d.split(' ').join('_') + '-' + i);
-                if (brushSelection(brush) !== null) {
-                  pc.g().select('#brush-' + d.split(' ').join('_') + '-' + i).call(e.brush.move, null);
+                var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
+                if (brushSelection(brush$$1) !== null) {
+                  pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
                 }
               });
             });
@@ -4360,13 +4359,13 @@
       };
     };
 
-    var drawBrushes = function drawBrushes(brushes, pc, axis, selector$$1) {
+    var drawBrushes = function drawBrushes(brushes, config, pc, axis, selector$$1) {
       var brushSelection = selector$$1.selectAll('.brush').data(brushes, function (d) {
         return d.id;
       });
 
       brushSelection.enter().insert('g', '.brush').attr('class', 'brush').attr('dimension', axis).attr('id', function (b) {
-        return 'brush-' + axis.split(' ').join('_') + '-' + b.id;
+        return 'brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + b.id;
       }).each(function (brushObject) {
         brushObject.brush(select(this));
       });
@@ -4390,13 +4389,13 @@
       var brushes = state.brushes;
 
 
-      var is_brushed = function is_brushed(p) {
+      var is_brushed = function is_brushed(p, pos) {
         var axisBrushes = brushes[p];
 
         for (var i = 0; i < axisBrushes.length; i++) {
-          var brush = document.getElementById('brush-' + p.split(' ').join('_') + '-' + i);
+          var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
 
-          if (brushSelection(brush) !== null) {
+          if (brushSelection(brush$$1) !== null) {
             return true;
           }
         }
@@ -4409,7 +4408,7 @@
         var axisBrushes = brushes[p];
 
         return axisBrushes.map(function (d, i) {
-          return brushSelection(document.getElementById('brush-' + p.split(' ').join('_') + '-' + i));
+          return brushSelection(document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(p) + '-' + i));
         }).map(function (d, i) {
           if (d === null || d === undefined) {
             return null;
@@ -4645,16 +4644,16 @@
 
         var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
 
-        var brush = brushY().extent([[-15, 0], [15, brushRangeMax]]);
+        var brush$$1 = brushY().extent([[-15, 0], [15, brushRangeMax]]);
 
         if (brushes[axis]) {
           brushes[axis].push({
             id: brushes[axis].length,
-            brush: brush,
+            brush: brush$$1,
             node: _selector.node()
           });
         } else {
-          brushes[axis] = [{ id: 0, brush: brush, node: _selector.node() }];
+          brushes[axis] = [{ id: 0, brush: brush$$1, node: _selector.node() }];
         }
 
         if (brushNodes[axis]) {
@@ -4663,7 +4662,7 @@
           brushNodes[axis] = [{ id: 0, node: _selector.node() }];
         }
 
-        brush.on('start', function () {
+        brush$$1.on('start', function () {
           if (event.sourceEvent !== null) {
             events.call('brushstart', pc, config.brushed);
             event.sourceEvent.stopPropagation();
@@ -4674,7 +4673,7 @@
         }).on('end', function () {
           // Figure out if our latest brush has a selection
           var lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-          var lastBrush = document.getElementById('brush-' + axis.split(' ').join('_') + '-' + lastBrushID);
+          var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
           var selection$$1 = brushSelection(lastBrush);
 
           // If it does, that means we need another one
@@ -4683,13 +4682,13 @@
           }
 
           // Always draw brushes
-          drawBrushes(brushes[axis], pc, axis, _selector);
+          drawBrushes(brushes[axis], config, pc, axis, _selector);
 
           brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
           events.call('brushend', pc, config.brushed);
         });
 
-        drawBrushes(brushes[axis], pc, axis, _selector);
+        drawBrushes(brushes[axis], config, pc, axis, _selector);
       };
     };
 
@@ -4698,7 +4697,7 @@
         var brushes = state.brushes;
 
         newBrush(state, config, pc, events, brushGroup)(axis, _selector);
-        drawBrushes(brushes[axis], pc, axis, _selector);
+        drawBrushes(brushes[axis], config, pc, axis, _selector);
       };
     };
 
@@ -6089,16 +6088,16 @@
         var multiBrushData = [];
 
         var _loop = function _loop(idx) {
-          var brush = config.brushes[idx];
+          var brush$$1 = config.brushes[idx];
           var values = [];
-          var ranger = brush.extent;
-          var actives = [brush.data];
-          if (typeof config.dimensions[brush.data].yscale.domain()[0] === 'number') {
+          var ranger = brush$$1.extent;
+          var actives = [brush$$1.data];
+          if (typeof config.dimensions[brush$$1.data].yscale.domain()[0] === 'number') {
             for (var _i = 0; _i < ranger.length; _i++) {
-              if (actives.includes(brush.data) && config.flipAxes.includes(brush.data)) {
-                values.push(config.dimensions[brush.data].yscale.invert(ranger[_i]));
-              } else if (config.dimensions[brush.data].yscale() !== 1) {
-                values.unshift(config.dimensions[brush.data].yscale.invert(ranger[_i]));
+              if (actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
+                values.push(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
+              } else if (config.dimensions[brush$$1.data].yscale() !== 1) {
+                values.unshift(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
               }
             }
             extents.push(values);
@@ -6108,11 +6107,11 @@
               }
             }
           } else {
-            ranges[brush.data] = brush.extent;
-            var _dimRange = config.dimensions[brush.data].yscale.range();
-            var _dimDomain = config.dimensions[brush.data].yscale.domain();
+            ranges[brush$$1.data] = brush$$1.extent;
+            var _dimRange = config.dimensions[brush$$1.data].yscale.range();
+            var _dimDomain = config.dimensions[brush$$1.data].yscale.domain();
             for (var _j = 0; _j < _dimRange.length; _j++) {
-              if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1] && actives.includes(brush.data) && config.flipAxes.includes(brush.data)) {
+              if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1] && actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
                 values.push(_dimRange[_j]);
               } else if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1]) {
                 values.unshift(_dimRange[_j]);
@@ -8556,13 +8555,13 @@
                 var html = select(this).select('.selection').nodes()[0].outerHTML;
                 html = html.replace('class="selection"', 'class="selection dummy' + ' selection-' + config.brushes.length + '"');
                 var dat = select(this).nodes()[0].__data__;
-                var brush = {
+                var brush$$1 = {
                   id: config.brushes.length,
                   extent: brushSelection(this),
                   html: html,
                   data: dat
                 };
-                config.brushes.push(brush);
+                config.brushes.push(brush$$1);
                 select(select(this).nodes()[0].parentNode).select('.axis').nodes()[0].outerHTML += html;
                 pc.brush();
                 config.dimensions[d].brush.move(select(this, null));

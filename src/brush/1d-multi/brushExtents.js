@@ -5,15 +5,15 @@ const brushExtents = (state, config, pc) => extents => {
   const { brushes } = state;
 
   if (typeof extents === 'undefined') {
-    return Object.keys(config.dimensions).reduce((acc, cur) => {
+    return Object.keys(config.dimensions).reduce((acc, cur, pos) => {
       const axisBrushes = brushes[cur];
 
-      if (brush === undefined || brush === null) {
+      if (axisBrushes === undefined || axisBrushes === null) {
         acc[cur] = [];
       } else {
         acc[cur] = axisBrushes.reduce((d, p, i) => {
           const range = brushSelection(
-            document.getElementById('brush-' + cur.split(' ').join('_') + '-' + i)
+            document.getElementById('brush-' + pos + '-' + i)
           );
           if (range !== null) {
             d = d.push(range);
