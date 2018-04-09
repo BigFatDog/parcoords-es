@@ -4302,6 +4302,7 @@
         return false;
       };
 
+      console.log(config.dimensions);
       var actives = Object.keys(config.dimensions).filter(is_brushed);
       var extents = actives.map(function (p) {
         var axisBrushes = brushes[p];
@@ -4758,7 +4759,7 @@
       brushNodes: {}
     };
 
-    var install1DAxes$1 = function install1DAxes(brushGroup, config, pc, events) {
+    var install1DMultiAxes = function install1DMultiAxes(brushGroup, config, pc, events) {
       var state = Object.assign({}, BrushState$1);
 
       brushGroup.modes['1D-axes-multi'] = {
@@ -9835,7 +9836,7 @@
       install1DAxes(brush, config, pc, events);
       install2DStrums(brush, config, pc, events, xscale);
       installAngularBrush(brush, config, pc, events, xscale);
-      install1DAxes$1(brush, config, pc, events);
+      install1DMultiAxes(brush, config, pc, events);
 
       pc.version = version;
       // this descriptive text should live with other introspective methods

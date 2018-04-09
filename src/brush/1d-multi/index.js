@@ -8,7 +8,7 @@ const BrushState = {
   brushNodes: {},
 };
 
-const install1DAxes = (brushGroup, config, pc, events) => {
+const install1DMultiAxes = (brushGroup, config, pc, events) => {
   const state = Object.assign({}, BrushState);
 
   brushGroup.modes['1D-axes-multi'] = {
@@ -19,4 +19,4 @@ const install1DAxes = (brushGroup, config, pc, events) => {
   };
 };
 
-export default install1DAxes;
+export default install1DMultiAxes;
