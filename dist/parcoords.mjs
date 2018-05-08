@@ -817,7 +817,7 @@ var BrushState$1 = {
   brushNodes: {}
 };
 
-var install1DAxes$1 = function install1DAxes(brushGroup, config, pc, events) {
+var install1DMultiAxes = function install1DMultiAxes(brushGroup, config, pc, events) {
   var state = Object.assign({}, BrushState$1);
 
   brushGroup.modes['1D-axes-multi'] = {
@@ -1966,7 +1966,7 @@ var autoscale = function autoscale(config, pc, xscale, ctx) {
       }
     };
     Object.keys(config.dimensions).forEach(function (k) {
-      config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
+      if (config.dimensions[k].yscale === undefined || config.dimensions[k].yscale === null) config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
     });
 
     // xscale
@@ -2775,7 +2775,7 @@ var scale = function scale(config) {
   };
 };
 
-var version = "2.0.4";
+var version = "2.0.5";
 
 var DefaultConfig = {
   data: [],
@@ -3129,7 +3129,7 @@ var ParCoords = function ParCoords(userConfig) {
   install1DAxes(brush, config, pc, events);
   install2DStrums(brush, config, pc, events, xscale);
   installAngularBrush(brush, config, pc, events, xscale);
-  install1DAxes$1(brush, config, pc, events);
+  install1DMultiAxes(brush, config, pc, events);
 
   pc.version = version;
   // this descriptive text should live with other introspective methods
