@@ -4302,7 +4302,6 @@
         return false;
       };
 
-      console.log(config.dimensions);
       var actives = Object.keys(config.dimensions).filter(is_brushed);
       var extents = actives.map(function (p) {
         var axisBrushes = brushes[p];
@@ -8525,7 +8524,7 @@
           }
         };
         Object.keys(config.dimensions).forEach(function (k) {
-          config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
+          if (config.dimensions[k].yscale === undefined || config.dimensions[k].yscale === null) config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
         });
 
         // xscale
@@ -9482,7 +9481,7 @@
       };
     };
 
-    var version = "2.0.4";
+    var version = "2.0.5";
 
     var DefaultConfig = {
       data: [],
