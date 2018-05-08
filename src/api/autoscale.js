@@ -83,7 +83,13 @@ const autoscale = (config, pc, xscale, ctx) =>
       },
     };
     Object.keys(config.dimensions).forEach(function(k) {
-      config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
+      if (
+        config.dimensions[k].yscale === undefined ||
+        config.dimensions[k].yscale === null
+      )
+        config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](
+          k
+        );
     });
 
     // xscale
