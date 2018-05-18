@@ -20,7 +20,7 @@ const brushReset = (state, config, pc) => dimension => {
         .g()
         .selectAll('.brush')
         .each(function(d) {
-          if (d != dimension) return;
+          if (d !== dimension) return;
           select(this).call(brushes[d].move, null);
           brushes[d].event(select(this));
         });

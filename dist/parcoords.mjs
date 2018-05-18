@@ -154,7 +154,7 @@ var brushReset = function brushReset(state, config, pc) {
     } else {
       if (pc.g() !== undefined && pc.g() !== null) {
         pc.g().selectAll('.brush').each(function (d) {
-          if (d != dimension) return;
+          if (d !== dimension) return;
           select(this).call(brushes[d].move, null);
           brushes[d].event(select(this));
         });

@@ -149,7 +149,7 @@
       } else {
         if (pc.g() !== undefined && pc.g() !== null) {
           pc.g().selectAll('.brush').each(function (d) {
-            if (d != dimension) return;
+            if (d !== dimension) return;
             d3Selection.select(this).call(brushes[d].move, null);
             brushes[d].event(d3Selection.select(this));
           });
