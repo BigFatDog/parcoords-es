@@ -44,7 +44,9 @@ const newBrush = (state, config, pc, events, brushGroup) => (
     .on('start', function() {
       if (event.sourceEvent !== null) {
         events.call('brushstart', pc, config.brushed);
-        event.sourceEvent.stopPropagation();
+        if (typeof event.sourceEvent.stopPropagation === 'function') {
+            event.sourceEvent.stopPropagation();
+        }
       }
     })
     .on('brush', function() {
@@ -66,20 +68,24 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       );
       const selection = brushSelection(lastBrush);
 
-      // If it does, that means we need another one
-      if (selection && selection[0] !== selection[1]) {
-        newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+      console.log(selection);
+      if (selection === undefined || selection === null) {
+          pc.brushReset(axis);
+      } else {
+        if (selection[0] !== selection[1]) {
+            newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+
+            drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+            brushUpdated(
+                config,
+                pc,
+                events
+            )(selected(state, config, pc, events, brushGroup));
+            events.call('brushend', pc, config.brushed);
+        }
       }
 
-      // Always draw brushes
-      drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-      brushUpdated(
-        config,
-        pc,
-        events
-      )(selected(state, config, pc, events, brushGroup));
-      events.call('brushend', pc, config.brushed);
     });
 
   return brush;

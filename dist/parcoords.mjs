@@ -623,7 +623,9 @@ var newBrush = function newBrush(state, config, pc, events, brushGroup) {
     brush.on('start', function () {
       if (event.sourceEvent !== null) {
         events.call('brushstart', pc, config.brushed);
-        event.sourceEvent.stopPropagation();
+        if (typeof event.sourceEvent.stopPropagation === 'function') {
+          event.sourceEvent.stopPropagation();
+        }
       }
     }).on('brush', function () {
       // record selections
@@ -637,13 +639,15 @@ var newBrush = function newBrush(state, config, pc, events, brushGroup) {
       // If it does, that means we need another one
       if (selection && selection[0] !== selection[1]) {
         newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+
+        // Always draw brushes
+        drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+        brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+        events.call('brushend', pc, config.brushed);
+      } else {
+        pc.brushReset(axis);
       }
-
-      // Always draw brushes
-      drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-      brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-      events.call('brushend', pc, config.brushed);
     });
 
     return brush;
@@ -762,7 +766,10 @@ var brushReset$1 = function brushReset(state, config, pc) {
           var brush = document.getElementById('brush-' + pos + '-' + i);
           if (brushSelection(brush) !== null) {
             pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
-            e.event(select('#brush-' + pos + '-' + i));
+
+            if (typeof e.event === 'function') {
+              e.event(select('#brush-' + pos + '-' + i));
+            }
           }
         });
 
@@ -1742,7 +1749,6 @@ var brushPredicate = function brushPredicate(brushGroup, config, pc) {
     }
 
     brushGroup.predicate = predicate;
-    console.log(brushGroup.currentMode());
     config.brushed = brushGroup.currentMode().selected();
     pc.renderBrushed();
     return pc;
@@ -2129,12 +2135,12 @@ var applyDimensionDefaults = function applyDimensionDefaults(config, pc) {
 
       acc[cur] = _extends({}, k, {
         orient: k.orient ? k.orient : 'left',
-        ticks: k.ticks != null ? k.ticks : 5,
-        innerTickSize: k.innerTickSize != null ? k.innerTickSize : 6,
-        outerTickSize: k.outerTickSize != null ? k.outerTickSize : 0,
-        tickPadding: k.tickPadding != null ? k.tickPadding : 3,
+        ticks: k.ticks !== null ? k.ticks : 5,
+        innerTickSize: k.innerTickSize !== null ? k.innerTickSize : 6,
+        outerTickSize: k.outerTickSize !== null ? k.outerTickSize : 0,
+        tickPadding: k.tickPadding !== null ? k.tickPadding : 3,
         type: k.type ? k.type : types[cur],
-        index: k.index != null ? k.index : i
+        index: k.index !== null ? k.index : i
       });
 
       return acc;
@@ -2678,7 +2684,7 @@ var renderDefaultQueue = function renderDefaultQueue(config, pc, foregroundQueue
 
 // try to coerce to number before returning type
 var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
-  return parseFloat(v) == v && v != null ? 'number' : toType(v);
+  return parseFloat(v) === v && v !== null ? 'number' : toType(v);
 };
 
 // attempt to determine types of each dimension based on first row of data

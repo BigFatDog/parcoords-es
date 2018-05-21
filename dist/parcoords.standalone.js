@@ -1556,6 +1556,9 @@
       displayable: function displayable() {
         return this.rgb().displayable();
       },
+      hex: function hex() {
+        return this.rgb().hex();
+      },
       toString: function toString() {
         return this.rgb() + "";
       }
@@ -1564,7 +1567,8 @@
     function color(format) {
       var m;
       format = (format + "").trim().toLowerCase();
-      return (m = reHex3.exec(format)) ? (m = parseInt(m[1], 16), new Rgb(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1)) : (m = reHex6.exec(format)) ? rgbn(parseInt(m[1], 16)) // #ff0000
+      return (m = reHex3.exec(format)) ? (m = parseInt(m[1], 16), new Rgb(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
+      ) : (m = reHex6.exec(format)) ? rgbn(parseInt(m[1], 16)) // #ff0000
       : (m = reRgbInteger.exec(format)) ? new Rgb(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
       : (m = reRgbPercent.exec(format)) ? new Rgb(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
       : (m = reRgbaInteger.exec(format)) ? rgba(m[1], m[2], m[3], m[4]) // rgba(255, 0, 0, 1)
@@ -1616,11 +1620,19 @@
       displayable: function displayable() {
         return 0 <= this.r && this.r <= 255 && 0 <= this.g && this.g <= 255 && 0 <= this.b && this.b <= 255 && 0 <= this.opacity && this.opacity <= 1;
       },
+      hex: function hex() {
+        return "#" + _hex(this.r) + _hex(this.g) + _hex(this.b);
+      },
       toString: function toString() {
         var a = this.opacity;a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
         return (a === 1 ? "rgb(" : "rgba(") + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", " + Math.max(0, Math.min(255, Math.round(this.b) || 0)) + (a === 1 ? ")" : ", " + a + ")");
       }
     }));
+
+    function _hex(value) {
+      value = Math.max(0, Math.min(255, Math.round(value) || 0));
+      return (value < 16 ? "0" : "") + value.toString(16);
+    }
 
     function hsla(h, s, l, a) {
       if (a <= 0) h = s = l = NaN;else if (l <= 0 || l >= 1) h = s = NaN;else if (s <= 0) h = NaN;
@@ -1692,11 +1704,11 @@
     var deg2rad = Math.PI / 180;
     var rad2deg = 180 / Math.PI;
 
-    var Kn = 18,
-        Xn = 0.950470,
-        // D65 standard referent
-    Yn = 1,
-        Zn = 1.088830,
+    // https://beta.observablehq.com/@mbostock/lab-and-rgb
+    var K = 18,
+        Xn = 0.96422,
+        Yn = 1,
+        Zn = 0.82521,
         t0 = 4 / 29,
         t1 = 6 / 29,
         t2 = 3 * t1 * t1,
@@ -1705,16 +1717,21 @@
     function labConvert(o) {
       if (o instanceof Lab) return new Lab(o.l, o.a, o.b, o.opacity);
       if (o instanceof Hcl) {
+        if (isNaN(o.h)) return new Lab(o.l, 0, 0, o.opacity);
         var h = o.h * deg2rad;
         return new Lab(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
       }
       if (!(o instanceof Rgb)) o = rgbConvert(o);
-      var b = rgb2xyz(o.r),
-          a = rgb2xyz(o.g),
-          l = rgb2xyz(o.b),
-          x = xyz2lab((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn),
-          y = xyz2lab((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn),
-          z = xyz2lab((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn);
+      var r = rgb2lrgb(o.r),
+          g = rgb2lrgb(o.g),
+          b = rgb2lrgb(o.b),
+          y = xyz2lab((0.2225045 * r + 0.7168786 * g + 0.0606169 * b) / Yn),
+          x,
+          z;
+      if (r === g && g === b) x = z = y;else {
+        x = xyz2lab((0.4360747 * r + 0.3850649 * g + 0.1430804 * b) / Xn);
+        z = xyz2lab((0.0139322 * r + 0.0971045 * g + 0.7141733 * b) / Zn);
+      }
       return new Lab(116 * y - 16, 500 * (x - y), 200 * (y - z), o.opacity);
     }
 
@@ -1731,20 +1748,19 @@
 
     define$1(Lab, lab, extend(Color, {
       brighter: function brighter(k) {
-        return new Lab(this.l + Kn * (k == null ? 1 : k), this.a, this.b, this.opacity);
+        return new Lab(this.l + K * (k == null ? 1 : k), this.a, this.b, this.opacity);
       },
       darker: function darker(k) {
-        return new Lab(this.l - Kn * (k == null ? 1 : k), this.a, this.b, this.opacity);
+        return new Lab(this.l - K * (k == null ? 1 : k), this.a, this.b, this.opacity);
       },
       rgb: function rgb$$1() {
         var y = (this.l + 16) / 116,
             x = isNaN(this.a) ? y : y + this.a / 500,
             z = isNaN(this.b) ? y : y - this.b / 200;
-        y = Yn * lab2xyz(y);
         x = Xn * lab2xyz(x);
+        y = Yn * lab2xyz(y);
         z = Zn * lab2xyz(z);
-        return new Rgb(xyz2rgb(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
-        xyz2rgb(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
+        return new Rgb(lrgb2rgb(3.1338561 * x - 1.6168667 * y - 0.4906146 * z), lrgb2rgb(-0.9787684 * x + 1.9161415 * y + 0.0334540 * z), lrgb2rgb(0.0719453 * x - 0.2289914 * y + 1.4052427 * z), this.opacity);
       }
     }));
 
@@ -1756,17 +1772,18 @@
       return t > t1 ? t * t * t : t2 * (t - t0);
     }
 
-    function xyz2rgb(x) {
+    function lrgb2rgb(x) {
       return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
     }
 
-    function rgb2xyz(x) {
+    function rgb2lrgb(x) {
       return (x /= 255) <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
     }
 
     function hclConvert(o) {
       if (o instanceof Hcl) return new Hcl(o.h, o.c, o.l, o.opacity);
       if (!(o instanceof Lab)) o = labConvert(o);
+      if (o.a === 0 && o.b === 0) return new Hcl(NaN, 0, o.l, o.opacity);
       var h = Math.atan2(o.b, o.a) * rad2deg;
       return new Hcl(h < 0 ? h + 360 : h, Math.sqrt(o.a * o.a + o.b * o.b), o.l, o.opacity);
     }
@@ -1784,10 +1801,10 @@
 
     define$1(Hcl, hcl, extend(Color, {
       brighter: function brighter(k) {
-        return new Hcl(this.h, this.c, this.l + Kn * (k == null ? 1 : k), this.opacity);
+        return new Hcl(this.h, this.c, this.l + K * (k == null ? 1 : k), this.opacity);
       },
       darker: function darker(k) {
-        return new Hcl(this.h, this.c, this.l - Kn * (k == null ? 1 : k), this.opacity);
+        return new Hcl(this.h, this.c, this.l - K * (k == null ? 1 : k), this.opacity);
       },
       rgb: function rgb$$1() {
         return labConvert(this).rgb();
@@ -1907,7 +1924,7 @@
           i;
 
       for (i = 0; i < na; ++i) {
-        x[i] = interpolateValue(a[i], b[i]);
+        x[i] = value(a[i], b[i]);
       }for (; i < nb; ++i) {
         c[i] = b[i];
       }return function (t) {
@@ -1924,7 +1941,7 @@
       };
     }
 
-    function reinterpolate (a, b) {
+    function interpolateNumber (a, b) {
       return a = +a, b -= a, function (t) {
         return a + b * t;
       };
@@ -1960,7 +1977,7 @@
 
       for (k in b) {
         if (k in a) {
-          i[k] = interpolateValue(a[k], b[k]);
+          i[k] = value(a[k], b[k]);
         } else {
           c[k] = b[k];
         }
@@ -2021,7 +2038,7 @@
         } else {
           // interpolate non-matching numbers
           s[++i] = null;
-          q.push({ i: i, x: reinterpolate(am, bm) });
+          q.push({ i: i, x: interpolateNumber(am, bm) });
         }
         bi = reB.lastIndex;
       }
@@ -2042,10 +2059,10 @@
       });
     }
 
-    function interpolateValue (a, b) {
+    function value (a, b) {
         var t = typeof b === "undefined" ? "undefined" : _typeof(b),
             c;
-        return b == null || t === "boolean" ? constant$2(b) : (t === "number" ? reinterpolate : t === "string" ? (c = color(b)) ? (b = c, interpolateRgb) : interpolateString : b instanceof color ? interpolateRgb : b instanceof Date ? date : Array.isArray(b) ? array : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object : reinterpolate)(a, b);
+        return b == null || t === "boolean" ? constant$2(b) : (t === "number" ? interpolateNumber : t === "string" ? (c = color(b)) ? (b = c, interpolateRgb) : interpolateString : b instanceof color ? interpolateRgb : b instanceof Date ? date : Array.isArray(b) ? array : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object : interpolateNumber)(a, b);
     }
 
     function interpolateRound (a, b) {
@@ -2111,7 +2128,7 @@
       function translate(xa, ya, xb, yb, s, q) {
         if (xa !== xb || ya !== yb) {
           var i = s.push("translate(", null, pxComma, null, pxParen);
-          q.push({ i: i - 4, x: reinterpolate(xa, xb) }, { i: i - 2, x: reinterpolate(ya, yb) });
+          q.push({ i: i - 4, x: interpolateNumber(xa, xb) }, { i: i - 2, x: interpolateNumber(ya, yb) });
         } else if (xb || yb) {
           s.push("translate(" + xb + pxComma + yb + pxParen);
         }
@@ -2120,7 +2137,7 @@
       function rotate(a, b, s, q) {
         if (a !== b) {
           if (a - b > 180) b += 360;else if (b - a > 180) a += 360; // shortest path
-          q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: reinterpolate(a, b) });
+          q.push({ i: s.push(pop(s) + "rotate(", null, degParen) - 2, x: interpolateNumber(a, b) });
         } else if (b) {
           s.push(pop(s) + "rotate(" + b + degParen);
         }
@@ -2128,7 +2145,7 @@
 
       function skewX(a, b, s, q) {
         if (a !== b) {
-          q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: reinterpolate(a, b) });
+          q.push({ i: s.push(pop(s) + "skewX(", null, degParen) - 2, x: interpolateNumber(a, b) });
         } else if (b) {
           s.push(pop(s) + "skewX(" + b + degParen);
         }
@@ -2137,7 +2154,7 @@
       function scale(xa, ya, xb, yb, s, q) {
         if (xa !== xb || ya !== yb) {
           var i = s.push(pop(s) + "scale(", null, ",", null, ")");
-          q.push({ i: i - 4, x: reinterpolate(xa, xb) }, { i: i - 2, x: reinterpolate(ya, yb) });
+          q.push({ i: i - 4, x: interpolateNumber(xa, xb) }, { i: i - 2, x: interpolateNumber(ya, yb) });
         } else if (xb !== 1 || yb !== 1) {
           s.push(pop(s) + "scale(" + xb + "," + yb + ")");
         }
@@ -2754,7 +2771,8 @@
     function color$1(format) {
       var m;
       format = (format + "").trim().toLowerCase();
-      return (m = reHex3$1.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$1(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1)) : (m = reHex6$1.exec(format)) ? rgbn$1(parseInt(m[1], 16)) // #ff0000
+      return (m = reHex3$1.exec(format)) ? (m = parseInt(m[1], 16), new Rgb$1(m >> 8 & 0xf | m >> 4 & 0x0f0, m >> 4 & 0xf | m & 0xf0, (m & 0xf) << 4 | m & 0xf, 1) // #f00
+      ) : (m = reHex6$1.exec(format)) ? rgbn$1(parseInt(m[1], 16)) // #ff0000
       : (m = reRgbInteger$1.exec(format)) ? new Rgb$1(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
       : (m = reRgbPercent$1.exec(format)) ? new Rgb$1(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
       : (m = reRgbaInteger$1.exec(format)) ? rgba$1(m[1], m[2], m[3], m[4]) // rgba(255, 0, 0, 1)
@@ -2882,7 +2900,7 @@
     var deg2rad$1 = Math.PI / 180;
     var rad2deg$1 = 180 / Math.PI;
 
-    var Kn$1 = 18,
+    var Kn = 18,
         Xn$1 = 0.950470,
         // D65 standard referent
     Yn$1 = 1,
@@ -2899,9 +2917,9 @@
         return new Lab$1(o.l, Math.cos(h) * o.c, Math.sin(h) * o.c, o.opacity);
       }
       if (!(o instanceof Rgb$1)) o = rgbConvert$1(o);
-      var b = rgb2xyz$1(o.r),
-          a = rgb2xyz$1(o.g),
-          l = rgb2xyz$1(o.b),
+      var b = rgb2xyz(o.r),
+          a = rgb2xyz(o.g),
+          l = rgb2xyz(o.b),
           x = xyz2lab$1((0.4124564 * b + 0.3575761 * a + 0.1804375 * l) / Xn$1),
           y = xyz2lab$1((0.2126729 * b + 0.7151522 * a + 0.0721750 * l) / Yn$1),
           z = xyz2lab$1((0.0193339 * b + 0.1191920 * a + 0.9503041 * l) / Zn$1);
@@ -2921,10 +2939,10 @@
 
     define$2(Lab$1, lab$2, extend$1(Color$1, {
       brighter: function brighter(k) {
-        return new Lab$1(this.l + Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+        return new Lab$1(this.l + Kn * (k == null ? 1 : k), this.a, this.b, this.opacity);
       },
       darker: function darker(k) {
-        return new Lab$1(this.l - Kn$1 * (k == null ? 1 : k), this.a, this.b, this.opacity);
+        return new Lab$1(this.l - Kn * (k == null ? 1 : k), this.a, this.b, this.opacity);
       },
       rgb: function rgb() {
         var y = (this.l + 16) / 116,
@@ -2933,8 +2951,8 @@
         y = Yn$1 * lab2xyz$1(y);
         x = Xn$1 * lab2xyz$1(x);
         z = Zn$1 * lab2xyz$1(z);
-        return new Rgb$1(xyz2rgb$1(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
-        xyz2rgb$1(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb$1(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
+        return new Rgb$1(xyz2rgb(3.2404542 * x - 1.5371385 * y - 0.4985314 * z), // D65 -> sRGB
+        xyz2rgb(-0.9692660 * x + 1.8760108 * y + 0.0415560 * z), xyz2rgb(0.0556434 * x - 0.2040259 * y + 1.0572252 * z), this.opacity);
       }
     }));
 
@@ -2946,11 +2964,11 @@
       return t > t1$1 ? t * t * t : t2$1 * (t - t0$1);
     }
 
-    function xyz2rgb$1(x) {
+    function xyz2rgb(x) {
       return 255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
     }
 
-    function rgb2xyz$1(x) {
+    function rgb2xyz(x) {
       return (x /= 255) <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
     }
 
@@ -2974,10 +2992,10 @@
 
     define$2(Hcl$1, hcl$3, extend$1(Color$1, {
       brighter: function brighter(k) {
-        return new Hcl$1(this.h, this.c, this.l + Kn$1 * (k == null ? 1 : k), this.opacity);
+        return new Hcl$1(this.h, this.c, this.l + Kn * (k == null ? 1 : k), this.opacity);
       },
       darker: function darker(k) {
-        return new Hcl$1(this.h, this.c, this.l - Kn$1 * (k == null ? 1 : k), this.opacity);
+        return new Hcl$1(this.h, this.c, this.l - Kn * (k == null ? 1 : k), this.opacity);
       },
       rgb: function rgb() {
         return labConvert$1(this).rgb();
@@ -3040,7 +3058,7 @@
 
     function interpolate (a, b) {
         var c;
-        return (typeof b === "number" ? reinterpolate : b instanceof color$1 ? interpolateRgb : (c = color$1(b)) ? (b = c, interpolateRgb) : interpolateString)(a, b);
+        return (typeof b === "number" ? interpolateNumber : b instanceof color$1 ? interpolateRgb : (c = color$1(b)) ? (b = c, interpolateRgb) : interpolateString)(a, b);
     }
 
     function attrRemove$1(name) {
@@ -3071,32 +3089,32 @@
       };
     }
 
-    function attrFunction$1(name, interpolate$$1, value) {
+    function attrFunction$1(name, interpolate$$1, value$$1) {
       var value00, value10, interpolate0;
       return function () {
         var value0,
-            value1 = value(this);
+            value1 = value$$1(this);
         if (value1 == null) return void this.removeAttribute(name);
         value0 = this.getAttribute(name);
         return value0 === value1 ? null : value0 === value00 && value1 === value10 ? interpolate0 : interpolate0 = interpolate$$1(value00 = value0, value10 = value1);
       };
     }
 
-    function attrFunctionNS$1(fullname, interpolate$$1, value) {
+    function attrFunctionNS$1(fullname, interpolate$$1, value$$1) {
       var value00, value10, interpolate0;
       return function () {
         var value0,
-            value1 = value(this);
+            value1 = value$$1(this);
         if (value1 == null) return void this.removeAttributeNS(fullname.space, fullname.local);
         value0 = this.getAttributeNS(fullname.space, fullname.local);
         return value0 === value1 ? null : value0 === value00 && value1 === value10 ? interpolate0 : interpolate0 = interpolate$$1(value00 = value0, value10 = value1);
       };
     }
 
-    function transition_attr (name, value) {
+    function transition_attr (name, value$$1) {
       var fullname = namespace(name),
           i = fullname === "transform" ? interpolateTransformSvg : interpolate;
-      return this.attrTween(name, typeof value === "function" ? (fullname.local ? attrFunctionNS$1 : attrFunction$1)(fullname, i, tweenValue(this, "attr." + name, value)) : value == null ? (fullname.local ? attrRemoveNS$1 : attrRemove$1)(fullname) : (fullname.local ? attrConstantNS$1 : attrConstant$1)(fullname, i, value + ""));
+      return this.attrTween(name, typeof value$$1 === "function" ? (fullname.local ? attrFunctionNS$1 : attrFunction$1)(fullname, i, tweenValue(this, "attr." + name, value$$1)) : value$$1 == null ? (fullname.local ? attrRemoveNS$1 : attrRemove$1)(fullname) : (fullname.local ? attrConstantNS$1 : attrConstant$1)(fullname, i, value$$1 + ""));
     }
 
     function attrTweenNS(fullname, value) {
@@ -3328,19 +3346,19 @@
         };
     }
 
-    function styleFunction$1(name, interpolate$$1, value) {
+    function styleFunction$1(name, interpolate$$1, value$$1) {
         var value00, value10, interpolate0;
         return function () {
             var value0 = styleValue(this, name),
-                value1 = value(this);
+                value1 = value$$1(this);
             if (value1 == null) value1 = (this.style.removeProperty(name), styleValue(this, name));
             return value0 === value1 ? null : value0 === value00 && value1 === value10 ? interpolate0 : interpolate0 = interpolate$$1(value00 = value0, value10 = value1);
         };
     }
 
-    function transition_style (name, value, priority) {
+    function transition_style (name, value$$1, priority) {
         var i = (name += "") === "transform" ? interpolateTransformCss : interpolate;
-        return value == null ? this.styleTween(name, styleRemove$1(name, i)).on("end.style." + name, styleRemoveEnd(name)) : this.styleTween(name, typeof value === "function" ? styleFunction$1(name, i, tweenValue(this, "style." + name, value)) : styleConstant$1(name, i, value + ""), priority);
+        return value$$1 == null ? this.styleTween(name, styleRemove$1(name, i)).on("end.style." + name, styleRemoveEnd(name)) : this.styleTween(name, typeof value$$1 === "function" ? styleFunction$1(name, i, tweenValue(this, "style." + name, value$$1)) : styleConstant$1(name, i, value$$1 + ""), priority);
     }
 
     function styleTween(name, value, priority) {
@@ -3679,7 +3697,7 @@
                 emit = emitter(that, arguments),
                 selection0 = state.selection,
                 selection1 = dim.input(typeof selection$$1 === "function" ? selection$$1.apply(this, arguments) : selection$$1, state.extent),
-                i = interpolateValue(selection0, selection1);
+                i = value(selection0, selection1);
 
             function tween(t) {
               state.selection = t === 1 && empty$1(selection1) ? null : i(t);
@@ -4014,8 +4032,8 @@
       };
 
       brush.on = function () {
-        var value = listeners.on.apply(listeners, arguments);
-        return value === listeners ? brush : value;
+        var value$$1 = listeners.on.apply(listeners, arguments);
+        return value$$1 === listeners ? brush : value$$1;
       };
 
       return brush;
@@ -4095,7 +4113,7 @@
         } else {
           if (pc.g() !== undefined && pc.g() !== null) {
             pc.g().selectAll('.brush').each(function (d) {
-              if (d != dimension) return;
+              if (d !== dimension) return;
               select(this).call(brushes[d].move, null);
               brushes[d].event(select(this));
             });
@@ -4564,7 +4582,9 @@
         brush$$1.on('start', function () {
           if (event.sourceEvent !== null) {
             events.call('brushstart', pc, config.brushed);
-            event.sourceEvent.stopPropagation();
+            if (typeof event.sourceEvent.stopPropagation === 'function') {
+              event.sourceEvent.stopPropagation();
+            }
           }
         }).on('brush', function () {
           // record selections
@@ -4575,16 +4595,19 @@
           var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
           var selection$$1 = brushSelection(lastBrush);
 
-          // If it does, that means we need another one
-          if (selection$$1 && selection$$1[0] !== selection$$1[1]) {
-            newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+          console.log(selection$$1);
+          if (selection$$1 === undefined || selection$$1 === null) {
+            pc.brushReset(axis);
+          } else {
+            if (selection$$1[0] !== selection$$1[1]) {
+              newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+
+              drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+              brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+              events.call('brushend', pc, config.brushed);
+            }
           }
-
-          // Always draw brushes
-          drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-          events.call('brushend', pc, config.brushed);
         });
 
         return brush$$1;
@@ -4703,7 +4726,10 @@
               var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
               if (brushSelection(brush$$1) !== null) {
                 pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
-                e.event(select('#brush-' + pos + '-' + i));
+
+                if (typeof e.event === 'function') {
+                  e.event(select('#brush-' + pos + '-' + i));
+                }
               }
             });
 
@@ -5334,7 +5360,7 @@
         }
 
         // Or, is (x1,y1) coincident with (x0,y0)? Do nothing.
-        else if (!(l01_2 > epsilon)) {}
+        else if (!(l01_2 > epsilon)) ;
 
           // Or, are (x0,y0), (x1,y1) and (x2,y2) collinear?
           // Equivalently, is (x1,y1) coincident with (x2,y2)?
@@ -6204,7 +6230,6 @@
         }
 
         brushGroup.predicate = predicate;
-        console.log(brushGroup.currentMode());
         config.brushed = brushGroup.currentMode().selected();
         pc.renderBrushed();
         return pc;
@@ -6837,27 +6862,27 @@
       };
     }
 
-    function reinterpolateClamp(reinterpolate$$1) {
+    function reinterpolateClamp(reinterpolate) {
       return function (a, b) {
-        var r = reinterpolate$$1(a = +a, b = +b);
+        var r = reinterpolate(a = +a, b = +b);
         return function (t) {
           return t <= 0 ? a : t >= 1 ? b : r(t);
         };
       };
     }
 
-    function bimap(domain, range$$1, deinterpolate, reinterpolate$$1) {
+    function bimap(domain, range$$1, deinterpolate, reinterpolate) {
       var d0 = domain[0],
           d1 = domain[1],
           r0 = range$$1[0],
           r1 = range$$1[1];
-      if (d1 < d0) d0 = deinterpolate(d1, d0), r0 = reinterpolate$$1(r1, r0);else d0 = deinterpolate(d0, d1), r0 = reinterpolate$$1(r0, r1);
+      if (d1 < d0) d0 = deinterpolate(d1, d0), r0 = reinterpolate(r1, r0);else d0 = deinterpolate(d0, d1), r0 = reinterpolate(r0, r1);
       return function (x) {
         return r0(d0(x));
       };
     }
 
-    function polymap(domain, range$$1, deinterpolate, reinterpolate$$1) {
+    function polymap(domain, range$$1, deinterpolate, reinterpolate) {
       var j = Math.min(domain.length, range$$1.length) - 1,
           d = new Array(j),
           r = new Array(j),
@@ -6871,7 +6896,7 @@
 
       while (++i < j) {
         d[i] = deinterpolate(domain[i], domain[i + 1]);
-        r[i] = reinterpolate$$1(range$$1[i], range$$1[i + 1]);
+        r[i] = reinterpolate(range$$1[i], range$$1[i + 1]);
       }
 
       return function (x) {
@@ -6886,27 +6911,27 @@
 
     // deinterpolate(a, b)(x) takes a domain value x in [a,b] and returns the corresponding parameter t in [0,1].
     // reinterpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding domain value x in [a,b].
-    function continuous(deinterpolate, reinterpolate$$1) {
+    function continuous(deinterpolate, reinterpolate) {
       var domain = unit,
           range$$1 = unit,
-          interpolate$$1 = interpolateValue,
+          interpolate$$1 = value,
           clamp = false,
-          piecewise,
+          piecewise$$1,
           output,
           input;
 
       function rescale() {
-        piecewise = Math.min(domain.length, range$$1.length) > 2 ? polymap : bimap;
+        piecewise$$1 = Math.min(domain.length, range$$1.length) > 2 ? polymap : bimap;
         output = input = null;
         return scale;
       }
 
       function scale(x) {
-        return (output || (output = piecewise(domain, range$$1, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate$$1)))(+x);
+        return (output || (output = piecewise$$1(domain, range$$1, clamp ? deinterpolateClamp(deinterpolate) : deinterpolate, interpolate$$1)))(+x);
       }
 
       scale.invert = function (y) {
-        return (input || (input = piecewise(range$$1, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate$$1) : reinterpolate$$1)))(+y);
+        return (input || (input = piecewise$$1(range$$1, domain, deinterpolateLinear, clamp ? reinterpolateClamp(reinterpolate) : reinterpolate)))(+y);
       };
 
       scale.domain = function (_) {
@@ -7349,7 +7374,7 @@
     }
 
     function linear$2() {
-      var scale = continuous(deinterpolateLinear, reinterpolate);
+      var scale = continuous(deinterpolateLinear, interpolateNumber);
 
       scale.copy = function () {
         return copy(scale, linear$2());
@@ -8350,7 +8375,7 @@
     }
 
     function calendar(year$$1, month$$1, week, day$$1, hour$$1, minute$$1, second$$1, millisecond$$1, format) {
-      var scale = continuous(deinterpolateLinear, reinterpolate),
+      var scale = continuous(deinterpolateLinear, interpolateNumber),
           invert = scale.invert,
           domain = scale.domain;
 
@@ -8673,12 +8698,12 @@
 
           acc[cur] = _extends({}, k, {
             orient: k.orient ? k.orient : 'left',
-            ticks: k.ticks != null ? k.ticks : 5,
-            innerTickSize: k.innerTickSize != null ? k.innerTickSize : 6,
-            outerTickSize: k.outerTickSize != null ? k.outerTickSize : 0,
-            tickPadding: k.tickPadding != null ? k.tickPadding : 3,
+            ticks: k.ticks !== null ? k.ticks : 5,
+            innerTickSize: k.innerTickSize !== null ? k.innerTickSize : 6,
+            outerTickSize: k.outerTickSize !== null ? k.outerTickSize : 0,
+            tickPadding: k.tickPadding !== null ? k.tickPadding : 3,
             type: k.type ? k.type : types[cur],
-            index: k.index != null ? k.index : i
+            index: k.index !== null ? k.index : i
           });
 
           return acc;
@@ -9213,7 +9238,7 @@
       return function () {
         pc.clear('brushed');
 
-        if (isBrushed(config, brushGroup)) {
+        if (isBrushed(config, brushGroup) && config.brushed !== false) {
           config.brushed.forEach(pathBrushed(config, ctx, position));
         }
       };
@@ -9384,7 +9409,7 @@
 
     // try to coerce to number before returning type
     var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
-      return parseFloat(v) == v && v != null ? 'number' : toType(v);
+      return parseFloat(v) === v && v !== null ? 'number' : toType(v);
     };
 
     // attempt to determine types of each dimension based on first row of data
