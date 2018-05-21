@@ -4595,7 +4595,6 @@
           var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
           var selection$$1 = brushSelection(lastBrush);
 
-          console.log(selection$$1);
           if (selection$$1 === undefined || selection$$1 === null) {
             pc.brushReset(axis);
           } else {

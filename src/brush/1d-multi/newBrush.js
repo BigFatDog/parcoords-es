@@ -68,7 +68,6 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       );
       const selection = brushSelection(lastBrush);
 
-      console.log(selection);
       if (selection === undefined || selection === null) {
           pc.brushReset(axis);
       } else {
