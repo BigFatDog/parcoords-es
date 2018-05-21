@@ -5,7 +5,6 @@ const brushReset = (state, config, pc) => dimension => {
   const { brushes } = state;
 
   if (dimension === undefined) {
-    config.brushed = false;
     if (pc.g() !== undefined && pc.g() !== null) {
       Object.keys(config.dimensions).forEach((d, pos) => {
         const axisBrush = brushes[d];
