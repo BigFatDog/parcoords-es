@@ -35,8 +35,8 @@ const brushReset = (state, config, pc) => dimension => {
             .select('#brush-' + pos + '-' + i)
             .call(e.brush.move, null);
 
-          if (typeof e.event === 'function'){
-              e.event(select('#brush-' + pos + '-' + i));
+          if (typeof e.event === 'function') {
+            e.event(select('#brush-' + pos + '-' + i));
           }
         }
       });

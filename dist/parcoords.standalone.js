@@ -4562,21 +4562,23 @@
         var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
 
         var brush$$1 = brushY().extent([[-15, 0], [15, brushRangeMax]]);
+        var id = brushes[axis] ? brushes[axis].length : 0;
+        var node = 'brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + id;
 
         if (brushes[axis]) {
           brushes[axis].push({
-            id: brushes[axis].length,
+            id: id,
             brush: brush$$1,
-            node: _selector.node()
+            node: node
           });
         } else {
-          brushes[axis] = [{ id: 0, brush: brush$$1, node: _selector.node() }];
+          brushes[axis] = [{ id: id, brush: brush$$1, node: node }];
         }
 
         if (brushNodes[axis]) {
-          brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
+          brushNodes[axis].push({ id: id, node: node });
         } else {
-          brushNodes[axis] = [{ id: 0, node: _selector.node() }];
+          brushNodes[axis] = [{ id: id, node: node }];
         }
 
         brush$$1.on('start', function () {
@@ -4586,7 +4588,7 @@
               event.sourceEvent.stopPropagation();
             }
           }
-        }).on('brush', function () {
+        }).on('brush', function (e) {
           // record selections
           brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
         }).on('end', function () {
@@ -4595,18 +4597,20 @@
           var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
           var selection$$1 = brushSelection(lastBrush);
 
-          if (selection$$1 === undefined || selection$$1 === null) {
-            pc.brushReset(axis);
+          if (selection$$1 !== undefined && selection$$1 !== null && selection$$1[0] !== selection$$1[1]) {
+            newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+
+            drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+            brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
           } else {
-            if (selection$$1[0] !== selection$$1[1]) {
-              newBrush(state, config, pc, events, brushGroup)(axis, _selector);
-
-              drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-              brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-              events.call('brushend', pc, config.brushed);
+            if (event.sourceEvent && event.sourceEvent.toString() === '[object MouseEvent]' && event.selection === null) {
+              console.log('triggerd');
+              pc.brushReset(axis);
             }
           }
+
+          events.call('brushend', pc, config.brushed);
         });
 
         return brush$$1;
@@ -4701,7 +4705,6 @@
 
 
         if (dimension === undefined) {
-          config.brushed = false;
           if (pc.g() !== undefined && pc.g() !== null) {
             Object.keys(config.dimensions).forEach(function (d, pos) {
               var axisBrush = brushes[d];

@@ -23,21 +23,24 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       : config.dimensions[axis].yscale.range()[0];
 
   const brush = brushY().extent([[-15, 0], [15, brushRangeMax]]);
+  const id = brushes[axis] ? brushes[axis].length : 0;
+  const node =
+    'brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + id;
 
   if (brushes[axis]) {
     brushes[axis].push({
-      id: brushes[axis].length,
+      id,
       brush,
-      node: _selector.node(),
+      node,
     });
   } else {
-    brushes[axis] = [{ id: 0, brush, node: _selector.node() }];
+    brushes[axis] = [{ id, brush, node }];
   }
 
   if (brushNodes[axis]) {
-    brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
+    brushNodes[axis].push({ id, node });
   } else {
-    brushNodes[axis] = [{ id: 0, node: _selector.node() }];
+    brushNodes[axis] = [{ id, node }];
   }
 
   brush
@@ -45,11 +48,11 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       if (event.sourceEvent !== null) {
         events.call('brushstart', pc, config.brushed);
         if (typeof event.sourceEvent.stopPropagation === 'function') {
-            event.sourceEvent.stopPropagation();
+          event.sourceEvent.stopPropagation();
         }
       }
     })
-    .on('brush', function() {
+    .on('brush', function(e) {
       // record selections
       brushUpdated(
         config,
@@ -68,23 +71,30 @@ const newBrush = (state, config, pc, events, brushGroup) => (
       );
       const selection = brushSelection(lastBrush);
 
-      if (selection === undefined || selection === null) {
-          pc.brushReset(axis);
+      if (
+        selection !== undefined &&
+        selection !== null &&
+        selection[0] !== selection[1]
+      ) {
+        newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+
+        drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+        brushUpdated(config, pc, events)(
+          selected(state, config, pc, events, brushGroup)
+        );
       } else {
-        if (selection[0] !== selection[1]) {
-            newBrush(state, config, pc, events, brushGroup)(axis, _selector);
-
-            drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-            brushUpdated(
-                config,
-                pc,
-                events
-            )(selected(state, config, pc, events, brushGroup));
-            events.call('brushend', pc, config.brushed);
+        if (
+          event.sourceEvent &&
+          event.sourceEvent.toString() === '[object MouseEvent]' &&
+          event.selection === null
+        ) {
+          console.log('triggerd');
+          pc.brushReset(axis);
         }
       }
 
+      events.call('brushend', pc, config.brushed);
     });
 
   return brush;
