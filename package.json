@@ -1,6 +1,6 @@
 {
   "name": "parcoord-es",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "ES6 module of Parallel Coordinates, based on d3 v5 modules",
   "main": "dist/parcoords.js",
   "module": "dist/parcoords.mjs",
@@ -49,7 +49,7 @@
     "istanbul": "^1.1.0-alpha.1",
     "mocha": "^5.2.0",
     "prettier": "1.12.1",
-    "rollup": "^0.59.1",
+    "rollup": "^0.59.2",
     "rollup-plugin-babel": "^3.0.4",
     "rollup-plugin-commonjs": "^9.1.3",
     "rollup-plugin-json": "^3.0.0",
