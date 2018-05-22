@@ -89,7 +89,6 @@ const newBrush = (state, config, pc, events, brushGroup) => (
           event.sourceEvent.toString() === '[object MouseEvent]' &&
           event.selection === null
         ) {
-          console.log('triggerd');
           pc.brushReset(axis);
         }
       }

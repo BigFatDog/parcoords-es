@@ -641,7 +641,6 @@
           brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
         } else {
           if (d3Selection.event.sourceEvent && d3Selection.event.sourceEvent.toString() === '[object MouseEvent]' && d3Selection.event.selection === null) {
-            console.log('triggerd');
             pc.brushReset(axis);
           }
         }

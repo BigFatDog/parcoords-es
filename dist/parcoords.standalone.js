@@ -4605,7 +4605,6 @@
             brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
           } else {
             if (event.sourceEvent && event.sourceEvent.toString() === '[object MouseEvent]' && event.selection === null) {
-              console.log('triggerd');
               pc.brushReset(axis);
             }
           }
