@@ -2778,7 +2778,7 @@
     };
   };
 
-  var version = "2.0.6";
+  var version = "2.0.7";
 
   var DefaultConfig = {
     data: [],
