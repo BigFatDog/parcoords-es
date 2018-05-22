@@ -14,7 +14,7 @@ const pathBrushed = (config, ctx, position) => (d, i) => {
 const renderBrushedDefault = (config, ctx, position, pc, brushGroup) => () => {
   pc.clear('brushed');
 
-  if (isBrushed(config, brushGroup)) {
+  if (isBrushed(config, brushGroup) && config.brushed !== false) {
     config.brushed.forEach(pathBrushed(config, ctx, position));
   }
 };

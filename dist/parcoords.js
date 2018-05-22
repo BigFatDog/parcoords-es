@@ -618,7 +618,9 @@
       brush.on('start', function () {
         if (d3Selection.event.sourceEvent !== null) {
           events.call('brushstart', pc, config.brushed);
-          d3Selection.event.sourceEvent.stopPropagation();
+          if (typeof d3Selection.event.sourceEvent.stopPropagation === 'function') {
+            d3Selection.event.sourceEvent.stopPropagation();
+          }
         }
       }).on('brush', function () {
         // record selections
@@ -632,13 +634,15 @@
         // If it does, that means we need another one
         if (selection && selection[0] !== selection[1]) {
           newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+
+          // Always draw brushes
+          drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+          events.call('brushend', pc, config.brushed);
+        } else {
+          pc.brushReset(axis);
         }
-
-        // Always draw brushes
-        drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-        brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
-        events.call('brushend', pc, config.brushed);
       });
 
       return brush;
@@ -757,7 +761,10 @@
             var brush = document.getElementById('brush-' + pos + '-' + i);
             if (d3Brush.brushSelection(brush) !== null) {
               pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
-              e.event(d3Selection.select('#brush-' + pos + '-' + i));
+
+              if (typeof e.event === 'function') {
+                e.event(d3Selection.select('#brush-' + pos + '-' + i));
+              }
             }
           });
 
@@ -1737,7 +1744,6 @@
       }
 
       brushGroup.predicate = predicate;
-      console.log(brushGroup.currentMode());
       config.brushed = brushGroup.currentMode().selected();
       pc.renderBrushed();
       return pc;
@@ -2124,12 +2130,12 @@
 
         acc[cur] = _extends({}, k, {
           orient: k.orient ? k.orient : 'left',
-          ticks: k.ticks != null ? k.ticks : 5,
-          innerTickSize: k.innerTickSize != null ? k.innerTickSize : 6,
-          outerTickSize: k.outerTickSize != null ? k.outerTickSize : 0,
-          tickPadding: k.tickPadding != null ? k.tickPadding : 3,
+          ticks: k.ticks !== null ? k.ticks : 5,
+          innerTickSize: k.innerTickSize !== null ? k.innerTickSize : 6,
+          outerTickSize: k.outerTickSize !== null ? k.outerTickSize : 0,
+          tickPadding: k.tickPadding !== null ? k.tickPadding : 3,
           type: k.type ? k.type : types[cur],
-          index: k.index != null ? k.index : i
+          index: k.index !== null ? k.index : i
         });
 
         return acc;
@@ -2673,7 +2679,7 @@
 
   // try to coerce to number before returning type
   var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
-    return parseFloat(v) == v && v != null ? 'number' : toType(v);
+    return parseFloat(v) === v && v !== null ? 'number' : toType(v);
   };
 
   // attempt to determine types of each dimension based on first row of data
