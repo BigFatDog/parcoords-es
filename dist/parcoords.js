@@ -149,7 +149,7 @@
       } else {
         if (pc.g() !== undefined && pc.g() !== null) {
           pc.g().selectAll('.brush').each(function (d) {
-            if (d != dimension) return;
+            if (d !== dimension) return;
             d3Selection.select(this).call(brushes[d].move, null);
             brushes[d].event(d3Selection.select(this));
           });
@@ -598,29 +598,33 @@
       var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
 
       var brush = d3Brush.brushY().extent([[-15, 0], [15, brushRangeMax]]);
+      var id = brushes[axis] ? brushes[axis].length : 0;
+      var node = 'brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + id;
 
       if (brushes[axis]) {
         brushes[axis].push({
-          id: brushes[axis].length,
+          id: id,
           brush: brush,
-          node: _selector.node()
+          node: node
         });
       } else {
-        brushes[axis] = [{ id: 0, brush: brush, node: _selector.node() }];
+        brushes[axis] = [{ id: id, brush: brush, node: node }];
       }
 
       if (brushNodes[axis]) {
-        brushNodes[axis].push({ id: brushes.length, node: _selector.node() });
+        brushNodes[axis].push({ id: id, node: node });
       } else {
-        brushNodes[axis] = [{ id: 0, node: _selector.node() }];
+        brushNodes[axis] = [{ id: id, node: node }];
       }
 
       brush.on('start', function () {
         if (d3Selection.event.sourceEvent !== null) {
           events.call('brushstart', pc, config.brushed);
-          d3Selection.event.sourceEvent.stopPropagation();
+          if (typeof d3Selection.event.sourceEvent.stopPropagation === 'function') {
+            d3Selection.event.sourceEvent.stopPropagation();
+          }
         }
-      }).on('brush', function () {
+      }).on('brush', function (e) {
         // record selections
         brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
       }).on('end', function () {
@@ -629,15 +633,18 @@
         var lastBrush = document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(axis) + '-' + lastBrushID);
         var selection = d3Brush.brushSelection(lastBrush);
 
-        // If it does, that means we need another one
-        if (selection && selection[0] !== selection[1]) {
+        if (selection !== undefined && selection !== null && selection[0] !== selection[1]) {
           newBrush(state, config, pc, events, brushGroup)(axis, _selector);
+
+          drawBrushes(brushes[axis], config, pc, axis, _selector);
+
+          brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
+        } else {
+          if (d3Selection.event.sourceEvent && d3Selection.event.sourceEvent.toString() === '[object MouseEvent]' && d3Selection.event.selection === null) {
+            pc.brushReset(axis);
+          }
         }
 
-        // Always draw brushes
-        drawBrushes(brushes[axis], config, pc, axis, _selector);
-
-        brushUpdated$1(config, pc, events)(selected$1(state, config, pc, events, brushGroup));
         events.call('brushend', pc, config.brushed);
       });
 
@@ -733,7 +740,6 @@
 
 
       if (dimension === undefined) {
-        config.brushed = false;
         if (pc.g() !== undefined && pc.g() !== null) {
           Object.keys(config.dimensions).forEach(function (d, pos) {
             var axisBrush = brushes[d];
@@ -757,7 +763,10 @@
             var brush = document.getElementById('brush-' + pos + '-' + i);
             if (d3Brush.brushSelection(brush) !== null) {
               pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
-              e.event(d3Selection.select('#brush-' + pos + '-' + i));
+
+              if (typeof e.event === 'function') {
+                e.event(d3Selection.select('#brush-' + pos + '-' + i));
+              }
             }
           });
 
@@ -1737,7 +1746,6 @@
       }
 
       brushGroup.predicate = predicate;
-      console.log(brushGroup.currentMode());
       config.brushed = brushGroup.currentMode().selected();
       pc.renderBrushed();
       return pc;
@@ -2124,12 +2132,12 @@
 
         acc[cur] = _extends({}, k, {
           orient: k.orient ? k.orient : 'left',
-          ticks: k.ticks != null ? k.ticks : 5,
-          innerTickSize: k.innerTickSize != null ? k.innerTickSize : 6,
-          outerTickSize: k.outerTickSize != null ? k.outerTickSize : 0,
-          tickPadding: k.tickPadding != null ? k.tickPadding : 3,
+          ticks: k.ticks !== null ? k.ticks : 5,
+          innerTickSize: k.innerTickSize !== null ? k.innerTickSize : 6,
+          outerTickSize: k.outerTickSize !== null ? k.outerTickSize : 0,
+          tickPadding: k.tickPadding !== null ? k.tickPadding : 3,
           type: k.type ? k.type : types[cur],
-          index: k.index != null ? k.index : i
+          index: k.index !== null ? k.index : i
         });
 
         return acc;
@@ -2502,7 +2510,7 @@
     return function () {
       pc.clear('brushed');
 
-      if (isBrushed(config, brushGroup)) {
+      if (isBrushed(config, brushGroup) && config.brushed !== false) {
         config.brushed.forEach(pathBrushed(config, ctx, position));
       }
     };
@@ -2673,7 +2681,7 @@
 
   // try to coerce to number before returning type
   var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
-    return parseFloat(v) == v && v != null ? 'number' : toType(v);
+    return parseFloat(v) === v && v !== null ? 'number' : toType(v);
   };
 
   // attempt to determine types of each dimension based on first row of data
@@ -2770,7 +2778,7 @@
     };
   };
 
-  var version = "2.0.5";
+  var version = "2.0.6";
 
   var DefaultConfig = {
     data: [],

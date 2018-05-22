@@ -9,7 +9,6 @@ const brushPredicate = (brushGroup, config, pc) => (predicate = null) => {
   }
 
   brushGroup.predicate = predicate;
-  console.log(brushGroup.currentMode());
   config.brushed = brushGroup.currentMode().selected();
   pc.renderBrushed();
   return pc;
