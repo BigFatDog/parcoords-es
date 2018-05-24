@@ -44,7 +44,7 @@ text {
   font: 10px sans-serif;
 }
 </style>
-<script src="lib/d3.v4.min.js"></script>
+<script src="lib/d3.v5.min.js"></script>
 <script src="./parcoords.standalone.js"></script>
 <script src="lib/underscore.js"></script>
 <script src="lib/divgrid.js"></script>
@@ -64,7 +64,7 @@ var parcoords = ParCoords()("#example")
   });
 
 // load csv file and create the chart
-d3.csv('data/ngl_wyoming.csv', function(data) {
+d3.csv('data/ngl_wyoming.csv').then(function(data) {
   // process veterans dataset
   var dateParse = d3.timeFormat("%m/%d/%Y");
 

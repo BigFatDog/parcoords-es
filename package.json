@@ -1,6 +1,6 @@
 {
   "name": "parcoord-es",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "ES6 module of Parallel Coordinates, based on d3 v5 modules",
   "main": "dist/parcoords.js",
   "module": "dist/parcoords.mjs",
@@ -15,7 +15,7 @@
     "test:watch": "mocha --reporter min --watch",
     "test": "mocha",
     "test:cover": "babel-node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha",
-    "prepublish": "npm test",
+    "prepare": "npm test",
     "pretty": "prettier --single-quote --trailing-comma es5 --write \"{src,__{tests,demo,dist}__}/**/*.js\""
   },
   "files": [

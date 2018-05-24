@@ -6,7 +6,7 @@
 <title>Bundling Example</title>
 <link rel="stylesheet" type="text/css" href="./parcoords.css">
 <link rel="stylesheet" type="text/css" href="style.css">
-<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="lib/d3.v5.min.js"></script>
 <script src="./parcoords.standalone.js"></script>
 
 
@@ -33,7 +33,7 @@
     //interact with this variable from a javascript console
     var pc0;
 
-    d3.csv('data/cars.csv', function(data) {
+    d3.csv('data/cars.csv').then(function(data) {
     pc0 = ParCoords()("#example")
     .data(data)
     .bundlingStrength(.5) // set bundling strength

@@ -152,6 +152,7 @@ var brushReset = function brushReset(state, config, pc) {
         pc.renderBrushed();
       }
     } else {
+      config.brushed = false;
       if (pc.g() !== undefined && pc.g() !== null) {
         pc.g().selectAll('.brush').each(function (d) {
           if (d !== dimension) return;
@@ -2686,7 +2687,7 @@ var renderDefaultQueue = function renderDefaultQueue(config, pc, foregroundQueue
 
 // try to coerce to number before returning type
 var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
-  return parseFloat(v) === v && v !== null ? 'number' : toType(v);
+  return parseFloat(v) == v && v !== null ? 'number' : toType(v);
 };
 
 // attempt to determine types of each dimension based on first row of data
@@ -2783,7 +2784,7 @@ var scale = function scale(config) {
   };
 };
 
-var version = "2.0.7";
+var version = "2.0.8";
 
 var DefaultConfig = {
   data: [],

@@ -217,9 +217,7 @@
         .attr("class", function(d) { return "axis " + d.key.replace(/ /g, "_"); })
         .attr("transform", function(d,i) { return "translate(" + xscale(i) + ")"; });
 
-    d3.csv("data/planets.csv", function(error, data) {
-        if (error) throw error;
-
+    d3.csv("data/planets.csv").then(function(data) {
         data.forEach(function(d) {
             dimensions.forEach(function(p) {
                 d[p.key] = !d[p.key] ? null : p.type.coerce(d[p.key]);

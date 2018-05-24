@@ -2,7 +2,7 @@
 <title>Axis-Config Example</title>
 <link rel="stylesheet" type="text/css" href="./parcoords.css">
 <link rel="stylesheet" type="text/css" href="./style.css">
-<script src="./lib/d3.v4.min.js"></script>
+<script src="./lib/d3.v5.min.js"></script>
 <script src="./parcoords.standalone.js"></script>
 <div id="example" class="parcoords" style="width:960px;height:600px;"></div>
 <p>This example demonstrates dimension configuration. The displacement axis is scaled logarithmically with a custom tickformat, the Power axis has a custom title, and the tick labels for year are on the right
@@ -35,7 +35,7 @@
                 .alpha(0.4);
 
         // load csv file and create the chart
-        d3.csv('data/sales_flow_cn.csv', function(data) {
+        d3.csv('data/sales_flow_cn.csv').then(function(data) {
             var range = parcoords.height() - parcoords.margin().top - parcoords.margin().bottom;
             var min = d3.min(data, function(d) {
                 return parseInt(d['displacement (cc)']);

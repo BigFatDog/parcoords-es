@@ -15,6 +15,7 @@ const brushReset = (state, config, pc) => dimension => {
       pc.renderBrushed();
     }
   } else {
+      config.brushed = false;
     if (pc.g() !== undefined && pc.g() !== null) {
       pc
         .g()
