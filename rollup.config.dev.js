@@ -32,7 +32,7 @@ export default {
             contentBase: ['demo', 'dist'],
             historyApiFallback: false,
             host: 'localhost',
-            port: 3007
+            port: 3004
         }),
         livereload({
             watch: ['demo', 'dist'],
