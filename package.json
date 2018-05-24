@@ -15,7 +15,7 @@
     "test:watch": "mocha --reporter min --watch",
     "test": "mocha",
     "test:cover": "babel-node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha",
-    "prepublish": "npm test",
+    "prepare": "npm test",
     "pretty": "prettier --single-quote --trailing-comma es5 --write \"{src,__{tests,demo,dist}__}/**/*.js\""
   },
   "files": [
