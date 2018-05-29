@@ -1,3 +1,5 @@
+const isValid = d => d !== null && d !== undefined;
+
 const applyDimensionDefaults = (config, pc) =>
   function(dims) {
     const types = pc.detectDimensionTypes(config.data);
@@ -5,16 +7,15 @@ const applyDimensionDefaults = (config, pc) =>
 
     return dims.reduce((acc, cur, i) => {
       const k = config.dimensions[cur] ? config.dimensions[cur] : {};
-
       acc[cur] = {
         ...k,
-        orient: k.orient ? k.orient : 'left',
-        ticks: k.ticks !== null ? k.ticks : 5,
-        innerTickSize: k.innerTickSize !== null ? k.innerTickSize : 6,
-        outerTickSize: k.outerTickSize !== null ? k.outerTickSize : 0,
-        tickPadding: k.tickPadding !== null ? k.tickPadding : 3,
-        type: k.type ? k.type : types[cur],
-        index: k.index !== null ? k.index : i,
+        orient: isValid(k.orient) ? k.orient : 'left',
+        ticks:  isValid(k.ticks) ? k.ticks : 5,
+        innerTickSize: isValid(k.innerTickSize) ? k.innerTickSize : 6,
+        outerTickSize: isValid(k.outerTickSize) ? k.outerTickSize : 0,
+        tickPadding: isValid(k.tickPadding) ? k.tickPadding : 3,
+        type: isValid(k.type) ? k.type : types[cur],
+        index: isValid(k.index) ? k.index : i,
       };
 
       return acc;
