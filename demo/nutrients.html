@@ -15,19 +15,17 @@
 <script id="brushing">
     var parcoords = ParCoords()("#nutrients");
     d3.csv('data/nutrients.csv').then(function(data) {
-        var colorMap = {};
         var colorList = ['#3b73b9', '#aa71aa', '#ee3224', '#00aeef', '#f8981d',
             '#80bb42', '#aacdef', '#cacec2', '#aaa6ce', '#df9e9d', '#6ab2e7',
             '#ffdd00', '#9ac2b9', '#a7a9ac', '#bbbb42', '#e6a6ce'];
 
-        _(data).chain()
+        var groups = _(data).chain()
             .pluck('group')
-            .uniq()
-            .each(function(d,i) {
-                colorMap[d] = colorList.length > i ? colorList[i] : "black";
-            });
+            .uniq();
 
-        var color = function(d) { return colorMap[d.group]; };
+        var colorScale = d3.scaleOrdinal().domain(groups).range(colorList);
+
+        var color = function(d) { return colorScale(d.group); };
 
         parcoords
             .data(data)
