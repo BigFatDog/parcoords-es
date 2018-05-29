@@ -16,7 +16,9 @@
     var parcoords = ParCoords()("#nutrients");
     d3.csv('data/nutrients.csv').then(function(data) {
         var colorMap = {};
-        var colorList = ["#a50026","#d73027","#f46d43","#fdae61","#fee090","#ffffbf","#e0f3f8","#abd9e9","#74add1","#4575b4","#313695", "#67001f","#b2182b","#d6604d","#f4a582","#fddbc7","#ffffff","#e0e0e0","#bababa","#878787","#4d4d4d","#1a1a1a", "#40004b","#762a83","#9970ab","#c2a5cf","#e7d4e8","#f7f7f7","#d9f0d3","#a6dba0","#5aae61","#1b7837","#00441b"];
+        var colorList = ['#3b73b9', '#aa71aa', '#ee3224', '#00aeef', '#f8981d',
+            '#80bb42', '#aacdef', '#cacec2', '#aaa6ce', '#df9e9d', '#6ab2e7',
+            '#ffdd00', '#9ac2b9', '#a7a9ac', '#bbbb42', '#e6a6ce'];
 
         _(data).chain()
             .pluck('group')
@@ -33,6 +35,7 @@
             .hideAxis(['name'])
             .margin({ top: 24, left: 60, bottom: 12, right: 0 })
             .mode("queue")
+            .alpha(0.7)
             .render()
             .brushMode("1D-axes");  // enable brushing
 
