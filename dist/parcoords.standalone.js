@@ -4211,7 +4211,9 @@
         _brush.on('start', function () {
           if (event.sourceEvent !== null) {
             events.call('brushstart', pc, config.brushed);
-            event.sourceEvent.stopPropagation();
+            if (typeof event.sourceEvent.stopPropagation === 'function') {
+              event.sourceEvent.stopPropagation();
+            }
           }
         }).on('brush', function () {
           brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
@@ -6331,13 +6333,7 @@
           axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
           axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-        }).append('svg:text').attr({
-          'text-anchor': 'middle',
-          y: 0,
-          transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
-          x: 0,
-          class: 'label'
-        }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+        }).append('svg:text').attr('text-anchor', 'middle').attr('class', 'label').attr('x', 0).attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
         // Update
         g_data.attr('opacity', 0);
@@ -6349,7 +6345,7 @@
         // Exit
         g_data.exit().remove();
 
-        g = pc.svg.selectAll('.dimension');
+        var g = pc.svg.selectAll('.dimension');
         g.transition().duration(animationTime).attr('transform', function (p) {
           return 'translate(' + position(p) + ')';
         }).style('opacity', 1);

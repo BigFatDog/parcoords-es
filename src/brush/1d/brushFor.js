@@ -26,7 +26,9 @@ const brushFor = (state, config, pc, events, brushGroup) => (
     .on('start', function() {
       if (event.sourceEvent !== null) {
         events.call('brushstart', pc, config.brushed);
-        event.sourceEvent.stopPropagation();
+        if (typeof event.sourceEvent.stopPropagation === 'function') {
+          event.sourceEvent.stopPropagation();
+        }
       }
     })
     .on('brush', function() {
