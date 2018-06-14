@@ -77,8 +77,7 @@ const updateAxes = (config, pc, position, axis, flags) => (
   g_data.exit().remove();
 
   g = pc.svg.selectAll('.dimension');
-  g
-    .transition()
+  g.transition()
     .duration(animationTime)
     .attr('transform', p => 'translate(' + position(p) + ')')
     .style('opacity', 1);

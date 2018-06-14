@@ -10,8 +10,7 @@ const brushable = (config, pc, flags) =>
     const g = pc.g();
 
     // Add and store a brush for each axis.
-    g
-      .append('svg:g')
+    g.append('svg:g')
       .attr('class', 'brush')
       .each(function(d) {
         if (config.dimensions[d] !== undefined) {

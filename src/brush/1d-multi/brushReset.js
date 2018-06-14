@@ -12,8 +12,7 @@ const brushReset = (state, config, pc) => dimension => {
         axisBrush.forEach((e, i) => {
           const brush = document.getElementById('brush-' + pos + '-' + i);
           if (brushSelection(brush) !== null) {
-            pc
-              .g()
+            pc.g()
               .select('#brush-' + pos + '-' + i)
               .call(e.brush.move, null);
           }
@@ -30,8 +29,7 @@ const brushReset = (state, config, pc) => dimension => {
       axisBrush.forEach((e, i) => {
         const brush = document.getElementById('brush-' + pos + '-' + i);
         if (brushSelection(brush) !== null) {
-          pc
-            .g()
+          pc.g()
             .select('#brush-' + pos + '-' + i)
             .call(e.brush.move, null);
 

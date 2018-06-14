@@ -8,8 +8,7 @@ const install = (state, config, pc, events, brushGroup) => () => {
     pc.createAxes();
   }
 
-  pc
-    .g()
+  pc.g()
     .append('svg:g')
     .attr('id', (d, i) => 'brush-group-' + i)
     .attr('class', 'brush-group')

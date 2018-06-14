@@ -6,8 +6,7 @@ const brushReset = (state, config, pc) => dimension => {
   if (dimension === undefined) {
     config.brushed = false;
     if (pc.g() !== undefined && pc.g() !== null) {
-      pc
-        .g()
+      pc.g()
         .selectAll('.brush')
         .each(function(d) {
           select(this).call(brushes[d].move, null);
@@ -15,10 +14,9 @@ const brushReset = (state, config, pc) => dimension => {
       pc.renderBrushed();
     }
   } else {
-      config.brushed = false;
+    config.brushed = false;
     if (pc.g() !== undefined && pc.g() !== null) {
-      pc
-        .g()
+      pc.g()
         .selectAll('.brush')
         .each(function(d) {
           if (d !== dimension) return;
