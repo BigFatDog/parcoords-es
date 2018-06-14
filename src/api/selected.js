@@ -1,7 +1,7 @@
 import { brushSelection } from 'd3-brush';
 import { selectAll } from 'd3-selection';
 
-const selected = config => {
+const selected = config => () => {
   let actives = [];
   let extents = [];
   let ranges = {};
