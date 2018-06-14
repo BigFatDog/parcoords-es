@@ -16,8 +16,7 @@ const reorder = (config, pc, xscale) => rowdata => {
     pc.unhighlight();
 
     const g = pc.g();
-    g
-      .transition()
+    g.transition()
       .duration(1500)
       .attr('transform', d => 'translate(' + xscale(d) + ')');
     pc.render();

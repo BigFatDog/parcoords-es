@@ -17,8 +17,7 @@ const brushExtents = (state, config, pc) => extents => {
   } else {
     //first get all the brush selections
     const brushSelections = {};
-    pc
-      .g()
+    pc.g()
       .selectAll('.brush')
       .each(function(d) {
         brushSelections[d] = select(this);

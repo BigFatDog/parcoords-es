@@ -4211,7 +4211,9 @@
         _brush.on('start', function () {
           if (event.sourceEvent !== null) {
             events.call('brushstart', pc, config.brushed);
-            event.sourceEvent.stopPropagation();
+            if (typeof event.sourceEvent.stopPropagation === 'function') {
+              event.sourceEvent.stopPropagation();
+            }
           }
         }).on('brush', function () {
           brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
@@ -6066,118 +6068,54 @@
     };
 
     var selected$4 = function selected(config) {
-      var actives = [];
-      var extents = [];
-      var ranges = {};
-      //get brush selections from each node, convert to actual values
-      //invert order of values in array to comply with the parcoords architecture
-      if (config.brushes.length === 0) {
-        var nodes = selectAll('.brush').nodes();
-        for (var k = 0; k < nodes.length; k++) {
-          if (brushSelection(nodes[k]) !== null) {
-            actives.push(nodes[k].__data__);
-            var values = [];
-            var ranger = brushSelection(nodes[k]);
-            if (typeof config.dimensions[nodes[k].__data__].yscale.domain()[0] === 'number') {
-              for (var i = 0; i < ranger.length; i++) {
-                if (actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
-                  values.push(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
-                } else if (config.dimensions[nodes[k].__data__].yscale() !== 1) {
-                  values.unshift(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
+      return function () {
+        var actives = [];
+        var extents = [];
+        var ranges = {};
+        //get brush selections from each node, convert to actual values
+        //invert order of values in array to comply with the parcoords architecture
+        if (config.brushes.length === 0) {
+          var nodes = selectAll('.brush').nodes();
+          for (var k = 0; k < nodes.length; k++) {
+            if (brushSelection(nodes[k]) !== null) {
+              actives.push(nodes[k].__data__);
+              var values = [];
+              var ranger = brushSelection(nodes[k]);
+              if (typeof config.dimensions[nodes[k].__data__].yscale.domain()[0] === 'number') {
+                for (var i = 0; i < ranger.length; i++) {
+                  if (actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
+                    values.push(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
+                  } else if (config.dimensions[nodes[k].__data__].yscale() !== 1) {
+                    values.unshift(config.dimensions[nodes[k].__data__].yscale.invert(ranger[i]));
+                  }
                 }
-              }
-              extents.push(values);
-              for (var ii = 0; ii < extents.length; ii++) {
-                if (extents[ii].length === 0) {
-                  extents[ii] = [1, 1];
+                extents.push(values);
+                for (var ii = 0; ii < extents.length; ii++) {
+                  if (extents[ii].length === 0) {
+                    extents[ii] = [1, 1];
+                  }
                 }
-              }
-            } else {
-              ranges[nodes[k].__data__] = brushSelection(nodes[k]);
-              var dimRange = config.dimensions[nodes[k].__data__].yscale.range();
-              var dimDomain = config.dimensions[nodes[k].__data__].yscale.domain();
-              for (var j = 0; j < dimRange.length; j++) {
-                if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1] && actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
-                  values.push(dimRange[j]);
-                } else if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) {
-                  values.unshift(dimRange[j]);
+              } else {
+                ranges[nodes[k].__data__] = brushSelection(nodes[k]);
+                var dimRange = config.dimensions[nodes[k].__data__].yscale.range();
+                var dimDomain = config.dimensions[nodes[k].__data__].yscale.domain();
+                for (var j = 0; j < dimRange.length; j++) {
+                  if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1] && actives.includes(nodes[k].__data__) && config.flipAxes.includes(nodes[k].__data__)) {
+                    values.push(dimRange[j]);
+                  } else if (dimRange[j] >= ranger[0] && dimRange[j] <= ranger[1]) {
+                    values.unshift(dimRange[j]);
+                  }
                 }
-              }
-              extents.push(values);
-              for (var _ii = 0; _ii < extents.length; _ii++) {
-                if (extents[_ii].length === 0) {
-                  extents[_ii] = [1, 1];
+                extents.push(values);
+                for (var _ii = 0; _ii < extents.length; _ii++) {
+                  if (extents[_ii].length === 0) {
+                    extents[_ii] = [1, 1];
+                  }
                 }
               }
             }
           }
-        }
-        // test if within range
-        var within = {
-          date: function date(d, p, dimension) {
-            var category = d[p];
-            var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
-            var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
-            return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-          },
-          number: function number(d, p, dimension) {
-            return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
-          },
-          string: function string(d, p, dimension) {
-            var category = d[p];
-            var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
-            var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
-            return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
-          }
-        };
-        return config.data.filter(function (d) {
-          return actives.every(function (p, dimension) {
-            return within[config.dimensions[p].type](d, p, dimension);
-          });
-        });
-      } else {
-        // need to get data from each brush instead of each axis
-        // first must find active axes by iterating through all brushes
-        // then go through similiar process as above.
-        var multiBrushData = [];
-
-        var _loop = function _loop(idx) {
-          var brush$$1 = config.brushes[idx];
-          var values = [];
-          var ranger = brush$$1.extent;
-          var actives = [brush$$1.data];
-          if (typeof config.dimensions[brush$$1.data].yscale.domain()[0] === 'number') {
-            for (var _i = 0; _i < ranger.length; _i++) {
-              if (actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
-                values.push(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
-              } else if (config.dimensions[brush$$1.data].yscale() !== 1) {
-                values.unshift(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
-              }
-            }
-            extents.push(values);
-            for (var _ii2 = 0; _ii2 < extents.length; _ii2++) {
-              if (extents[_ii2].length === 0) {
-                extents[_ii2] = [1, 1];
-              }
-            }
-          } else {
-            ranges[brush$$1.data] = brush$$1.extent;
-            var _dimRange = config.dimensions[brush$$1.data].yscale.range();
-            var _dimDomain = config.dimensions[brush$$1.data].yscale.domain();
-            for (var _j = 0; _j < _dimRange.length; _j++) {
-              if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1] && actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
-                values.push(_dimRange[_j]);
-              } else if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1]) {
-                values.unshift(_dimRange[_j]);
-              }
-            }
-            extents.push(values);
-            for (var _ii3 = 0; _ii3 < extents.length; _ii3++) {
-              if (extents[_ii3].length === 0) {
-                extents[_ii3] = [1, 1];
-              }
-            }
-          }
+          // test if within range
           var within = {
             date: function date(d, p, dimension) {
               var category = d[p];
@@ -6186,7 +6124,7 @@
               return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
             },
             number: function number(d, p, dimension) {
-              return extents[idx][0] <= d[p] && d[p] <= extents[idx][1];
+              return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
             },
             string: function string(d, p, dimension) {
               var category = d[p];
@@ -6195,27 +6133,93 @@
               return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
             }
           };
-
-          // filter data, but instead of returning it now,
-          // put it into multiBrush data which is returned after
-          // all brushes are iterated through.
-          var filtered = config.data.filter(function (d) {
+          return config.data.filter(function (d) {
             return actives.every(function (p, dimension) {
               return within[config.dimensions[p].type](d, p, dimension);
             });
           });
-          for (var z = 0; z < filtered.length; z++) {
-            multiBrushData.push(filtered[z]);
-          }
-          actives = [];
-          ranges = {};
-        };
+        } else {
+          // need to get data from each brush instead of each axis
+          // first must find active axes by iterating through all brushes
+          // then go through similiar process as above.
+          var multiBrushData = [];
 
-        for (var idx = 0; idx < config.brushes.length; idx++) {
-          _loop(idx);
+          var _loop = function _loop(idx) {
+            var brush$$1 = config.brushes[idx];
+            var values = [];
+            var ranger = brush$$1.extent;
+            var actives = [brush$$1.data];
+            if (typeof config.dimensions[brush$$1.data].yscale.domain()[0] === 'number') {
+              for (var _i = 0; _i < ranger.length; _i++) {
+                if (actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
+                  values.push(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
+                } else if (config.dimensions[brush$$1.data].yscale() !== 1) {
+                  values.unshift(config.dimensions[brush$$1.data].yscale.invert(ranger[_i]));
+                }
+              }
+              extents.push(values);
+              for (var _ii2 = 0; _ii2 < extents.length; _ii2++) {
+                if (extents[_ii2].length === 0) {
+                  extents[_ii2] = [1, 1];
+                }
+              }
+            } else {
+              ranges[brush$$1.data] = brush$$1.extent;
+              var _dimRange = config.dimensions[brush$$1.data].yscale.range();
+              var _dimDomain = config.dimensions[brush$$1.data].yscale.domain();
+              for (var _j = 0; _j < _dimRange.length; _j++) {
+                if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1] && actives.includes(brush$$1.data) && config.flipAxes.includes(brush$$1.data)) {
+                  values.push(_dimRange[_j]);
+                } else if (_dimRange[_j] >= ranger[0] && _dimRange[_j] <= ranger[1]) {
+                  values.unshift(_dimRange[_j]);
+                }
+              }
+              extents.push(values);
+              for (var _ii3 = 0; _ii3 < extents.length; _ii3++) {
+                if (extents[_ii3].length === 0) {
+                  extents[_ii3] = [1, 1];
+                }
+              }
+            }
+            var within = {
+              date: function date(d, p, dimension) {
+                var category = d[p];
+                var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
+                var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
+                return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+              },
+              number: function number(d, p, dimension) {
+                return extents[idx][0] <= d[p] && d[p] <= extents[idx][1];
+              },
+              string: function string(d, p, dimension) {
+                var category = d[p];
+                var categoryIndex = config.dimensions[p].yscale.domain().indexOf(category);
+                var categoryRangeValue = config.dimensions[p].yscale.range()[categoryIndex];
+                return categoryRangeValue >= ranges[p][0] && categoryRangeValue <= ranges[p][1];
+              }
+            };
+
+            // filter data, but instead of returning it now,
+            // put it into multiBrush data which is returned after
+            // all brushes are iterated through.
+            var filtered = config.data.filter(function (d) {
+              return actives.every(function (p, dimension) {
+                return within[config.dimensions[p].type](d, p, dimension);
+              });
+            });
+            for (var z = 0; z < filtered.length; z++) {
+              multiBrushData.push(filtered[z]);
+            }
+            actives = [];
+            ranges = {};
+          };
+
+          for (var idx = 0; idx < config.brushes.length; idx++) {
+            _loop(idx);
+          }
+          return multiBrushData;
         }
-        return multiBrushData;
-      }
+      };
     };
 
     var brushPredicate = function brushPredicate(brushGroup, config, pc) {
@@ -6329,13 +6333,7 @@
           axisElement.selectAll('path').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
 
           axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
-        }).append('svg:text').attr({
-          'text-anchor': 'middle',
-          y: 0,
-          transform: 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
-          x: 0,
-          class: 'label'
-        }).text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
+        }).append('svg:text').attr('text-anchor', 'middle').attr('class', 'label').attr('x', 0).attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
         // Update
         g_data.attr('opacity', 0);
@@ -6347,7 +6345,7 @@
         // Exit
         g_data.exit().remove();
 
-        g = pc.svg.selectAll('.dimension');
+        var g = pc.svg.selectAll('.dimension');
         g.transition().duration(animationTime).attr('transform', function (p) {
           return 'translate(' + position(p) + ')';
         }).style('opacity', 1);
@@ -7498,6 +7496,7 @@
         return (end - start) / k;
       });
     };
+    var milliseconds = millisecond.range;
 
     var durationSecond = 1e3;
     var durationMinute = 6e4;
@@ -7514,6 +7513,7 @@
     }, function (date) {
       return date.getUTCSeconds();
     });
+    var seconds = second.range;
 
     var minute = newInterval(function (date) {
       date.setTime(Math.floor(date / durationMinute) * durationMinute);
@@ -7524,6 +7524,7 @@
     }, function (date) {
       return date.getMinutes();
     });
+    var minutes = minute.range;
 
     var hour = newInterval(function (date) {
       var offset = date.getTimezoneOffset() * durationMinute % durationHour;
@@ -7536,6 +7537,7 @@
     }, function (date) {
       return date.getHours();
     });
+    var hours = hour.range;
 
     var day = newInterval(function (date) {
       date.setHours(0, 0, 0, 0);
@@ -7546,6 +7548,7 @@
     }, function (date) {
       return date.getDate() - 1;
     });
+    var days = day.range;
 
     function weekday(i) {
       return newInterval(function (date) {
@@ -7566,6 +7569,8 @@
     var friday = weekday(5);
     var saturday = weekday(6);
 
+    var sundays = sunday.range;
+
     var month = newInterval(function (date) {
       date.setDate(1);
       date.setHours(0, 0, 0, 0);
@@ -7576,6 +7581,7 @@
     }, function (date) {
       return date.getMonth();
     });
+    var months = month.range;
 
     var year = newInterval(function (date) {
       date.setMonth(0, 1);
@@ -7598,6 +7604,7 @@
         date.setFullYear(date.getFullYear() + step * k);
       });
     };
+    var years = year.range;
 
     var utcMinute = newInterval(function (date) {
       date.setUTCSeconds(0, 0);
@@ -7608,6 +7615,7 @@
     }, function (date) {
       return date.getUTCMinutes();
     });
+    var utcMinutes = utcMinute.range;
 
     var utcHour = newInterval(function (date) {
       date.setUTCMinutes(0, 0, 0);
@@ -7618,6 +7626,7 @@
     }, function (date) {
       return date.getUTCHours();
     });
+    var utcHours = utcHour.range;
 
     var utcDay = newInterval(function (date) {
       date.setUTCHours(0, 0, 0, 0);
@@ -7628,6 +7637,7 @@
     }, function (date) {
       return date.getUTCDate() - 1;
     });
+    var utcDays = utcDay.range;
 
     function utcWeekday(i) {
       return newInterval(function (date) {
@@ -7648,6 +7658,8 @@
     var utcFriday = utcWeekday(5);
     var utcSaturday = utcWeekday(6);
 
+    var utcSundays = utcSunday.range;
+
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
       date.setUTCHours(0, 0, 0, 0);
@@ -7658,6 +7670,7 @@
     }, function (date) {
       return date.getUTCMonth();
     });
+    var utcMonths = utcMonth.range;
 
     var utcYear = newInterval(function (date) {
       date.setUTCMonth(0, 1);
@@ -7680,6 +7693,7 @@
         date.setUTCFullYear(date.getUTCFullYear() + step * k);
       });
     };
+    var utcYears = utcYear.range;
 
     function localDate(d) {
       if (0 <= d.y && d.y < 100) {
@@ -9511,7 +9525,7 @@
       };
     };
 
-    var version = "2.0.9";
+    var version = "2.1.0";
 
     var DefaultConfig = {
       data: [],

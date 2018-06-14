@@ -42,14 +42,14 @@ const updateAxes = (config, pc, position, axis, flags) => (
         .style('shape-rendering', 'crispEdges');
     })
     .append('svg:text')
-    .attr({
-      'text-anchor': 'middle',
-      y: 0,
-      transform:
-        'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')',
-      x: 0,
-      class: 'label',
-    })
+    .attr('text-anchor', 'middle')
+    .attr('class', 'label')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr(
+      'transform',
+      'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')'
+    )
     .text(dimensionLabels(config))
     .on('dblclick', flipAxisAndUpdatePCP(config, pc, axis))
     .on('wheel', rotateLabels(config, pc));
@@ -76,9 +76,8 @@ const updateAxes = (config, pc, position, axis, flags) => (
   // Exit
   g_data.exit().remove();
 
-  g = pc.svg.selectAll('.dimension');
-  g
-    .transition()
+  const g = pc.svg.selectAll('.dimension');
+  g.transition()
     .duration(animationTime)
     .attr('transform', p => 'translate(' + position(p) + ')')
     .style('opacity', 1);
@@ -94,7 +93,7 @@ const updateAxes = (config, pc, position, axis, flags) => (
   if (flags.brushable) pc.brushable();
   if (flags.reorderable) pc.reorderable();
   if (pc.brushMode() !== 'None') {
-    let mode = pc.brushMode();
+    const mode = pc.brushMode();
     pc.brushMode('None');
     pc.brushMode(mode);
   }

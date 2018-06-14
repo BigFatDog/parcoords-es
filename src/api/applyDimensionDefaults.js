@@ -10,7 +10,7 @@ const applyDimensionDefaults = (config, pc) =>
       acc[cur] = {
         ...k,
         orient: isValid(k.orient) ? k.orient : 'left',
-        ticks:  isValid(k.ticks) ? k.ticks : 5,
+        ticks: isValid(k.ticks) ? k.ticks : 5,
         innerTickSize: isValid(k.innerTickSize) ? k.innerTickSize : 6,
         outerTickSize: isValid(k.outerTickSize) ? k.outerTickSize : 0,
         tickPadding: isValid(k.tickPadding) ? k.tickPadding : 3,
