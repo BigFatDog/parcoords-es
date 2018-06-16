@@ -1,4 +1,4 @@
-const getset = (obj, state, events, side_effects, pc) => {
+const getset = (obj, state, events, side_effects) => {
   Object.keys(state).forEach(function(key) {
     obj[key] = function(x) {
       if (!arguments.length) {

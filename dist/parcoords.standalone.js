@@ -9719,7 +9719,7 @@
       });
     };
 
-    var getset = function getset(obj, state, events, side_effects, pc) {
+    var getset = function getset(obj, state, events, side_effects) {
       Object.keys(state).forEach(function (key) {
         obj[key] = function (x) {
           if (!arguments.length) {
@@ -9756,7 +9756,7 @@
       var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
 
       // create getter/setters
-      getset(pc, __, events, side_effects, pc);
+      getset(pc, __, events, side_effects);
 
       // expose events
       // getter/setter with event firing
