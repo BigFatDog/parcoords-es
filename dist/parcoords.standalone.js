@@ -4133,7 +4133,7 @@
         var brushNodes = state.brushNodes;
 
         var is_brushed = function is_brushed(p) {
-          return brushSelection(brushNodes[p]) !== null;
+          return brushNodes[p] && brushSelection(brushNodes[p]) !== null;
         };
 
         var actives = Object.keys(config.dimensions).filter(is_brushed);
