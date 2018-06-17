@@ -8565,7 +8565,9 @@
           }
         };
         Object.keys(config.dimensions).forEach(function (k) {
-          if (config.dimensions[k].yscale === undefined || config.dimensions[k].yscale === null) config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
+          if (config.dimensions[k].yscale === undefined || config.dimensions[k].yscale === null) {
+            config.dimensions[k].yscale = defaultScales[config.dimensions[k].type](k);
+          }
         });
 
         // xscale
@@ -9517,9 +9519,10 @@
       };
     };
 
-    var scale = function scale(config) {
+    var scale = function scale(config, pc) {
       return function (d, domain) {
         config.dimensions[d].yscale.domain(domain);
+        pc.render().default();
 
         return this;
       };
@@ -9719,7 +9722,7 @@
       });
     };
 
-    var getset = function getset(obj, state, events, side_effects, pc) {
+    var getset = function getset(obj, state, events, side_effects) {
       Object.keys(state).forEach(function (key) {
         obj[key] = function (x) {
           if (!arguments.length) {
@@ -9756,7 +9759,7 @@
       var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
 
       // create getter/setters
-      getset(pc, __, events, side_effects, pc);
+      getset(pc, __, events, side_effects);
 
       // expose events
       // getter/setter with event firing
@@ -9805,7 +9808,7 @@
       pc.flags = flags;
 
       pc.autoscale = autoscale(config, pc, xscale, ctx);
-      pc.scale = scale(config);
+      pc.scale = scale(config, pc);
       pc.flip = flip(config);
       pc.commonScale = commonScale(config, pc);
       pc.detectDimensions = detectDimensions(pc);

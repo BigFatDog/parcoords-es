@@ -114,7 +114,7 @@ const ParCoords = userConfig => {
   pc.flags = flags;
 
   pc.autoscale = autoscale(config, pc, xscale, ctx);
-  pc.scale = scale(config);
+  pc.scale = scale(config, pc);
   pc.flip = flip(config);
   pc.commonScale = commonScale(config, pc);
   pc.detectDimensions = detectDimensions(pc);
