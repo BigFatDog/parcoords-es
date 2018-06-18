@@ -3,13 +3,11 @@ import install from './install';
 import selected from './selected';
 import uninstall from './uninstall';
 
-const BrushState = {
-  brushes: {},
-  brushNodes: {},
-};
-
 const install1DAxes = (brushGroup, config, pc, events) => {
-  const state = Object.assign({}, BrushState);
+  const state = {
+    brushes: {},
+    brushNodes: {},
+  };
 
   brushGroup.modes['1D-axes'] = {
     install: install(state, config, pc, events, brushGroup),
