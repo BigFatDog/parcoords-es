@@ -304,13 +304,11 @@ var uninstall = function uninstall(state, pc) {
   };
 };
 
-var BrushState = {
-  brushes: {},
-  brushNodes: {}
-};
-
 var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
-  var state = Object.assign({}, BrushState);
+  var state = {
+    brushes: {},
+    brushNodes: {}
+  };
 
   brushGroup.modes['1D-axes'] = {
     install: install(state, config, pc, events, brushGroup),
@@ -824,13 +822,11 @@ var uninstall$1 = function uninstall(state, pc) {
   };
 };
 
-var BrushState$1 = {
-  brushes: {},
-  brushNodes: {}
-};
-
 var install1DMultiAxes = function install1DMultiAxes(brushGroup, config, pc, events) {
-  var state = Object.assign({}, BrushState$1);
+  var state = {
+    brushes: {},
+    brushNodes: {}
+  };
 
   brushGroup.modes['1D-axes-multi'] = {
     install: install$1(state, config, pc, events, brushGroup),
@@ -1135,13 +1131,11 @@ var install$2 = function install(brushGroup, state, config, pc, events, xscale) 
   };
 };
 
-var BrushState$2 = {
-  strums: {},
-  strumRect: {}
-};
-
 var install2DStrums = function install2DStrums(brushGroup, config, pc, events, xscale) {
-  var state = Object.assign({}, BrushState$2);
+  var state = {
+    strums: {},
+    strumRect: {}
+  };
 
   brushGroup.modes['2D-strums'] = {
     install: install$2(brushGroup, state, config, pc, events, xscale),
@@ -1518,13 +1512,11 @@ var install$3 = function install(brushGroup, state, config, pc, events, xscale) 
   };
 };
 
-var BrushState$3 = {
-  arcs: {},
-  strumRect: {}
-};
-
 var installAngularBrush = function installAngularBrush(brushGroup, config, pc, events, xscale) {
-  var state = Object.assign({}, BrushState$3);
+  var state = {
+    arcs: {},
+    strumRect: {}
+  };
 
   brushGroup.modes['angular'] = {
     install: install$3(brushGroup, state, config, pc, events, xscale),
@@ -2788,7 +2780,7 @@ var scale = function scale(config, pc) {
   };
 };
 
-var version = "2.1.1";
+var version = "2.1.2";
 
 var DefaultConfig = {
   data: [],
