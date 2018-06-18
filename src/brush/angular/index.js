@@ -2,13 +2,11 @@ import uninstall from './uninstall';
 import install from './install';
 import selected from './selected';
 
-const BrushState = {
-  arcs: {},
-  strumRect: {},
-};
-
 const installAngularBrush = (brushGroup, config, pc, events, xscale) => {
-  const state = Object.assign({}, BrushState);
+  const state = {
+      arcs: {},
+      strumRect: {},
+  };
 
   brushGroup.modes['angular'] = {
     install: install(brushGroup, state, config, pc, events, xscale),
