@@ -4263,13 +4263,11 @@
       };
     };
 
-    var BrushState = {
-      brushes: {},
-      brushNodes: {}
-    };
-
     var install1DAxes = function install1DAxes(brushGroup, config, pc, events) {
-      var state = Object.assign({}, BrushState);
+      var state = {
+        brushes: {},
+        brushNodes: {}
+      };
 
       brushGroup.modes['1D-axes'] = {
         install: install(state, config, pc, events, brushGroup),
@@ -4783,13 +4781,11 @@
       };
     };
 
-    var BrushState$1 = {
-      brushes: {},
-      brushNodes: {}
-    };
-
     var install1DMultiAxes = function install1DMultiAxes(brushGroup, config, pc, events) {
-      var state = Object.assign({}, BrushState$1);
+      var state = {
+        brushes: {},
+        brushNodes: {}
+      };
 
       brushGroup.modes['1D-axes-multi'] = {
         install: install$1(state, config, pc, events, brushGroup),
@@ -5094,13 +5090,11 @@
       };
     };
 
-    var BrushState$2 = {
-      strums: {},
-      strumRect: {}
-    };
-
     var install2DStrums = function install2DStrums(brushGroup, config, pc, events, xscale) {
-      var state = Object.assign({}, BrushState$2);
+      var state = {
+        strums: {},
+        strumRect: {}
+      };
 
       brushGroup.modes['2D-strums'] = {
         install: install$2(brushGroup, state, config, pc, events, xscale),
@@ -5998,13 +5992,11 @@
       };
     };
 
-    var BrushState$3 = {
-      arcs: {},
-      strumRect: {}
-    };
-
     var installAngularBrush = function installAngularBrush(brushGroup, config, pc, events, xscale) {
-      var state = Object.assign({}, BrushState$3);
+      var state = {
+        arcs: {},
+        strumRect: {}
+      };
 
       brushGroup.modes['angular'] = {
         install: install$3(brushGroup, state, config, pc, events, xscale),
@@ -7001,23 +6993,49 @@
       };
     }
 
-    function formatDefault (x, p) {
-      x = x.toPrecision(p);
+    // [[fill]align][sign][symbol][0][width][,][.precision][~][type]
+    var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?(~)?([a-z%])?$/i;
 
-      out: for (var n = x.length, i = 1, i0 = -1, i1; i < n; ++i) {
-        switch (x[i]) {
+    function formatSpecifier(specifier) {
+      return new FormatSpecifier(specifier);
+    }
+
+    formatSpecifier.prototype = FormatSpecifier.prototype; // instanceof
+
+    function FormatSpecifier(specifier) {
+      if (!(match = re.exec(specifier))) throw new Error("invalid format: " + specifier);
+      var match;
+      this.fill = match[1] || " ";
+      this.align = match[2] || ">";
+      this.sign = match[3] || "-";
+      this.symbol = match[4] || "";
+      this.zero = !!match[5];
+      this.width = match[6] && +match[6];
+      this.comma = !!match[7];
+      this.precision = match[8] && +match[8].slice(1);
+      this.trim = !!match[9];
+      this.type = match[10] || "";
+    }
+
+    FormatSpecifier.prototype.toString = function () {
+      return this.fill + this.align + this.sign + this.symbol + (this.zero ? "0" : "") + (this.width == null ? "" : Math.max(1, this.width | 0)) + (this.comma ? "," : "") + (this.precision == null ? "" : "." + Math.max(0, this.precision | 0)) + (this.trim ? "~" : "") + this.type;
+    };
+
+    // Trims insignificant zeros, e.g., replaces 1.2000k with 1.2k.
+    function formatTrim (s) {
+      out: for (var n = s.length, i = 1, i0 = -1, i1; i < n; ++i) {
+        switch (s[i]) {
           case ".":
             i0 = i1 = i;break;
           case "0":
             if (i0 === 0) i0 = i;i1 = i;break;
-          case "e":
-            break out;
           default:
-            if (i0 > 0) i0 = 0;break;
+            if (i0 > 0) {
+              if (!+s[i]) break out;i0 = 0;
+            }break;
         }
       }
-
-      return i0 > 0 ? x.slice(0, i0) + x.slice(i1 + 1) : x;
+      return i0 > 0 ? s.slice(0, i0) + s.slice(i1 + 1) : s;
     }
 
     var prefixExponent;
@@ -7041,7 +7059,6 @@
     }
 
     var formatTypes = {
-      "": formatDefault,
       "%": function _(x, p) {
         return (x * 100).toFixed(p);
       },
@@ -7079,53 +7096,6 @@
       }
     };
 
-    // [[fill]align][sign][symbol][0][width][,][.precision][type]
-    var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
-
-    function formatSpecifier(specifier) {
-      return new FormatSpecifier(specifier);
-    }
-
-    formatSpecifier.prototype = FormatSpecifier.prototype; // instanceof
-
-    function FormatSpecifier(specifier) {
-      if (!(match = re.exec(specifier))) throw new Error("invalid format: " + specifier);
-
-      var match,
-          fill = match[1] || " ",
-          align = match[2] || ">",
-          sign = match[3] || "-",
-          symbol = match[4] || "",
-          zero = !!match[5],
-          width = match[6] && +match[6],
-          comma = !!match[7],
-          precision = match[8] && +match[8].slice(1),
-          type = match[9] || "";
-
-      // The "n" type is an alias for ",g".
-      if (type === "n") comma = true, type = "g";
-
-      // Map invalid types to the default format.
-      else if (!formatTypes[type]) type = "";
-
-      // If zero fill is specified, padding goes after sign and before digits.
-      if (zero || fill === "0" && align === "=") zero = true, fill = "0", align = "=";
-
-      this.fill = fill;
-      this.align = align;
-      this.sign = sign;
-      this.symbol = symbol;
-      this.zero = zero;
-      this.width = width;
-      this.comma = comma;
-      this.precision = precision;
-      this.type = type;
-    }
-
-    FormatSpecifier.prototype.toString = function () {
-      return this.fill + this.align + this.sign + this.symbol + (this.zero ? "0" : "") + (this.width == null ? "" : Math.max(1, this.width | 0)) + (this.comma ? "," : "") + (this.precision == null ? "" : "." + Math.max(0, this.precision | 0)) + this.type;
-    };
-
     function identity$3 (x) {
       return x;
     }
@@ -7150,7 +7120,17 @@
             width = specifier.width,
             comma = specifier.comma,
             precision = specifier.precision,
+            trim = specifier.trim,
             type = specifier.type;
+
+        // The "n" type is an alias for ",g".
+        if (type === "n") comma = true, type = "g";
+
+        // The "" type, and any invalid type, is an alias for ".12~g".
+        else if (!formatTypes[type]) precision == null && (precision = 12), trim = true, type = "g";
+
+        // If zero fill is specified, padding goes after sign and before digits.
+        if (zero || fill === "0" && align === "=") zero = true, fill = "0", align = "=";
 
         // Compute the prefix and suffix.
         // For SI-prefix, the suffix is lazily computed.
@@ -7161,13 +7141,13 @@
         // Is this an integer type?
         // Can this type generate exponential notation?
         var formatType = formatTypes[type],
-            maybeSuffix = !type || /[defgprs%]/.test(type);
+            maybeSuffix = /[defgprs%]/.test(type);
 
         // Set the default precision if not specified,
         // or clamp the specified precision to the supported range.
         // For significant precision, it must be in [1, 21].
         // For fixed precision, it must be in [0, 20].
-        precision = precision == null ? type ? 6 : 12 : /[gprs]/.test(type) ? Math.max(1, Math.min(21, precision)) : Math.max(0, Math.min(20, precision));
+        precision = precision == null ? 6 : /[gprs]/.test(type) ? Math.max(1, Math.min(21, precision)) : Math.max(0, Math.min(20, precision));
 
         function format(value) {
           var valuePrefix = prefix,
@@ -7185,6 +7165,9 @@
             // Perform the initial formatting.
             var valueNegative = value < 0;
             value = formatType(Math.abs(value), precision);
+
+            // Trim insignificant zeros.
+            if (trim) value = formatTrim(value);
 
             // If a negative value rounds to zero during formatting, treat as positive.
             if (valueNegative && +value === 0) valueNegative = false;
@@ -7570,8 +7553,6 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
-    var mondays = monday.range;
-    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7661,8 +7642,6 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
-    var utcMondays = utcMonday.range;
-    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);

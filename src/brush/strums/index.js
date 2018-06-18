@@ -2,13 +2,11 @@ import uninstall from './uninstall';
 import install from './install';
 import selected from './selected';
 
-const BrushState = {
-  strums: {},
-  strumRect: {},
-};
-
 const install2DStrums = (brushGroup, config, pc, events, xscale) => {
-  const state = Object.assign({}, BrushState);
+  const state = {
+      strums: {},
+      strumRect: {},
+  };
 
   brushGroup.modes['2D-strums'] = {
     install: install(brushGroup, state, config, pc, events, xscale),

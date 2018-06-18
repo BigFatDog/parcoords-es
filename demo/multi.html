@@ -1,0 +1,55 @@
+<!doctype html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+</head>
+<title>Brushing Example</title>
+<link rel="stylesheet" type="text/css" href="./parcoords.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.3/es6-sham.min.js"></script>
+<script src="./lib/d3.v5.min.js"></script>
+<script src="./parcoords.standalone.js"></script>
+<div id="plot01" class="parcoords" style="width:960px;height:200px;"></div>
+<div id="plot02" class="parcoords" style="width:960px;height:200px;"></div>
+<p>
+    <button id="brushReset">Reset Brushes</button>
+</p>
+
+<script>
+    const pc1 = ParCoords()("#plot01")
+        .alpha(0.4)
+    const pc2 = ParCoords()("#plot02")
+        .alpha(0.4)
+
+    // load csv file and create the chart
+    d3.csv('data/cars.csv').then(data => {
+        const d1 = data.slice();
+        const d2 = data.slice(0, 10);
+        pc1
+            .data(d1)
+            .hideAxis(["name"])
+            .composite("darker")
+            .render()
+            .shadows()
+            .reorderable()
+            .brushMode("1D-axes");
+
+        pc2
+            .data(d2)
+            .hideAxis(["name"])
+            .composite("darker")
+            .render()
+            .shadows()
+            .reorderable()
+            .brushMode("1D-axes")
+    });
+
+    d3.select('#brushReset').on('click', function () {
+        pc1.brushReset();
+        pc2.brushReset();
+
+    });
+</script>
+
+
+
