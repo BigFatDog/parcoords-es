@@ -4,8 +4,8 @@ import selected from './selected';
 
 const install2DStrums = (brushGroup, config, pc, events, xscale) => {
   const state = {
-      strums: {},
-      strumRect: {},
+    strums: {},
+    strumRect: {},
   };
 
   brushGroup.modes['2D-strums'] = {

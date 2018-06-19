@@ -5,8 +5,8 @@ import uninstall from './uninstall';
 
 const install1DMultiAxes = (brushGroup, config, pc, events) => {
   const state = {
-      brushes: {},
-      brushNodes: {},
+    brushes: {},
+    brushNodes: {},
   };
 
   brushGroup.modes['1D-axes-multi'] = {

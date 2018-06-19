@@ -1,14 +1,16 @@
 import { brushSelection } from 'd3-brush';
-import { selectAll } from 'd3-selection';
 
-const selected = config => () => {
+const selected = (config, pc) => () => {
   let actives = [];
   let extents = [];
   let ranges = {};
   //get brush selections from each node, convert to actual values
   //invert order of values in array to comply with the parcoords architecture
   if (config.brushes.length === 0) {
-    let nodes = selectAll('.brush').nodes();
+    let nodes = pc
+      .g()
+      .selectAll('.brush')
+      .nodes();
     for (let k = 0; k < nodes.length; k++) {
       if (brushSelection(nodes[k]) !== null) {
         actives.push(nodes[k].__data__);

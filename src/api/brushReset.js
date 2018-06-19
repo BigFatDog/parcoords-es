@@ -13,7 +13,10 @@ const brushReset = config =>
     config.brushed = false;
 
     if (pc.g() !== undefined) {
-      const nodes = selectAll('.brush').nodes();
+      const nodes = pc
+        .g()
+        .selectAll('.brush')
+        .nodes();
       for (let i = 0; i < nodes.length; i++) {
         if (nodes[i].__data__ === dimension) {
           // remove all dummy brushes for this axis or the real brush
