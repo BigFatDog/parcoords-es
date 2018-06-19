@@ -4,8 +4,8 @@ import selected from './selected';
 
 const installAngularBrush = (brushGroup, config, pc, events, xscale) => {
   const state = {
-      arcs: {},
-      strumRect: {},
+    arcs: {},
+    strumRect: {},
   };
 
   brushGroup.modes['angular'] = {

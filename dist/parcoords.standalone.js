@@ -6059,7 +6059,7 @@
       };
     };
 
-    var selected$4 = function selected(config) {
+    var selected$4 = function selected(config, pc) {
       return function () {
         var actives = [];
         var extents = [];
@@ -6067,7 +6067,7 @@
         //get brush selections from each node, convert to actual values
         //invert order of values in array to comply with the parcoords architecture
         if (config.brushes.length === 0) {
-          var nodes = selectAll('.brush').nodes();
+          var nodes = pc.g().selectAll('.brush').nodes();
           for (var k = 0; k < nodes.length; k++) {
             if (brushSelection(nodes[k]) !== null) {
               actives.push(nodes[k].__data__);
@@ -7553,8 +7553,6 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
-    var mondays = monday.range;
-    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7644,8 +7642,6 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
-    var utcMondays = utcMonday.range;
-    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
@@ -9285,7 +9281,7 @@
         config.brushed = false;
 
         if (pc.g() !== undefined) {
-          var nodes = selectAll('.brush').nodes();
+          var nodes = pc.g().selectAll('.brush').nodes();
           for (var i = 0; i < nodes.length; i++) {
             if (nodes[i].__data__ === dimension) {
               // remove all dummy brushes for this axis or the real brush
@@ -9822,7 +9818,7 @@
       pc.applyAxisConfig = applyAxisConfig;
       pc.brushable = brushable(config, pc, flags);
       pc.brushReset = brushReset$4(config);
-      pc.selected = selected$4(config);
+      pc.selected = selected$4(config, pc);
       pc.reorderable = reorderable(config, pc, xscale, position, dragging, flags);
 
       // Reorder dimensions, such that the highest value (visually) is on the left and

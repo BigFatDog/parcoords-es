@@ -147,7 +147,7 @@ const ParCoords = userConfig => {
   pc.applyAxisConfig = applyAxisConfig;
   pc.brushable = brushable(config, pc, flags);
   pc.brushReset = brushReset(config);
-  pc.selected = selected(config);
+  pc.selected = selected(config, pc);
   pc.reorderable = reorderable(config, pc, xscale, position, dragging, flags);
 
   // Reorder dimensions, such that the highest value (visually) is on the left and

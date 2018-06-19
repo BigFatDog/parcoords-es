@@ -32,7 +32,11 @@
             .render()
             .shadows()
             .reorderable()
-            .brushMode("1D-axes");
+            .brushMode("1D-axes")
+            .on("brushend", function(){
+                console.log(pc1.selected());
+                console.log(pc2.selected());
+            });
 
         pc2
             .data(d2)
@@ -42,6 +46,10 @@
             .shadows()
             .reorderable()
             .brushMode("1D-axes")
+            .on("brushend", function(){
+                console.log(pc1.selected());
+                console.log(pc2.selected());
+            });
     });
 
     d3.select('#brushReset').on('click', function () {
