@@ -1579,7 +1579,7 @@ var mergeParcoords = function mergeParcoords(pc) {
   };
 };
 
-var selected$4 = function selected(config) {
+var selected$4 = function selected(config, pc) {
   return function () {
     var actives = [];
     var extents = [];
@@ -1587,7 +1587,7 @@ var selected$4 = function selected(config) {
     //get brush selections from each node, convert to actual values
     //invert order of values in array to comply with the parcoords architecture
     if (config.brushes.length === 0) {
-      var nodes = selectAll('.brush').nodes();
+      var nodes = pc.g().selectAll('.brush').nodes();
       for (var k = 0; k < nodes.length; k++) {
         if (brushSelection(nodes[k]) !== null) {
           actives.push(nodes[k].__data__);
@@ -2550,7 +2550,7 @@ var brushReset$4 = function brushReset(config) {
     config.brushed = false;
 
     if (pc.g() !== undefined) {
-      var nodes = selectAll('.brush').nodes();
+      var nodes = pc.g().selectAll('.brush').nodes();
       for (var i = 0; i < nodes.length; i++) {
         if (nodes[i].__data__ === dimension) {
           // remove all dummy brushes for this axis or the real brush
@@ -2780,7 +2780,7 @@ var scale = function scale(config, pc) {
   };
 };
 
-var version = "2.1.2";
+var version = "2.1.3";
 
 var DefaultConfig = {
   data: [],
@@ -3087,7 +3087,7 @@ var ParCoords = function ParCoords(userConfig) {
   pc.applyAxisConfig = applyAxisConfig;
   pc.brushable = brushable(config, pc, flags);
   pc.brushReset = brushReset$4(config);
-  pc.selected = selected$4(config);
+  pc.selected = selected$4(config, pc);
   pc.reorderable = reorderable(config, pc, xscale, position, dragging, flags);
 
   // Reorder dimensions, such that the highest value (visually) is on the left and
