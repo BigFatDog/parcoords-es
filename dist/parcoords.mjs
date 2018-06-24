@@ -2774,13 +2774,14 @@ var detectDimensions = function detectDimensions(pc) {
 var scale = function scale(config, pc) {
   return function (d, domain) {
     config.dimensions[d].yscale.domain(domain);
-    pc.render().default();
+    pc.render.default();
+    pc.updateAxes();
 
     return this;
   };
 };
 
-var version = "2.1.3";
+var version = "2.1.4";
 
 var DefaultConfig = {
   data: [],
