@@ -46,6 +46,11 @@
     opacity: 0.25;
 }
 
+/* custom "dimmed" class for marked layer */
+.parcoords canvas.dimmed {
+  opacity: 0.85;
+}
+
 .parcoords {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
