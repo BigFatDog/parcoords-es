@@ -1,5 +1,4 @@
 // draw single cubic bezier curve
-import { entries } from 'd3-collection';
 import computeCentroids from './computeCentroids';
 import computeControlPoints from './computeControlPoints';
 import h from './height';
