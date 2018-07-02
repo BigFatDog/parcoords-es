@@ -29,9 +29,9 @@ const singleCurve = (config, position, d, ctx) => {
 
 // returns the y-position just beyond the separating null value line
 const getNullPosition = config => {
-  if (config.nullValueSeparator == 'bottom') {
+  if (config.nullValueSeparator === 'bottom') {
     return h(config) + 1;
-  } else if (config.nullValueSeparator == 'top') {
+  } else if (config.nullValueSeparator === 'top') {
     return 1;
   } else {
     console.log(
@@ -42,21 +42,20 @@ const getNullPosition = config => {
 };
 
 const singlePath = (config, position, d, ctx) => {
-  entries(config.dimensions).forEach((p, i) => {
+  Object.keys(config.dimensions).forEach((p, i) => {
+    const dest = d[p] === undefined
+        ? getNullPosition(config)
+        : config.dimensions[p].yscale(d[p]);
     //p isn't really p
-    if (i == 0) {
+    if (i === 0) {
       ctx.moveTo(
-        position(p.key),
-        typeof d[p.key] == 'undefined'
-          ? getNullPosition(config)
-          : config.dimensions[p.key].yscale(d[p.key])
+        position(p),
+        dest
       );
     } else {
       ctx.lineTo(
-        position(p.key),
-        typeof d[p.key] == 'undefined'
-          ? getNullPosition(config)
-          : config.dimensions[p.key].yscale(d[p.key])
+        position(p),
+        dest
       );
     }
   });
