@@ -41,23 +41,17 @@ const getNullPosition = config => {
 };
 
 const singlePath = (config, position, d, ctx) => {
-  Object.keys(config.dimensions).forEach((p, i) => {
-    const dest = d[p] === undefined
+  Object.keys(config.dimensions)
+    .map(p => [
+      position(p),
+      d[p] === undefined
         ? getNullPosition(config)
-        : config.dimensions[p].yscale(d[p]);
-    //p isn't really p
-    if (i === 0) {
-      ctx.moveTo(
-        position(p),
-        dest
-      );
-    } else {
-      ctx.lineTo(
-        position(p),
-        dest
-      );
-    }
-  });
+        : config.dimensions[p].yscale(d[p]),
+    ])
+    .sort((a, b) => a[0] - b[0])
+    .forEach((p, i) => {
+      i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]);
+    });
 };
 
 // draw single polyline
