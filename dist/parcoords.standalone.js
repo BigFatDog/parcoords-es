@@ -1151,7 +1151,7 @@
       event.stopImmediatePropagation();
     }
 
-    function nodrag (view) {
+    function dragDisable (view) {
       var root = view.document.documentElement,
           selection$$1 = select(view).on("dragstart.drag", noevent, true);
       if ("onselectstart" in root) {
@@ -1243,7 +1243,7 @@
         var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
         if (!gesture) return;
         select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
-        nodrag(event.view);
+        dragDisable(event.view);
         nopropagation();
         mousemoving = false;
         mousedownx = event.clientX;
@@ -3836,7 +3836,7 @@
         } else {
           var view = select(event.view).on("keydown.brush", keydowned, true).on("keyup.brush", keyupped, true).on("mousemove.brush", moved, true).on("mouseup.brush", ended, true);
 
-          nodrag(event.view);
+          dragDisable(event.view);
         }
 
         nopropagation$1();
@@ -7553,8 +7553,6 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
-    var mondays = monday.range;
-    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7644,8 +7642,6 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
-    var utcMondays = utcMonday.range;
-    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
@@ -8749,9 +8745,9 @@
           axisElement.selectAll('line').style('fill', 'none').style('stroke', '#222').style('shape-rendering', 'crispEdges');
         }).append('svg:text').attr('text-anchor', 'middle').attr('y', 0).attr('transform', 'translate(0,-5) rotate(' + config.dimensionTitleRotation + ')').attr('x', 0).attr('class', 'label').text(dimensionLabels(config)).on('dblclick', flipAxisAndUpdatePCP(config, pc, axis)).on('wheel', rotateLabels(config, pc));
 
-        if (config.nullValueSeparator == 'top') {
+        if (config.nullValueSeparator === 'top') {
           pc.svg.append('line').attr('x1', 0).attr('y1', 1 + config.nullValueSeparatorPadding.top).attr('x2', w(config)).attr('y2', 1 + config.nullValueSeparatorPadding.top).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
-        } else if (config.nullValueSeparator == 'bottom') {
+        } else if (config.nullValueSeparator === 'bottom') {
           pc.svg.append('line').attr('x1', 0).attr('y1', h(config) + 1 - config.nullValueSeparatorPadding.bottom).attr('x2', w(config)).attr('y2', h(config) + 1 - config.nullValueSeparatorPadding.bottom).attr('stroke-width', 1).attr('stroke', '#777').attr('fill', 'none').attr('shape-rendering', 'crispEdges');
         }
 
@@ -9193,9 +9189,9 @@
 
     // returns the y-position just beyond the separating null value line
     var getNullPosition = function getNullPosition(config) {
-      if (config.nullValueSeparator == 'bottom') {
+      if (config.nullValueSeparator === 'bottom') {
         return h(config) + 1;
-      } else if (config.nullValueSeparator == 'top') {
+      } else if (config.nullValueSeparator === 'top') {
         return 1;
       } else {
         console.log("A value is NULL, but nullValueSeparator is not set; set it to 'bottom' or 'top'.");
@@ -9204,13 +9200,12 @@
     };
 
     var singlePath = function singlePath(config, position, d, ctx) {
-      entries(config.dimensions).forEach(function (p, i) {
-        //p isn't really p
-        if (i == 0) {
-          ctx.moveTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-        } else {
-          ctx.lineTo(position(p.key), typeof d[p.key] == 'undefined' ? getNullPosition(config) : config.dimensions[p.key].yscale(d[p.key]));
-        }
+      Object.keys(config.dimensions).map(function (p) {
+        return [position(p), d[p] === undefined ? getNullPosition(config) : config.dimensions[p].yscale(d[p])];
+      }).sort(function (a, b) {
+        return a[0] - b[0];
+      }).forEach(function (p, i) {
+        i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]);
       });
     };
 
@@ -9516,7 +9511,7 @@
       };
     };
 
-    var version = "2.1.4";
+    var version = "2.1.5";
 
     var DefaultConfig = {
       data: [],
