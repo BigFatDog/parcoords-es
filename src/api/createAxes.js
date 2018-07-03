@@ -70,7 +70,7 @@ const createAxes = (config, pc, xscale, flags, axis) =>
       .on('dblclick', flipAxisAndUpdatePCP(config, pc, axis))
       .on('wheel', rotateLabels(config, pc));
 
-    if (config.nullValueSeparator == 'top') {
+    if (config.nullValueSeparator === 'top') {
       pc.svg
         .append('line')
         .attr('x1', 0)
@@ -81,7 +81,7 @@ const createAxes = (config, pc, xscale, flags, axis) =>
         .attr('stroke', '#777')
         .attr('fill', 'none')
         .attr('shape-rendering', 'crispEdges');
-    } else if (config.nullValueSeparator == 'bottom') {
+    } else if (config.nullValueSeparator === 'bottom') {
       pc.svg
         .append('line')
         .attr('x1', 0)

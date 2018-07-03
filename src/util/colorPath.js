@@ -1,5 +1,4 @@
 // draw single cubic bezier curve
-import { entries } from 'd3-collection';
 import computeCentroids from './computeCentroids';
 import computeControlPoints from './computeControlPoints';
 import h from './height';
@@ -29,9 +28,9 @@ const singleCurve = (config, position, d, ctx) => {
 
 // returns the y-position just beyond the separating null value line
 const getNullPosition = config => {
-  if (config.nullValueSeparator == 'bottom') {
+  if (config.nullValueSeparator === 'bottom') {
     return h(config) + 1;
-  } else if (config.nullValueSeparator == 'top') {
+  } else if (config.nullValueSeparator === 'top') {
     return 1;
   } else {
     console.log(
@@ -42,24 +41,17 @@ const getNullPosition = config => {
 };
 
 const singlePath = (config, position, d, ctx) => {
-  entries(config.dimensions).forEach((p, i) => {
-    //p isn't really p
-    if (i == 0) {
-      ctx.moveTo(
-        position(p.key),
-        typeof d[p.key] == 'undefined'
-          ? getNullPosition(config)
-          : config.dimensions[p.key].yscale(d[p.key])
-      );
-    } else {
-      ctx.lineTo(
-        position(p.key),
-        typeof d[p.key] == 'undefined'
-          ? getNullPosition(config)
-          : config.dimensions[p.key].yscale(d[p.key])
-      );
-    }
-  });
+  Object.keys(config.dimensions)
+    .map(p => [
+      position(p),
+      d[p] === undefined
+        ? getNullPosition(config)
+        : config.dimensions[p].yscale(d[p]),
+    ])
+    .sort((a, b) => a[0] - b[0])
+    .forEach((p, i) => {
+      i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]);
+    });
 };
 
 // draw single polyline
