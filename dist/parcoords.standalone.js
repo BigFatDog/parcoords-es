@@ -1151,7 +1151,7 @@
       event.stopImmediatePropagation();
     }
 
-    function dragDisable (view) {
+    function nodrag (view) {
       var root = view.document.documentElement,
           selection$$1 = select(view).on("dragstart.drag", noevent, true);
       if ("onselectstart" in root) {
@@ -1243,7 +1243,7 @@
         var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
         if (!gesture) return;
         select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
-        dragDisable(event.view);
+        nodrag(event.view);
         nopropagation();
         mousemoving = false;
         mousedownx = event.clientX;
@@ -2186,6 +2186,99 @@
 
     var rho = Math.SQRT2;
 
+    var noop$1 = { value: function value() {} };
+
+    function dispatch$1() {
+      for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
+        if (!(t = arguments[i] + "") || t in _) throw new Error("illegal type: " + t);
+        _[t] = [];
+      }
+      return new Dispatch$1(_);
+    }
+
+    function Dispatch$1(_) {
+      this._ = _;
+    }
+
+    function parseTypenames$2(typenames, types) {
+      return typenames.trim().split(/^|\s+/).map(function (t) {
+        var name = "",
+            i = t.indexOf(".");
+        if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+        if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
+        return { type: t, name: name };
+      });
+    }
+
+    Dispatch$1.prototype = dispatch$1.prototype = {
+      constructor: Dispatch$1,
+      on: function on(typename, callback) {
+        var _ = this._,
+            T = parseTypenames$2(typename + "", _),
+            t,
+            i = -1,
+            n = T.length;
+
+        // If no callback was specified, return the callback of the given type and name.
+        if (arguments.length < 2) {
+          while (++i < n) {
+            if ((t = (typename = T[i]).type) && (t = get$2(_[t], typename.name))) return t;
+          }return;
+        }
+
+        // If a type was specified, set the callback for the given type and name.
+        // Otherwise, if a null callback was specified, remove callbacks of the given name.
+        if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
+        while (++i < n) {
+          if (t = (typename = T[i]).type) _[t] = set$2(_[t], typename.name, callback);else if (callback == null) for (t in _) {
+            _[t] = set$2(_[t], typename.name, null);
+          }
+        }
+
+        return this;
+      },
+      copy: function copy() {
+        var copy = {},
+            _ = this._;
+        for (var t in _) {
+          copy[t] = _[t].slice();
+        }return new Dispatch$1(copy);
+      },
+      call: function call(type, that) {
+        if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) {
+          args[i] = arguments[i + 2];
+        }if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+        for (t = this._[type], i = 0, n = t.length; i < n; ++i) {
+          t[i].value.apply(that, args);
+        }
+      },
+      apply: function apply(type, that, args) {
+        if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+        for (var t = this._[type], i = 0, n = t.length; i < n; ++i) {
+          t[i].value.apply(that, args);
+        }
+      }
+    };
+
+    function get$2(type, name) {
+      for (var i = 0, n = type.length, c; i < n; ++i) {
+        if ((c = type[i]).name === name) {
+          return c.value;
+        }
+      }
+    }
+
+    function set$2(type, name, callback) {
+      for (var i = 0, n = type.length; i < n; ++i) {
+        if (type[i].name === name) {
+          type[i] = noop$1, type = type.slice(0, i).concat(type.slice(i + 1));
+          break;
+        }
+      }
+      if (callback != null) type.push({ name: name, value: callback });
+      return type;
+    }
+
     var frame = 0,
         // is an animation frame pending?
     timeout = 0,
@@ -2315,7 +2408,7 @@
       return t;
     }
 
-    var emptyOn = dispatch("start", "end", "interrupt");
+    var emptyOn = dispatch$1("start", "end", "interrupt");
     var emptyTween = [];
 
     var CREATED = 0;
@@ -2345,18 +2438,18 @@
     }
 
     function init(node, id) {
-      var schedule = get$2(node, id);
+      var schedule = get$3(node, id);
       if (schedule.state > CREATED) throw new Error("too late; already scheduled");
       return schedule;
     }
 
-    function set$2(node, id) {
-      var schedule = get$2(node, id);
+    function set$3(node, id) {
+      var schedule = get$3(node, id);
       if (schedule.state > STARTING) throw new Error("too late; already started");
       return schedule;
     }
 
-    function get$2(node, id) {
+    function get$3(node, id) {
       var schedule = node.__transition;
       if (!schedule || !(schedule = schedule[id])) throw new Error("transition not found");
       return schedule;
@@ -2503,7 +2596,7 @@
     function tweenRemove(id, name) {
       var tween0, tween1;
       return function () {
-        var schedule$$1 = set$2(this, id),
+        var schedule$$1 = set$3(this, id),
             tween = schedule$$1.tween;
 
         // If this node shared tween with the previous node,
@@ -2528,7 +2621,7 @@
       var tween0, tween1;
       if (typeof value !== "function") throw new Error();
       return function () {
-        var schedule$$1 = set$2(this, id),
+        var schedule$$1 = set$3(this, id),
             tween = schedule$$1.tween;
 
         // If this node shared tween with the previous node,
@@ -2555,7 +2648,7 @@
       name += "";
 
       if (arguments.length < 2) {
-        var tween = get$2(this.node(), id).tween;
+        var tween = get$3(this.node(), id).tween;
         for (var i = 0, n = tween.length, t; i < n; ++i) {
           if ((t = tween[i]).name === name) {
             return t.value;
@@ -2571,12 +2664,12 @@
       var id = transition._id;
 
       transition.each(function () {
-        var schedule$$1 = set$2(this, id);
+        var schedule$$1 = set$3(this, id);
         (schedule$$1.value || (schedule$$1.value = {}))[name] = value.apply(this, arguments);
       });
 
       return function (node) {
-        return get$2(node, id).value[name];
+        return get$3(node, id).value[name];
       };
     }
 
@@ -3165,38 +3258,38 @@
     function transition_delay (value) {
       var id = this._id;
 
-      return arguments.length ? this.each((typeof value === "function" ? delayFunction : delayConstant)(id, value)) : get$2(this.node(), id).delay;
+      return arguments.length ? this.each((typeof value === "function" ? delayFunction : delayConstant)(id, value)) : get$3(this.node(), id).delay;
     }
 
     function durationFunction(id, value) {
       return function () {
-        set$2(this, id).duration = +value.apply(this, arguments);
+        set$3(this, id).duration = +value.apply(this, arguments);
       };
     }
 
     function durationConstant(id, value) {
       return value = +value, function () {
-        set$2(this, id).duration = value;
+        set$3(this, id).duration = value;
       };
     }
 
     function transition_duration (value) {
       var id = this._id;
 
-      return arguments.length ? this.each((typeof value === "function" ? durationFunction : durationConstant)(id, value)) : get$2(this.node(), id).duration;
+      return arguments.length ? this.each((typeof value === "function" ? durationFunction : durationConstant)(id, value)) : get$3(this.node(), id).duration;
     }
 
     function easeConstant(id, value) {
       if (typeof value !== "function") throw new Error();
       return function () {
-        set$2(this, id).ease = value;
+        set$3(this, id).ease = value;
       };
     }
 
     function transition_ease (value) {
       var id = this._id;
 
-      return arguments.length ? this.each(easeConstant(id, value)) : get$2(this.node(), id).ease;
+      return arguments.length ? this.each(easeConstant(id, value)) : get$3(this.node(), id).ease;
     }
 
     function transition_filter (match) {
@@ -3242,7 +3335,7 @@
     function onFunction(id, name, listener) {
       var on0,
           on1,
-          sit = start(name) ? init : set$2;
+          sit = start(name) ? init : set$3;
       return function () {
         var schedule$$1 = sit(this, id),
             on = schedule$$1.on;
@@ -3259,7 +3352,7 @@
     function transition_on (name, listener) {
       var id = this._id;
 
-      return arguments.length < 2 ? get$2(this.node(), id).on.on(name) : this.each(onFunction(id, name, listener));
+      return arguments.length < 2 ? get$3(this.node(), id).on.on(name) : this.each(onFunction(id, name, listener));
     }
 
     function removeFunction(id) {
@@ -3286,7 +3379,7 @@
           if ((node = group[i]) && (subnode = select$$1.call(node, node.__data__, i, group))) {
             if ("__data__" in node) subnode.__data__ = node.__data__;
             subgroup[i] = subnode;
-            schedule(subgroup[i], name, id, i, subgroup, get$2(node, id));
+            schedule(subgroup[i], name, id, i, subgroup, get$3(node, id));
           }
         }
       }
@@ -3303,7 +3396,7 @@
       for (var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j) {
         for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) {
           if (node = group[i]) {
-            for (var children = select$$1.call(node, node.__data__, i, group), child, inherit = get$2(node, id), k = 0, l = children.length; k < l; ++k) {
+            for (var children = select$$1.call(node, node.__data__, i, group), child, inherit = get$3(node, id), k = 0, l = children.length; k < l; ++k) {
               if (child = children[k]) {
                 schedule(child, name, id, k, children, inherit);
               }
@@ -3406,7 +3499,7 @@
       for (var groups = this._groups, m = groups.length, j = 0; j < m; ++j) {
         for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) {
           if (node = group[i]) {
-            var inherit = get$2(node, id0);
+            var inherit = get$3(node, id0);
             schedule(node, name, id1, i, group, {
               time: inherit.time + inherit.delay + inherit.duration,
               delay: 0,
@@ -3836,7 +3929,7 @@
         } else {
           var view = select(event.view).on("keydown.brush", keydowned, true).on("keyup.brush", keyupped, true).on("mousemove.brush", moved, true).on("mouseup.brush", ended, true);
 
-          dragDisable(event.view);
+          nodrag(event.view);
         }
 
         nopropagation$1();
@@ -4194,10 +4287,10 @@
       };
     };
 
-    var brushUpdated = function brushUpdated(config, pc, events) {
+    var brushUpdated = function brushUpdated(config, pc, events, args) {
       return function (newSelection) {
         config.brushed = newSelection;
-        events.call('brush', pc, config.brushed);
+        events.call('brush', pc, config.brushed, args);
         pc.renderBrushed();
       };
     };
@@ -4210,16 +4303,16 @@
 
         _brush.on('start', function () {
           if (event.sourceEvent !== null) {
-            events.call('brushstart', pc, config.brushed);
+            events.call('brushstart', pc, config.brushed, Array.prototype.slice.call(arguments));
             if (typeof event.sourceEvent.stopPropagation === 'function') {
               event.sourceEvent.stopPropagation();
             }
           }
         }).on('brush', function () {
-          brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
+          brushUpdated(config, pc, events, Array.prototype.slice.call(arguments))(selected(state, config, brushGroup)());
         }).on('end', function () {
           brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
-          events.call('brushend', pc, config.brushed);
+          events.call('brushend', pc, config.brushed, Array.prototype.slice.call(arguments));
         });
 
         state.brushes[axis] = _brush;
@@ -6629,7 +6722,7 @@
 
     var proto = map$1.prototype;
 
-    Set.prototype = set$3.prototype = {
+    Set.prototype = set$4.prototype = {
       constructor: Set,
       has: proto.has,
       add: function add(value) {
@@ -6645,7 +6738,7 @@
       each: proto.each
     };
 
-    function set$3(object, f) {
+    function set$4(object, f) {
       var set = new Set();
 
       // Copy constructor.
