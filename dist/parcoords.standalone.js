@@ -1151,7 +1151,7 @@
       event.stopImmediatePropagation();
     }
 
-    function dragDisable (view) {
+    function nodrag (view) {
       var root = view.document.documentElement,
           selection$$1 = select(view).on("dragstart.drag", noevent, true);
       if ("onselectstart" in root) {
@@ -1243,7 +1243,7 @@
         var gesture = beforestart("mouse", container.apply(this, arguments), mouse, this, arguments);
         if (!gesture) return;
         select(event.view).on("mousemove.drag", mousemoved, true).on("mouseup.drag", mouseupped, true);
-        dragDisable(event.view);
+        nodrag(event.view);
         nopropagation();
         mousemoving = false;
         mousedownx = event.clientX;
@@ -3836,7 +3836,7 @@
         } else {
           var view = select(event.view).on("keydown.brush", keydowned, true).on("keyup.brush", keyupped, true).on("mousemove.brush", moved, true).on("mouseup.brush", ended, true);
 
-          dragDisable(event.view);
+          nodrag(event.view);
         }
 
         nopropagation$1();
@@ -7553,6 +7553,8 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
+    var mondays = monday.range;
+    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7642,6 +7644,8 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
+    var utcMondays = utcMonday.range;
+    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
