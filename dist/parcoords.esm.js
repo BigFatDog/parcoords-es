@@ -2780,7 +2780,7 @@ var scale = function scale(config, pc) {
   };
 };
 
-var version = "2.1.5";
+var version = "2.1.6";
 
 var DefaultConfig = {
   data: [],
@@ -3147,4 +3147,4 @@ var ParCoords = function ParCoords(userConfig) {
 };
 
 export default ParCoords;
-//# sourceMappingURL=parcoords.mjs.map
+//# sourceMappingURL=parcoords.esm.js.map
