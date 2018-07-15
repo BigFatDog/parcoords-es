@@ -1,0 +1,215 @@
+<!doctype html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <title>Marking example</title>
+
+  <!-- Main -->
+  <link rel="stylesheet" type="text/css" href="../dist/parcoords.css">
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <script src="lib/d3.v5.min.js"></script>
+  <script src="../dist/parcoords.standalone.js"></script>
+  <script src="lib/underscore.js"></script>
+  <script src="lib/divgrid.js"></script>
+
+  <!-- SlickGrid -->
+  <link rel="stylesheet" href="lib/slickgrid/slick.grid.css" type="text/css" media="screen" charset="utf-8">
+  <link rel="stylesheet" href="lib/slickgrid/jquery-ui-1.8.16.custom.css" type="text/css" />
+  <link rel="stylesheet" href="lib/slickgrid/plugins/slick.columnpicker.css" type="text/css"/>
+
+  <script src="lib/slickgrid/jquery-1.7.min.js"></script>
+  <script src="lib/slickgrid/jquery.event.drag-2.0.min.js"></script>
+  <script src="lib/slickgrid/slick.core.js"></script>
+  <script src="lib/slickgrid/slick.grid.js"></script>
+  <script src="lib/slickgrid/slick.dataview.js"></script>
+  <script src="lib/slickgrid/slick.formatters.js"></script>
+  <script src="lib/slickgrid/slick.editors.js"></script>
+
+  <script src="lib/slickgrid/plugins/slick.checkboxselectcolumn.js"></script>
+  <script src="lib/slickgrid/plugins/slick.autotooltips.js"></script>
+  <script src="lib/slickgrid/plugins/slick.cellrangedecorator.js"></script>
+  <script src="lib/slickgrid/plugins/slick.cellrangeselector.js"></script>
+  <script src="lib/slickgrid/plugins/slick.cellcopymanager.js"></script>
+  <script src="lib/slickgrid/plugins/slick.cellselectionmodel.js"></script>
+  <script src="lib/slickgrid/plugins/slick.rowselectionmodel.js"></script>
+  <script src="lib/slickgrid/plugins/slick.columnpicker.js"></script>
+
+</head>
+
+<body>
+
+<p>Demonstrates marking feature using checkbox selections in slickgrid to 'mark' individual polylines on parallel coordinates plot.</p>
+
+<p>
+    <button id="reset_markings">Reset Markings</button>
+    <button id="reset_brushes">Reset Brushes</button>
+</p>
+<div id="plot" class="parcoords" style="height:200px; width=100%;"></div>
+<div id="grid"></div>
+
+
+    <script>
+
+        var pc = ParCoords()("#plot")
+            .alpha(0.4)
+
+        // load csv file and create the chart
+        d3.csv('data/cars.csv').then(function(data) {
+
+            // slickgrid needs each data element to have an id
+            data.forEach(function(d,i) { d.id = d.id || i; });
+
+            pc
+                .data(data)
+                .hideAxis(["name", "id"])
+                .composite("darker")
+                .render()
+                .mode("queue")
+                .shadows()
+                .reorderable()
+                .brushMode("1D-axes")
+
+            // ---------------------
+            // slickgrid setup
+            // ---------------------
+
+            //remove id col from left and place on right
+            var column_keys = d3.keys(data[0]).slice(0,-1);
+            column_keys.unshift(d3.keys(data[0]).pop());
+
+            var columns = column_keys.map(function(key,i) {
+              return {
+                id: key,
+                name: key,
+                field: key,
+                sortable: true
+              }
+            });
+
+            var options = {
+              enableCellNavigation: true,
+              enableColumnReorder: false,
+              multiColumnSort: false,
+              editable: true,
+              asyncEditorLoading: false,
+              autoEdit: false
+            };
+
+            var checkboxSelector = new Slick.CheckboxSelectColumn({
+              cssClass: "slick-cell-checkboxsel"
+            });
+            // add checkboxes to left grid
+            columns.unshift(checkboxSelector.getColumnDefinition());
+
+            var dataView = new Slick.Data.DataView();
+            var grid = new Slick.Grid("#grid", dataView, columns, options);
+            grid.setSelectionModel(new Slick.RowSelectionModel({selectActiveRow: false}));
+            grid.registerPlugin(checkboxSelector);
+
+            // wire up model events to drive the grid
+            dataView.onRowCountChanged.subscribe(function (e, args) {
+              grid.updateRowCount();
+              grid.render();
+            });
+
+            dataView.onRowsChanged.subscribe(function (e, args) {
+              grid.invalidateRows(args.rows);
+              grid.render();
+            });
+
+            // keep checkboxes matched with row on filter/brush
+            dataView.syncGridSelection(grid, preserveHidden=false);
+
+            // column sorting
+            var sortcol = column_keys[0];
+            var sortdir = 1;
+
+            // function comparer(a, b) {
+            //   var x = a[sortcol], y = b[sortcol];
+            //   return (x == y ? 0 : (x > y ? 1 : -1));
+            // }
+
+            function convert_to_float(x) {
+                var converted = parseFloat(x);
+                return isNaN(converted) ? x : converted
+            };
+
+            function comparer(a, b) {
+                var x = convert_to_float(a[sortcol]), y = convert_to_float(b[sortcol]);
+                return (x == y ? 0 : (x > y ? 1 : -1));
+            };
+
+            // click header to sort grid column
+            grid.onSort.subscribe(function (e, args) {
+              sortdir = args.sortAsc ? 1 : -1;
+              sortcol = args.sortCol.field;
+
+              if ($.browser.msie && $.browser.version <= 8) {
+                dataView.fastSort(sortcol, args.sortAsc);
+              } else {
+                dataView.sort(comparer, args.sortAsc);
+              }
+            });
+
+            // highlight row in chart
+            grid.onMouseEnter.subscribe(function(e, args) {
+              var i = grid.getCellFromEvent(e).row;
+              var d = pc.brushed() || data;
+              pc.highlight([d[i]]);
+            });
+            grid.onMouseLeave.subscribe(function(e, args) {
+              pc.unhighlight();
+            });
+
+            // mark row in chart
+            grid.onSelectedRowsChanged.subscribe(function (e, args) {
+              // reset and update selected rows
+              var selected_row_ids = grid.getSelectedRows();
+              var brushed = pc.brushed();
+              var d;
+              if (brushed.length) {
+                d = brushed;
+              } else {
+                d = data;
+              }
+              pc.unmark();
+              selected_row_ids.forEach(function(i) {
+                 pc.mark([d[i]]);
+               });
+            });
+
+            // fill grid with data
+            gridUpdate(data);
+
+            // update grid on brush
+            pc.on("brush", function(d) {
+              gridUpdate(d);
+            });
+
+            function gridUpdate(data) {
+                dataView.beginUpdate();
+                dataView.setItems(data);
+                // if marked data exists, keep in grid
+                if (pc.marked().length) {
+                  pc.marked().forEach(function(i) { dataView.insertItem(0,i); });
+                }
+                dataView.endUpdate();
+            };
+
+            // clear marked
+            d3.select('#reset_markings').on('click', function() {
+              // unmark all elements in grid (fires event)
+              grid.setSelectedRows([]);
+            });
+
+            d3.select('#reset_brushes').on('click', function () {
+              pc.brushReset();
+              gridUpdate(data)
+            });
+
+        });
+
+    </script>
+  </body>
