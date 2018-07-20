@@ -15,9 +15,6 @@ const reorder = (config, pc, xscale) => rowdata => {
     const highlighted = config.highlighted.slice(0);
     pc.unhighlight();
 
-    const marked = config.marked.slice(0);
-    pc.unmark();
-
     const g = pc.g();
     g.transition()
       .duration(1500)
@@ -27,9 +24,6 @@ const reorder = (config, pc, xscale) => rowdata => {
     // pc.highlight() does not check whether highlighted is length zero, so we do that here.
     if (highlighted.length !== 0) {
       pc.highlight(highlighted);
-    }
-    if (marked.length !== 0) {
-      pc.mark(marked);
     }
   }
 };
