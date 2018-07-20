@@ -29,6 +29,7 @@ const initState = userConfig => {
     'render',
     'resize',
     'highlight',
+    'mark',
     'brush',
     'brushend',
     'brushstart',

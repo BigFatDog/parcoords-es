@@ -20,6 +20,7 @@ const bindEvents = (
   xscale,
   flags,
   brushedQueue,
+  markedQueue,
   foregroundQueue,
   events,
   axis
@@ -31,6 +32,7 @@ const bindEvents = (
     xscale,
     flags,
     brushedQueue,
+    markedQueue,
     foregroundQueue
   );
 
