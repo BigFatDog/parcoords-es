@@ -1,7 +1,6 @@
 const DefaultConfig = {
   data: [],
   highlighted: [],
-  marked: [],
   dimensions: {},
   dimensionTitleRotation: 0,
   brushes: [],
@@ -9,9 +8,6 @@ const DefaultConfig = {
   brushedColor: null,
   alphaOnBrushed: 0.0,
   mode: 'default',
-  markedLineWidth: 3,
-  markedShadowColor: "#ffffff",
-  markedShadowBlur: 10,
   rate: 20,
   width: 600,
   height: 300,

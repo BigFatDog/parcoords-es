@@ -11,14 +11,12 @@ const renderDefault = (config, pc, ctx, position) => () => {
   pc.clear('highlight');
 
   pc.renderBrushed.default();
-  pc.renderMarked.default();
 
   config.data.forEach(pathForeground(config, ctx, position));
 };
 
 const renderDefaultQueue = (config, pc, foregroundQueue) => () => {
   pc.renderBrushed.queue();
-  pc.renderMarked.queue();
   foregroundQueue(config.data);
 };
 

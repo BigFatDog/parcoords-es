@@ -120,10 +120,6 @@ const autoscale = (config, pc, xscale, ctx) =>
     ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
     ctx.highlight.lineWidth = 3;
     ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
-    ctx.marked.lineWidth = config.markedLineWidth;
-    ctx.marked.shadowColor = config.markedShadowColor;
-    ctx.marked.shadowBlur = config.markedShadowBlur;
-    ctx.marked.scale(devicePixelRatio, devicePixelRatio);
 
     return this;
   };

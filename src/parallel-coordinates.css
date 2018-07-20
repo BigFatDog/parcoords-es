@@ -46,10 +46,6 @@
     opacity: 0.25;
 }
 
-.parcoords canvas.dimmed {
-  opacity: 0.85;
-}
-
 .parcoords {
     -webkit-touch-callout: none;
     -webkit-user-select: none;

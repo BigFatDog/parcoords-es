@@ -21,7 +21,7 @@ const init = (config, canvas, ctx) => {
     config.width = selection.node().clientWidth;
     config.height = selection.node().clientHeight;
     // canvas data layers
-    ['dots', 'foreground', 'brushed', 'marked', 'highlight'].forEach(layer => {
+    ['marks', 'foreground', 'brushed', 'highlight'].forEach(layer => {
       canvas[layer] = selection
         .append('canvas')
         .attr('class', layer)
