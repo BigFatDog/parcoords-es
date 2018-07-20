@@ -29,6 +29,12 @@ import sortDimensions from './api/sortDimensions';
 import sortDimensionsByRowData from './api/sortDimensionsByRowData';
 import clear from './api/clear';
 import {
+  pathMark,
+  renderMarked,
+  renderMarkedDefault,
+  renderMarkedQueue,
+} from './api/renderMarked';
+import {
   pathBrushed,
   renderBrushed,
   renderBrushedDefault,
@@ -40,6 +46,8 @@ import toString from './api/toString';
 import adjacentPairs from './api/adjacentPairs';
 import highlight from './api/highlight';
 import unhighlight from './api/unhighlight';
+import mark from './api/mark';
+import unmark from './api/unmark';
 import removeAxes from './api/removeAxes';
 import render from './api/render';
 import renderDefault, {
@@ -90,6 +98,10 @@ const ParCoords = userConfig => {
     .rate(50)
     .clear(() => pc.clear('brushed'));
 
+  const markedQueue = renderQueue(pathMark(config, ctx, position))
+    .rate(50)
+    .clear(() => pc.clear('marked'));
+
   const foregroundQueue = renderQueue(pathForeground(config, ctx, position))
     .rate(50)
     .clear(function() {
@@ -104,6 +116,7 @@ const ParCoords = userConfig => {
     xscale,
     flags,
     brushedQueue,
+    markedQueue,
     foregroundQueue,
     events,
     axis
@@ -126,6 +139,7 @@ const ParCoords = userConfig => {
   //Renders the polylines.
   pc.render = render(config, pc, events);
   pc.renderBrushed = renderBrushed(config, pc, events);
+  pc.renderMarked = renderMarked(config, pc, events);
   pc.render.default = renderDefault(config, pc, ctx, position);
   pc.render.queue = renderDefaultQueue(config, pc, foregroundQueue);
   pc.renderBrushed.default = renderBrushedDefault(
@@ -136,6 +150,8 @@ const ParCoords = userConfig => {
     brush
   );
   pc.renderBrushed.queue = renderBrushedQueue(config, brush, brushedQueue);
+  pc.renderMarked.default = renderMarkedDefault(config, pc, ctx, position);
+  pc.renderMarked.queue = renderMarkedQueue(config, markedQueue);
 
   pc.compute_real_centroids = computeRealCentroids(config.dimensions, position);
   pc.shadows = shadows(flags, pc);
@@ -175,6 +191,11 @@ const ParCoords = userConfig => {
   pc.highlight = highlight(config, pc, canvas, events, ctx, position);
   // clear highlighting
   pc.unhighlight = unhighlight(config, pc, canvas);
+
+  // mark an array of data
+  pc.mark = mark(config, pc, canvas, events, ctx, position);
+  // clear marked data
+  pc.unmark = unmark(config, pc, canvas);
 
   // calculate 2d intersection of line a->b with line c->d
   // points are objects with x and y properties
