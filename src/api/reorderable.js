@@ -31,6 +31,7 @@ const reorderable = (config, pc, xscale, position, dragging, flags) =>
             .transition()
             .attr('transform', 'translate(' + xscale(d) + ')');
           pc.render();
+          pc.renderMarkedDefault();
         })
     );
     flags.reorderable = true;

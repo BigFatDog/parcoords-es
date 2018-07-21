@@ -17,6 +17,7 @@ const sideEffects = (
   xscale,
   flags,
   brushedQueue,
+  markedQueue,
   foregroundQueue
 ) =>
   dispatch
@@ -37,6 +38,7 @@ const sideEffects = (
     .on('margin', d => pc.resize())
     .on('rate', d => {
       brushedQueue.rate(d.value);
+      markedQueue.rate(d.value);
       foregroundQueue.rate(d.value);
     })
     .on('dimensions', d => {
