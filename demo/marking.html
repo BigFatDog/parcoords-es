@@ -6,35 +6,35 @@
   <title>Marking example</title>
 
   <!-- Main -->
-  <link rel="stylesheet" type="text/css" href="../dist/parcoords.css">
+  <link rel="stylesheet" type="text/css" href="./parcoords.css">
   <link rel="stylesheet" type="text/css" href="style.css">
 
-  <script src="lib/d3.v5.min.js"></script>
-  <script src="../dist/parcoords.standalone.js"></script>
-  <script src="lib/underscore.js"></script>
-  <script src="lib/divgrid.js"></script>
+  <script src="./lib/d3.v5.min.js"></script>
+  <script src="./parcoords.standalone.js"></script>
+  <script src="./lib/underscore.js"></script>
+  <script src="./lib/divgrid.js"></script>
 
   <!-- SlickGrid -->
-  <link rel="stylesheet" href="lib/slickgrid/slick.grid.css" type="text/css" media="screen" charset="utf-8">
-  <link rel="stylesheet" href="lib/slickgrid/jquery-ui-1.8.16.custom.css" type="text/css" />
-  <link rel="stylesheet" href="lib/slickgrid/plugins/slick.columnpicker.css" type="text/css"/>
+  <link rel="stylesheet" href="./lib/slickgrid/slick.grid.css" type="text/css" media="screen" charset="utf-8">
+  <link rel="stylesheet" href="./lib/slickgrid/jquery-ui-1.8.16.custom.css" type="text/css" />
+  <link rel="stylesheet" href="./lib/slickgrid/plugins/slick.columnpicker.css" type="text/css"/>
 
-  <script src="lib/slickgrid/jquery-1.7.min.js"></script>
-  <script src="lib/slickgrid/jquery.event.drag-2.0.min.js"></script>
-  <script src="lib/slickgrid/slick.core.js"></script>
-  <script src="lib/slickgrid/slick.grid.js"></script>
-  <script src="lib/slickgrid/slick.dataview.js"></script>
-  <script src="lib/slickgrid/slick.formatters.js"></script>
-  <script src="lib/slickgrid/slick.editors.js"></script>
+  <script src="./lib/slickgrid/jquery-1.7.min.js"></script>
+  <script src="./lib/slickgrid/jquery.event.drag-2.0.min.js"></script>
+  <script src="./lib/slickgrid/slick.core.js"></script>
+  <script src="./lib/slickgrid/slick.grid.js"></script>
+  <script src="./lib/slickgrid/slick.dataview.js"></script>
+  <script src="./lib/slickgrid/slick.formatters.js"></script>
+  <script src="./lib/slickgrid/slick.editors.js"></script>
 
-  <script src="lib/slickgrid/plugins/slick.checkboxselectcolumn.js"></script>
-  <script src="lib/slickgrid/plugins/slick.autotooltips.js"></script>
-  <script src="lib/slickgrid/plugins/slick.cellrangedecorator.js"></script>
-  <script src="lib/slickgrid/plugins/slick.cellrangeselector.js"></script>
-  <script src="lib/slickgrid/plugins/slick.cellcopymanager.js"></script>
-  <script src="lib/slickgrid/plugins/slick.cellselectionmodel.js"></script>
-  <script src="lib/slickgrid/plugins/slick.rowselectionmodel.js"></script>
-  <script src="lib/slickgrid/plugins/slick.columnpicker.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.checkboxselectcolumn.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.autotooltips.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.cellrangedecorator.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.cellrangeselector.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.cellcopymanager.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.cellselectionmodel.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.rowselectionmodel.js"></script>
+  <script src="./lib/slickgrid/plugins/slick.columnpicker.js"></script>
 
 </head>
 
@@ -43,10 +43,10 @@
 <p>Demonstrates marking feature using checkbox selections in slickgrid to 'mark' individual polylines on parallel coordinates plot.</p>
 
 <p>
-    <button id="reset_marks">Reset Markings</button>
+    <button id="reset_marks">Reset Marks</button>
     <button id="reset_brushes">Reset Brushes</button>
 </p>
-<div id="plot" class="parcoords" style="height:200px; width=100%;"></div>
+<div id="plot" class="parcoords" style="height:200px; width:100%;"></div>
 <div id="grid"></div>
 
 
@@ -120,16 +120,26 @@
             });
 
             // keep checkboxes matched with row on filter/brush
-            dataView.syncGridSelection(grid, preserveHidden=false);
+            dataView.syncGridSelection(grid, preserveHidden=true);
 
             // column sorting
             var sortcol = column_keys[0];
             var sortdir = 1;
 
+            // function comparer(a, b) {
+            //   var x = a[sortcol], y = b[sortcol];
+            //   return (x == y ? 0 : (x > y ? 1 : -1));
+            // }
+
+            function convert_to_float(x) {
+                var converted = parseFloat(x);
+                return isNaN(converted) ? x : converted
+            };
+
             function comparer(a, b) {
-              var x = a[sortcol], y = b[sortcol];
-              return (x == y ? 0 : (x > y ? 1 : -1));
-            }
+                var x = convert_to_float(a[sortcol]), y = convert_to_float(b[sortcol]);
+                return (x == y ? 0 : (x > y ? 1 : -1));
+            };
 
             // click header to sort grid column
             grid.onSort.subscribe(function (e, args) {
