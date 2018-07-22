@@ -14,9 +14,11 @@ npm install
 npm run dev
 ```
 
-## API Deviation
+## API
+This section only lists api that are <b>deviated</b> from the oringinal parallel coordinates.
 
-brushExtents supports 1D multi brushes:
+
+<a name="parcoords_brush_extents" href="#parcoords_brush_extents">#</a> <b>brushExtents</b> supports 1D multi brushes:
 
 1D brush [<>](https://github.com/BigFatDog/parcoords-es/blob/master/demo/setterForBrushes.html "Source")
 ```javascript
@@ -30,6 +32,20 @@ brushExtents supports 1D multi brushes:
   .brushExtents({"2": [[3,4], [6,8], [10, 14]]});
 
 ```
+
+<a name="parcoords_marking" href="#parcoords_marking">#</a> parcoords.<b>mark<b/>([values])
+allows user to permanently highlight a data element in chart
+```
+const data = [...];
+const pc = ParCoords().data(data)...;
+parcoords.mark(data.filter(d => d.volume > 10));
+```
+Please refer to [marking demo](https://github.com/BigFatDog/parcoords-es/blob/develop/demo/marking.html "Source") for details
+
+<a name="parcoords_unmark" href="#parcoords_unmark">#</a> parcoords.<b>unmark<b/>()
+clears all permanently highlighted data that is added by <a href="#parcoords_marking">mark([values])</a>
+
+
 
 ## Usage
 
@@ -49,7 +65,7 @@ const chart = ParCoords()....
 ```
 ### Standalone
 
-parcoords.standalone.js contains all dependencies and can be used directly in your html page. Please note that only essential D3 V4 modules are bundled, your global namespace won't be polluted.
+parcoords.standalone.js contains all dependencies and can be used directly in your html page. Please note that only essential D3 V5 modules are bundled, your global namespace won't be polluted.
 ```
 <link rel="stylesheet" type="text/css" href="./parcoords.css">
 <script src="./parcoords.standalone.js"></script>
@@ -57,7 +73,7 @@ parcoords.standalone.js contains all dependencies and can be used directly in yo
 var parcoords = ParCoords()("#example")
 ```
 
-You are free to use either D3 V3 or D3 V4 in your html. demo/superformula.html demonstrates how to use parcoords-es with d3 V3.
+You are free to use either D3 V3 or D3 V5 in your html. demo/superformula.html demonstrates how to use parcoords-es with d3 V3.
 
 ## Development
 
@@ -95,12 +111,12 @@ npm run test:cover
 
 ## Built With
 
-* [D3 V4](http://www.dropwizard.io/1.0.2/docs/) - D3 modules are used
+* [D3 V5](http://www.dropwizard.io/1.0.2/docs/) - D3 modules are used
 * [Rollup](https://github.com/rollup/rollup) - Module bundler
 
 ## Authors
 
-* **Xing Yun** - *ES6 modular approach and D3 V4 upgrade* 
+* **Xing Yun** - *ES6 modular approach and D3 V5 upgrade*
 
 See also the list of [contributors](https://github.com/syntagmatic/parallel-coordinates/graphs/contributors) who created the ParallelCoordinates.
 
