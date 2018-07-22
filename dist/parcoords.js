@@ -152,7 +152,9 @@
           pc.g().selectAll('.brush').each(function (d) {
             if (d !== dimension) return;
             d3Selection.select(this).call(brushes[d].move, null);
-            brushes[d].event(d3Selection.select(this));
+            if (typeof brushes[d].type === 'function') {
+              brushes[d].event(d3Selection.select(this));
+            }
           });
           pc.renderBrushed();
         }
@@ -1985,6 +1987,10 @@
       ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
       ctx.highlight.lineWidth = 3;
       ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
+      ctx.marked.lineWidth = config.markedLineWidth;
+      ctx.marked.shadowColor = config.markedShadowColor;
+      ctx.marked.shadowBlur = config.markedShadowBlur;
+      ctx.marked.scale(devicePixelRatio, devicePixelRatio);
 
       return this;
     };
@@ -2188,7 +2194,7 @@
   var axisDots = function axisDots(config, pc, position) {
     return function (_r) {
       var r = _r || 0.1;
-      var ctx = pc.ctx.marks;
+      var ctx = pc.ctx.dots;
       var startAngle = 0;
       var endAngle = 2 * Math.PI;
       ctx.globalAlpha = d3Array.min([1 / Math.pow(config.data.length, 1 / 2), 1]);
@@ -2251,6 +2257,7 @@
         delete dragging[d];
         d3Selection.select(this).transition().attr('transform', 'translate(' + xscale(d) + ')');
         pc.render();
+        pc.renderMarked();
       }));
       flags.reorderable = true;
       return this;
@@ -2304,6 +2311,9 @@
         var highlighted = config.highlighted.slice(0);
         pc.unhighlight();
 
+        var marked = config.marked.slice(0);
+        pc.unmark();
+
         var g = pc.g();
         g.transition().duration(1500).attr('transform', function (d) {
           return 'translate(' + xscale(d) + ')';
@@ -2313,6 +2323,9 @@
         // pc.highlight() does not check whether highlighted is length zero, so we do that here.
         if (highlighted.length !== 0) {
           pc.highlight(highlighted);
+        }
+        if (marked.length !== 0) {
+          pc.mark(marked);
         }
       }
     };
@@ -2490,6 +2503,43 @@
     };
   };
 
+  var pathMark = function pathMark(config, ctx, position) {
+    return function (d, i) {
+      ctx.marked.strokeStyle = _functor(config.color)(d, i);
+      return colorPath(config, position, d, ctx.marked);
+    };
+  };
+
+  var renderMarkedDefault = function renderMarkedDefault(config, pc, ctx, position) {
+    return function () {
+      pc.clear('marked');
+
+      if (config.marked.length) {
+        config.marked.forEach(pathMark(config, ctx, position));
+      }
+    };
+  };
+
+  var renderMarkedQueue = function renderMarkedQueue(config, markedQueue) {
+    return function () {
+      if (config.marked) {
+        markedQueue(config.marked);
+      } else {
+        markedQueue([]); // This is needed to clear the currently marked items
+      }
+    };
+  };
+
+  var renderMarked = function renderMarked(config, pc, events) {
+    return function () {
+      if (!Object.keys(config.dimensions).length) pc.detectDimensions();
+
+      pc.renderMarked[config.mode]();
+      events.call('render', this);
+      return this;
+    };
+  };
+
   var pathBrushed = function pathBrushed(config, ctx, position) {
     return function (d, i) {
       if (config.brushedColor !== null) {
@@ -2614,6 +2664,34 @@
     };
   };
 
+  // mark an array of data
+  var mark = function mark(config, pc, canvas, events, ctx, position) {
+    return function () {
+      var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+      if (data === null) {
+        return config.marked;
+      }
+
+      // add array to already marked data
+      config.marked = config.marked.concat(data);
+      d3Selection.selectAll([canvas.foreground, canvas.brushed]).classed('dimmed', true);
+      data.forEach(pathMark(config, ctx, position));
+      events.call('mark', this, data);
+      return this;
+    };
+  };
+
+  // clear marked data arrays
+  var unmark = function unmark(config, pc, canvas) {
+    return function () {
+      config.marked = [];
+      pc.clear('marked');
+      d3Selection.selectAll([canvas.foreground, canvas.brushed]).classed('dimmed', false);
+      return this;
+    };
+  };
+
   var removeAxes = function removeAxes(pc) {
     return function () {
       pc._g.remove();
@@ -2662,6 +2740,7 @@
       pc.clear('highlight');
 
       pc.renderBrushed.default();
+      pc.renderMarked.default();
 
       config.data.forEach(pathForeground(config, ctx, position));
     };
@@ -2670,6 +2749,7 @@
   var renderDefaultQueue = function renderDefaultQueue(config, pc, foregroundQueue) {
     return function () {
       pc.renderBrushed.queue();
+      pc.renderMarked.queue();
       foregroundQueue(config.data);
     };
   };
@@ -2734,7 +2814,7 @@
       config.width = selection.node().clientWidth;
       config.height = selection.node().clientHeight;
       // canvas data layers
-      ['marks', 'foreground', 'brushed', 'highlight'].forEach(function (layer) {
+      ['dots', 'foreground', 'brushed', 'marked', 'highlight'].forEach(function (layer) {
         canvas[layer] = selection.append('canvas').attr('class', layer).node();
         ctx[layer] = canvas[layer].getContext('2d');
       });
@@ -2775,11 +2855,12 @@
     };
   };
 
-  var version = "2.1.6";
+  var version = "2.1.7";
 
   var DefaultConfig = {
     data: [],
     highlighted: [],
+    marked: [],
     dimensions: {},
     dimensionTitleRotation: 0,
     brushes: [],
@@ -2787,6 +2868,9 @@
     brushedColor: null,
     alphaOnBrushed: 0.0,
     mode: 'default',
+    markedLineWidth: 3,
+    markedShadowColor: '#ffffff',
+    markedShadowBlur: 10,
     rate: 20,
     width: 600,
     height: 300,
@@ -2824,7 +2908,7 @@
       });
     }
 
-    var eventTypes = ['render', 'resize', 'highlight', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(d3Collection.keys(config));
+    var eventTypes = ['render', 'resize', 'highlight', 'mark', 'brush', 'brushend', 'brushstart', 'axesreorder'].concat(d3Collection.keys(config));
 
     var events = d3Dispatch.dispatch.apply(_this$4, eventTypes),
         flags = {
@@ -2915,7 +2999,7 @@
     return arr;
   };
 
-  var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue) {
+  var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue) {
     return d3Dispatch.dispatch.apply(_this$5, Object.keys(config)).on('composite', function (d) {
       ctx.foreground.globalCompositeOperation = d.value;
       ctx.brushed.globalCompositeOperation = d.value;
@@ -2932,6 +3016,7 @@
       return pc.resize();
     }).on('rate', function (d) {
       brushedQueue.rate(d.value);
+      markedQueue.rate(d.value);
       foregroundQueue.rate(d.value);
     }).on('dimensions', function (d) {
       config.dimensions = pc.applyDimensionDefaults(Object.keys(d.value));
@@ -3002,8 +3087,8 @@
     return target;
   };
 
-  var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis) {
-    var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, foregroundQueue);
+  var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue, events, axis) {
+    var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue);
 
     // create getter/setters
     getset(pc, __, events, side_effects);
@@ -3043,12 +3128,16 @@
       return pc.clear('brushed');
     });
 
+    var markedQueue = renderQueue(pathMark(config, ctx, position)).rate(50).clear(function () {
+      return pc.clear('marked');
+    });
+
     var foregroundQueue = renderQueue(pathForeground(config, ctx, position)).rate(50).clear(function () {
       pc.clear('foreground');
       pc.clear('highlight');
     });
 
-    bindEvents(config, ctx, pc, xscale, flags, brushedQueue, foregroundQueue, events, axis);
+    bindEvents(config, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue, events, axis);
 
     // expose the state of the chart
     pc.state = config;
@@ -3067,10 +3156,13 @@
     //Renders the polylines.
     pc.render = render(config, pc, events);
     pc.renderBrushed = renderBrushed(config, pc, events);
+    pc.renderMarked = renderMarked(config, pc, events);
     pc.render.default = renderDefault(config, pc, ctx, position);
     pc.render.queue = renderDefaultQueue(config, pc, foregroundQueue);
     pc.renderBrushed.default = renderBrushedDefault(config, ctx, position, pc, brush);
     pc.renderBrushed.queue = renderBrushedQueue(config, brush, brushedQueue);
+    pc.renderMarked.default = renderMarkedDefault(config, pc, ctx, position);
+    pc.renderMarked.queue = renderMarkedQueue(config, markedQueue);
 
     pc.compute_real_centroids = computeRealCentroids(config.dimensions, position);
     pc.shadows = shadows(flags, pc);
@@ -3112,6 +3204,11 @@
     pc.highlight = highlight(config, pc, canvas, events, ctx, position);
     // clear highlighting
     pc.unhighlight = unhighlight(config, pc, canvas);
+
+    // mark an array of data
+    pc.mark = mark(config, pc, canvas, events, ctx, position);
+    // clear marked data
+    pc.unmark = unmark(config, pc, canvas);
 
     // calculate 2d intersection of line a->b with line c->d
     // points are objects with x and y properties
