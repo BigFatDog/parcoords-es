@@ -33,7 +33,7 @@ This section only lists api that are <b>deviated</b> from the original parallel 
 
 ```
 
-<a name="parcoords_marking" href="#parcoords_marking">#</a> parcoords.<b>mark<b/>([values])
+<a name="parcoords_marking" href="#parcoords_marking">#</a> parcoords.<b>mark</b>([values])
 allows user to permanently highlight a data element in chart
 ```
 const data = [...];
