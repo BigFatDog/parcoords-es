@@ -21,7 +21,9 @@ const brushReset = (state, config, pc) => dimension => {
         .each(function(d) {
           if (d !== dimension) return;
           select(this).call(brushes[d].move, null);
-          brushes[d].event(select(this));
+          if (typeof brushes[d].type === 'function') {
+            brushes[d].event(select(this));
+          }
         });
       pc.renderBrushed();
     }
