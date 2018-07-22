@@ -10,7 +10,7 @@ const DefaultConfig = {
   alphaOnBrushed: 0.0,
   mode: 'default',
   markedLineWidth: 3,
-  markedShadowColor: "#ffffff",
+  markedShadowColor: '#ffffff',
   markedShadowBlur: 10,
   rate: 20,
   width: 600,
