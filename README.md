@@ -42,7 +42,7 @@ parcoords.mark(data.filter(d => d.volume > 10));
 ```
 Please refer to [marking demo](https://github.com/BigFatDog/parcoords-es/blob/develop/demo/marking.html "Source") for details
 
-<a name="parcoords_unmark" href="#parcoords_unmark">#</a> parcoords.<b>unmark<b/>()
+<a name="parcoords_unmark" href="#parcoords_unmark">#</a> parcoords.<b>unmark</b>()
 clears all permanently highlighted data that is added by <a href="#parcoords_marking">mark([values])</a>
 
 
