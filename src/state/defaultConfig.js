@@ -8,6 +8,8 @@ const DefaultConfig = {
   brushed: false,
   brushedColor: null,
   alphaOnBrushed: 0.0,
+  lineWidth: 1.4,
+  highlightedLineWidth: 3,
   mode: 'default',
   markedLineWidth: 3,
   markedShadowColor: '#ffffff',
