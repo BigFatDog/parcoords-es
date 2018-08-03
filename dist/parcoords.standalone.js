@@ -7555,6 +7555,8 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
+    var mondays = monday.range;
+    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7644,6 +7646,8 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
+    var utcMondays = utcMonday.range;
+    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
@@ -8564,16 +8568,16 @@
         pc.selection.selectAll('canvas').style('margin-top', config.margin.top + 'px').style('margin-left', config.margin.left + 'px').style('width', w(config) + 2 + 'px').style('height', h(config) + 2 + 'px').attr('width', (w(config) + 2) * devicePixelRatio).attr('height', (h(config) + 2) * devicePixelRatio);
         // default styles, needs to be set when canvas width changes
         ctx.foreground.strokeStyle = config.color;
-        ctx.foreground.lineWidth = 1.4;
+        ctx.foreground.lineWidth = config.lineWidth;
         ctx.foreground.globalCompositeOperation = config.composite;
         ctx.foreground.globalAlpha = config.alpha;
         ctx.foreground.scale(devicePixelRatio, devicePixelRatio);
         ctx.brushed.strokeStyle = config.brushedColor;
-        ctx.brushed.lineWidth = 1.4;
+        ctx.brushed.lineWidth = config.lineWidth;
         ctx.brushed.globalCompositeOperation = config.composite;
         ctx.brushed.globalAlpha = config.alpha;
         ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
-        ctx.highlight.lineWidth = 3;
+        ctx.highlight.lineWidth = config.highlightedLineWidth;
         ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
         ctx.marked.lineWidth = config.markedLineWidth;
         ctx.marked.shadowColor = config.markedShadowColor;
@@ -9603,6 +9607,8 @@
       brushed: false,
       brushedColor: null,
       alphaOnBrushed: 0.0,
+      lineWidth: 1.4,
+      highlightedLineWidth: 3,
       mode: 'default',
       markedLineWidth: 3,
       markedShadowColor: '#ffffff',

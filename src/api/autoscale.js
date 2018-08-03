@@ -109,16 +109,16 @@ const autoscale = (config, pc, xscale, ctx) =>
       .attr('height', (h(config) + 2) * devicePixelRatio);
     // default styles, needs to be set when canvas width changes
     ctx.foreground.strokeStyle = config.color;
-    ctx.foreground.lineWidth = 1.4;
+    ctx.foreground.lineWidth = config.lineWidth;
     ctx.foreground.globalCompositeOperation = config.composite;
     ctx.foreground.globalAlpha = config.alpha;
     ctx.foreground.scale(devicePixelRatio, devicePixelRatio);
     ctx.brushed.strokeStyle = config.brushedColor;
-    ctx.brushed.lineWidth = 1.4;
+    ctx.brushed.lineWidth = config.lineWidth;
     ctx.brushed.globalCompositeOperation = config.composite;
     ctx.brushed.globalAlpha = config.alpha;
     ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
-    ctx.highlight.lineWidth = 3;
+    ctx.highlight.lineWidth = config.highlightedLineWidth;
     ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
     ctx.marked.lineWidth = config.markedLineWidth;
     ctx.marked.shadowColor = config.markedShadowColor;
