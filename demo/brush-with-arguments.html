@@ -26,7 +26,7 @@
               if(args !== undefined) {
                 d3.select("#brush-results").html([
                   '<span style="font-weight:bold;">brush end</span>',
-                  'dimension: ' + args[0]
+                  'dimension: ' + args.axis
                 ].join("<br/>"))
               } else {
                 d3.select("#brush-results").html('cleared brush')
@@ -34,12 +34,12 @@
             })
             .on("brush", function(brushed, args){
               if(args !== undefined) {
-                var brush_selection = d3.brushSelection(args[2][0])
+                var brush_selection = args.selection
                 d3.select("#brush-results").html([
                   '<span style="font-weight:bold;">brushing</span>',
-                  'dimension: ' + args[0],
-                  'selection (raw): ' + JSON.stringify(brush_selection),
-                  'selection : ' + JSON.stringify(brush_selection.map(d=>this.dimensions()[args[0]].yscale.invert(d)))
+                  'dimension: ' + args.axis,
+                  'selection (raw): ' + JSON.stringify(args.selection.raw),
+                  'selection : ' + JSON.stringify(args.selection.scaled)
                 ].join("<br/>"))
               } else {
                 d3.select("#brush-results").html('cleared brush')
@@ -47,12 +47,12 @@
             })
             .on("brushend", function(brushed, args){
               if(args !== undefined  && Object.keys(this.brushExtents()).length > 0) {
-                var brush_selection = d3.brushSelection(args[2][0])
+                var brush_selection = args.selection
                 d3.select("#brush-results").html([
                   '<span style="font-weight:bold;">brush end</span>',
-                  'dimension: ' + args[0],
-                  'selection (raw): ' + JSON.stringify(brush_selection),
-                  'selection : ' + JSON.stringify(brush_selection.map(d=>this.dimensions()[args[0]].yscale.invert(d)))
+                  'dimension: ' + args.axis,
+                  'selection (raw): ' + brush_selection.raw,
+                  'selection : ' + JSON.stringify(brush_selection.scaled)
                 ].join("<br/>"))
               } else {
                 d3.select("#brush-results").html('cleared brush')
