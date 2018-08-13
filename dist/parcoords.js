@@ -232,10 +232,10 @@
     };
   };
 
-  var brushUpdated = function brushUpdated(config, pc, events) {
+  var brushUpdated = function brushUpdated(config, pc, events, args) {
     return function (newSelection) {
       config.brushed = newSelection;
-      events.call('brush', pc, config.brushed);
+      events.call('brush', pc, config.brushed, args);
       pc.renderBrushed();
     };
   };
@@ -246,18 +246,36 @@
 
       var _brush = d3Brush.brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
+      var convertBrushArguments = function convertBrushArguments(args) {
+        var args_array = Array.prototype.slice.call(args);
+        var axis = args_array[0];
+        var selection_raw = d3Brush.brushSelection(args_array[2][0]);
+        var selection_scaled = selection_raw.map(function (d) {
+          return config.dimensions[axis].yscale.invert(d);
+        });
+
+        return {
+          axis: args_array[0],
+          node: args_array[2][0],
+          selection: {
+            raw: selection_raw,
+            scaled: selection_scaled
+          }
+        };
+      };
+
       _brush.on('start', function () {
         if (d3Selection.event.sourceEvent !== null) {
-          events.call('brushstart', pc, config.brushed);
+          events.call('brushstart', pc, config.brushed, convertBrushArguments(arguments));
           if (typeof d3Selection.event.sourceEvent.stopPropagation === 'function') {
             d3Selection.event.sourceEvent.stopPropagation();
           }
         }
       }).on('brush', function () {
-        brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
+        brushUpdated(config, pc, events, convertBrushArguments(arguments))(selected(state, config, brushGroup)());
       }).on('end', function () {
         brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
-        events.call('brushend', pc, config.brushed);
+        events.call('brushend', pc, config.brushed, convertBrushArguments(arguments));
       });
 
       state.brushes[axis] = _brush;
@@ -1976,16 +1994,16 @@
       pc.selection.selectAll('canvas').style('margin-top', config.margin.top + 'px').style('margin-left', config.margin.left + 'px').style('width', w(config) + 2 + 'px').style('height', h(config) + 2 + 'px').attr('width', (w(config) + 2) * devicePixelRatio).attr('height', (h(config) + 2) * devicePixelRatio);
       // default styles, needs to be set when canvas width changes
       ctx.foreground.strokeStyle = config.color;
-      ctx.foreground.lineWidth = 1.4;
+      ctx.foreground.lineWidth = config.lineWidth;
       ctx.foreground.globalCompositeOperation = config.composite;
       ctx.foreground.globalAlpha = config.alpha;
       ctx.foreground.scale(devicePixelRatio, devicePixelRatio);
       ctx.brushed.strokeStyle = config.brushedColor;
-      ctx.brushed.lineWidth = 1.4;
+      ctx.brushed.lineWidth = config.lineWidth;
       ctx.brushed.globalCompositeOperation = config.composite;
       ctx.brushed.globalAlpha = config.alpha;
       ctx.brushed.scale(devicePixelRatio, devicePixelRatio);
-      ctx.highlight.lineWidth = 3;
+      ctx.highlight.lineWidth = config.highlightedLineWidth;
       ctx.highlight.scale(devicePixelRatio, devicePixelRatio);
       ctx.marked.lineWidth = config.markedLineWidth;
       ctx.marked.shadowColor = config.markedShadowColor;
@@ -2855,7 +2873,7 @@
     };
   };
 
-  var version = "2.1.7";
+  var version = "2.1.8";
 
   var DefaultConfig = {
     data: [],
@@ -2867,6 +2885,8 @@
     brushed: false,
     brushedColor: null,
     alphaOnBrushed: 0.0,
+    lineWidth: 1.4,
+    highlightedLineWidth: 3,
     mode: 'default',
     markedLineWidth: 3,
     markedShadowColor: '#ffffff',

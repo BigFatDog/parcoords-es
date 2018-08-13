@@ -45,7 +45,22 @@ Please refer to [marking demo](https://github.com/BigFatDog/parcoords-es/blob/de
 <a name="parcoords_unmark" href="#parcoords_unmark">#</a> parcoords.<b>unmark</b>()
 clears all permanently highlighted data that is added by <a href="#parcoords_marking">mark([values])</a>
 
+<a name="parcoords_brush_arg" href="parcoords_brush_arg">#</a> parccords.<b>on</b>(function(brushed, args){})
+adds brush arguments to `brushstart`, `brush`, and `brushend` events.
 
+```
+parcoords.on('brushstart', function(brushed, args){
+    const {
+        selection: {
+            raw, //raw coordinate
+            scaled //y-scale transformed
+        },
+        node, // svg node
+        axis // dimension name
+    } = args;
+})
+```
+Please refer to [marking demo](https://github.com/BigFatDog/parcoords-es/blob/develop/demo/brush-with-arguments.html "Source") for details
 
 ## Usage
 
