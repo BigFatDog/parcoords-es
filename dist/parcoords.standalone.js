@@ -4196,10 +4196,10 @@
       };
     };
 
-    var brushUpdated = function brushUpdated(config, pc, events) {
+    var brushUpdated = function brushUpdated(config, pc, events, args) {
       return function (newSelection) {
         config.brushed = newSelection;
-        events.call('brush', pc, config.brushed);
+        events.call('brush', pc, config.brushed, args);
         pc.renderBrushed();
       };
     };
@@ -4210,18 +4210,36 @@
 
         var _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
+        var convertBrushArguments = function convertBrushArguments(args) {
+          var args_array = Array.prototype.slice.call(args);
+          var axis = args_array[0];
+          var selection_raw = brushSelection(args_array[2][0]);
+          var selection_scaled = selection_raw.map(function (d) {
+            return config.dimensions[axis].yscale.invert(d);
+          });
+
+          return {
+            axis: args_array[0],
+            node: args_array[2][0],
+            selection: {
+              raw: selection_raw,
+              scaled: selection_scaled
+            }
+          };
+        };
+
         _brush.on('start', function () {
           if (event.sourceEvent !== null) {
-            events.call('brushstart', pc, config.brushed);
+            events.call('brushstart', pc, config.brushed, convertBrushArguments(arguments));
             if (typeof event.sourceEvent.stopPropagation === 'function') {
               event.sourceEvent.stopPropagation();
             }
           }
         }).on('brush', function () {
-          brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
+          brushUpdated(config, pc, events, convertBrushArguments(arguments))(selected(state, config, brushGroup)());
         }).on('end', function () {
           brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
-          events.call('brushend', pc, config.brushed);
+          events.call('brushend', pc, config.brushed, convertBrushArguments(arguments));
         });
 
         state.brushes[axis] = _brush;
@@ -7555,8 +7573,6 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
-    var mondays = monday.range;
-    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7646,8 +7662,6 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
-    var utcMondays = utcMonday.range;
-    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);

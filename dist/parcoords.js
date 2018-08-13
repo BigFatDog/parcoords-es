@@ -232,10 +232,10 @@
     };
   };
 
-  var brushUpdated = function brushUpdated(config, pc, events) {
+  var brushUpdated = function brushUpdated(config, pc, events, args) {
     return function (newSelection) {
       config.brushed = newSelection;
-      events.call('brush', pc, config.brushed);
+      events.call('brush', pc, config.brushed, args);
       pc.renderBrushed();
     };
   };
@@ -246,18 +246,36 @@
 
       var _brush = d3Brush.brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
+      var convertBrushArguments = function convertBrushArguments(args) {
+        var args_array = Array.prototype.slice.call(args);
+        var axis = args_array[0];
+        var selection_raw = d3Brush.brushSelection(args_array[2][0]);
+        var selection_scaled = selection_raw.map(function (d) {
+          return config.dimensions[axis].yscale.invert(d);
+        });
+
+        return {
+          axis: args_array[0],
+          node: args_array[2][0],
+          selection: {
+            raw: selection_raw,
+            scaled: selection_scaled
+          }
+        };
+      };
+
       _brush.on('start', function () {
         if (d3Selection.event.sourceEvent !== null) {
-          events.call('brushstart', pc, config.brushed);
+          events.call('brushstart', pc, config.brushed, convertBrushArguments(arguments));
           if (typeof d3Selection.event.sourceEvent.stopPropagation === 'function') {
             d3Selection.event.sourceEvent.stopPropagation();
           }
         }
       }).on('brush', function () {
-        brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
+        brushUpdated(config, pc, events, convertBrushArguments(arguments))(selected(state, config, brushGroup)());
       }).on('end', function () {
         brushUpdated(config, pc, events)(selected(state, config, brushGroup)());
-        events.call('brushend', pc, config.brushed);
+        events.call('brushend', pc, config.brushed, convertBrushArguments(arguments));
       });
 
       state.brushes[axis] = _brush;
