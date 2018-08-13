@@ -60,7 +60,7 @@ parcoords.on('brushstart', function(brushed, args){
     } = args;
 })
 ```
-Please refer to [marking demo](https://github.com/BigFatDog/parcoords-es/blob/develop/demo/brush-with-arguments.html "Source") for details
+Please refer to [brushing with arguments demo](https://github.com/BigFatDog/parcoords-es/blob/develop/demo/brush-with-arguments.html "Source") for details
 
 ## Usage
 
