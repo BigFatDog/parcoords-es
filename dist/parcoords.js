@@ -2873,7 +2873,7 @@
     };
   };
 
-  var version = "2.1.7";
+  var version = "2.1.8";
 
   var DefaultConfig = {
     data: [],
