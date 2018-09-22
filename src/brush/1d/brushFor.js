@@ -25,7 +25,7 @@ const brushFor = (state, config, pc, events, brushGroup) => (
   const convertBrushArguments = args => {
     const args_array = Array.prototype.slice.call(args);
     const axis = args_array[0];
-    const selection_raw = brushSelection(args_array[2][0]);
+    const selection_raw = brushSelection(args_array[2][0]) || [];
     const selection_scaled = selection_raw.map(d =>
       config.dimensions[axis].yscale.invert(d)
     );
