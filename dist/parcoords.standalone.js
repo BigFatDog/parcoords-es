@@ -4213,7 +4213,7 @@
         var convertBrushArguments = function convertBrushArguments(args) {
           var args_array = Array.prototype.slice.call(args);
           var axis = args_array[0];
-          var selection_raw = brushSelection(args_array[2][0]);
+          var selection_raw = brushSelection(args_array[2][0]) || [];
           var selection_scaled = selection_raw.map(function (d) {
             return config.dimensions[axis].yscale.invert(d);
           });
@@ -9609,7 +9609,7 @@
       };
     };
 
-    var version = "2.1.8";
+    var version = "2.1.9";
 
     var DefaultConfig = {
       data: [],
