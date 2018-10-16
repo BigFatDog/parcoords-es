@@ -251,13 +251,35 @@ var brushFor = function brushFor(state, config, pc, events, brushGroup) {
 
     var _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
+    var invertCategorical = function invertCategorical(selection, yscale) {
+      if (selection.length === 0) {
+        return [];
+      }
+      var domain = yscale.domain();
+      var range = yscale.range();
+      var found = [];
+      range.forEach(function (d, i) {
+        if (d >= selection[0] && d <= selection[1]) {
+          found.push(domain[i]);
+        }
+      });
+      return found;
+    };
+
     var convertBrushArguments = function convertBrushArguments(args) {
       var args_array = Array.prototype.slice.call(args);
       var axis = args_array[0];
       var selection_raw = brushSelection(args_array[2][0]) || [];
-      var selection_scaled = selection_raw.map(function (d) {
-        return config.dimensions[axis].yscale.invert(d);
-      });
+      // ordinal scales do not have invert
+      var selection_scaled = [];
+      var yscale = config.dimensions[axis].yscale;
+      if (typeof yscale.invert === 'undefined') {
+        selection_scaled = invertCategorical(selection_raw, yscale);
+      } else {
+        selection_scaled = selection_raw.map(function (d) {
+          return config.dimensions[axis].yscale.invert(d);
+        });
+      }
 
       return {
         axis: args_array[0],
@@ -2878,7 +2900,7 @@ var scale = function scale(config, pc) {
   };
 };
 
-var version = "2.1.9";
+var version = "2.2.0";
 
 var DefaultConfig = {
   data: [],
