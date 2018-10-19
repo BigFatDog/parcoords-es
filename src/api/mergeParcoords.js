@@ -6,9 +6,18 @@ const mergeParcoords = pc => callback => {
 
   // Create a canvas element to store the merged canvases
   const mergedCanvas = document.createElement('canvas');
-  mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
-  mergedCanvas.height =
-    (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
+
+  const foregroundCanvas = pc.canvas.foreground;
+  // We will need to adjust for canvas margins to align the svg and canvas
+  const canvasMarginLeft = Number(foregroundCanvas.style.marginLeft.replace('px',''));
+  // In addition we will need to consider the negative translation on axis titles
+  //   by default parcoords will translate(0,-5) so we will add this
+  const textTopAdjust = 25;
+  const canvasMarginTop = Number(foregroundCanvas.style.marginTop.replace('px','')) + textTopAdjust;
+  const width = (foregroundCanvas.clientWidth + canvasMarginLeft) * devicePixelRatio;
+  const height = (foregroundCanvas.clientHeight + canvasMarginTop) * devicePixelRatio;
+  mergedCanvas.width = width;
+  mergedCanvas.height = height + 30; // pad so that svg labels at bottom will not get cut off
   mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
   mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
 
@@ -21,18 +30,24 @@ const mergeParcoords = pc => callback => {
   for (const key in pc.canvas) {
     context.drawImage(
       pc.canvas[key],
-      0,
-      24 * devicePixelRatio,
-      mergedCanvas.width,
-      mergedCanvas.height - 30 * devicePixelRatio
+      canvasMarginLeft * devicePixelRatio,
+      canvasMarginTop * devicePixelRatio,
+      width - canvasMarginLeft * devicePixelRatio,
+      height - canvasMarginTop * devicePixelRatio
     );
   }
 
   // Add SVG elements to canvas
   const DOMURL = window.URL || window.webkitURL || window;
   const serializer = new XMLSerializer();
+  // axis labels are translated (0,-5) so we will clone the svg
+  //   and translate down so the labels are drawn on the canvas
+  const svgNodeCopy = pc.selection.select('svg').node().cloneNode(true);
+  svgNodeCopy.setAttribute('transform', 'translate(0,' + textTopAdjust + ')');
+  svgNodeCopy.setAttribute('height', svgNodeCopy.getAttribute('height') + textTopAdjust);
   const svgStr = serializer.serializeToString(
-    pc.selection.select('svg').node()
+    //pc.selection.select('svg').node()
+    svgNodeCopy
   );
 
   // Create a Data URI.
