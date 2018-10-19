@@ -1,3 +1,5 @@
+import {select, selectAll} from 'd3-selection';
+
 // Merges the canvases and SVG elements into one canvas element which is then passed into the callback
 // (so you can choose to save it to disk, etc.)
 const mergeParcoords = pc => callback => {
@@ -10,13 +12,12 @@ const mergeParcoords = pc => callback => {
   const foregroundCanvas = pc.canvas.foreground;
   // We will need to adjust for canvas margins to align the svg and canvas
   const canvasMarginLeft = Number(foregroundCanvas.style.marginLeft.replace('px',''));
-  // In addition we will need to consider the negative translation on axis titles
-  //   by default parcoords will translate(0,-5) so we will add this
-  const textTopAdjust = 25;
+
+  const textTopAdjust = 15;
   const canvasMarginTop = Number(foregroundCanvas.style.marginTop.replace('px','')) + textTopAdjust;
   const width = (foregroundCanvas.clientWidth + canvasMarginLeft) * devicePixelRatio;
   const height = (foregroundCanvas.clientHeight + canvasMarginTop) * devicePixelRatio;
-  mergedCanvas.width = width;
+  mergedCanvas.width = width + 50; // pad so that svg labels at right will not get cut off
   mergedCanvas.height = height + 30; // pad so that svg labels at bottom will not get cut off
   mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
   mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
@@ -45,8 +46,11 @@ const mergeParcoords = pc => callback => {
   const svgNodeCopy = pc.selection.select('svg').node().cloneNode(true);
   svgNodeCopy.setAttribute('transform', 'translate(0,' + textTopAdjust + ')');
   svgNodeCopy.setAttribute('height', svgNodeCopy.getAttribute('height') + textTopAdjust);
+  // text will need fill attribute since css styles will not get picked up
+  //   this is not sophisticated since it doesn't look up css styles
+  //   if the user changes
+  select(svgNodeCopy).selectAll('text').attr('fill', 'black');
   const svgStr = serializer.serializeToString(
-    //pc.selection.select('svg').node()
     svgNodeCopy
   );
 
