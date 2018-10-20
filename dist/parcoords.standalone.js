@@ -6068,8 +6068,17 @@
 
         // Create a canvas element to store the merged canvases
         var mergedCanvas = document.createElement('canvas');
-        mergedCanvas.width = pc.canvas.foreground.clientWidth * devicePixelRatio;
-        mergedCanvas.height = (pc.canvas.foreground.clientHeight + 30) * devicePixelRatio;
+
+        var foregroundCanvas = pc.canvas.foreground;
+        // We will need to adjust for canvas margins to align the svg and canvas
+        var canvasMarginLeft = Number(foregroundCanvas.style.marginLeft.replace('px', ''));
+
+        var textTopAdjust = 15;
+        var canvasMarginTop = Number(foregroundCanvas.style.marginTop.replace('px', '')) + textTopAdjust;
+        var width = (foregroundCanvas.clientWidth + canvasMarginLeft) * devicePixelRatio;
+        var height = (foregroundCanvas.clientHeight + canvasMarginTop) * devicePixelRatio;
+        mergedCanvas.width = width + 50; // pad so that svg labels at right will not get cut off
+        mergedCanvas.height = height + 30; // pad so that svg labels at bottom will not get cut off
         mergedCanvas.style.width = mergedCanvas.width / devicePixelRatio + 'px';
         mergedCanvas.style.height = mergedCanvas.height / devicePixelRatio + 'px';
 
@@ -6080,13 +6089,22 @@
 
         // Merge all the canvases
         for (var key in pc.canvas) {
-          context.drawImage(pc.canvas[key], 0, 24 * devicePixelRatio, mergedCanvas.width, mergedCanvas.height - 30 * devicePixelRatio);
+          context.drawImage(pc.canvas[key], canvasMarginLeft * devicePixelRatio, canvasMarginTop * devicePixelRatio, width - canvasMarginLeft * devicePixelRatio, height - canvasMarginTop * devicePixelRatio);
         }
 
         // Add SVG elements to canvas
         var DOMURL = window.URL || window.webkitURL || window;
         var serializer = new XMLSerializer();
-        var svgStr = serializer.serializeToString(pc.selection.select('svg').node());
+        // axis labels are translated (0,-5) so we will clone the svg
+        //   and translate down so the labels are drawn on the canvas
+        var svgNodeCopy = pc.selection.select('svg').node().cloneNode(true);
+        svgNodeCopy.setAttribute('transform', 'translate(0,' + textTopAdjust + ')');
+        svgNodeCopy.setAttribute('height', svgNodeCopy.getAttribute('height') + textTopAdjust);
+        // text will need fill attribute since css styles will not get picked up
+        //   this is not sophisticated since it doesn't look up css styles
+        //   if the user changes
+        select(svgNodeCopy).selectAll('text').attr('fill', 'black');
+        var svgStr = serializer.serializeToString(svgNodeCopy);
 
         // Create a Data URI.
         var src = 'data:image/svg+xml;base64,' + window.btoa(svgStr);
@@ -7595,6 +7613,8 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
+    var mondays = monday.range;
+    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7684,6 +7704,8 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
+    var utcMondays = utcMonday.range;
+    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
@@ -9631,7 +9653,7 @@
       };
     };
 
-    var version = "2.2.0";
+    var version = "2.2.1";
 
     var DefaultConfig = {
       data: [],
