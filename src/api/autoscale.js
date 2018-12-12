@@ -94,7 +94,11 @@ const autoscale = (config, pc, xscale, ctx) =>
     });
 
     // xscale
-    xscale.range([0, w(config)], 1);
+    // add padding for d3 >= v4 default 0.2
+    xscale
+      .range([0, w(config)])
+      .padding(0.2);
+
     // Retina display, etc.
     const devicePixelRatio = window.devicePixelRatio || 1;
 
