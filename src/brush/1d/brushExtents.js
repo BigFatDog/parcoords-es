@@ -36,7 +36,10 @@ const brushExtents = (state, config, pc) => extents => {
 
         //update the extent
         //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
-        brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
+        //we actually don't need this since we are using brush.move below
+        //extents set the limits of the brush which means a user will not be able
+        //to move or drag the brush beyond the limits set by brush.extent
+        //brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
 
         //redraw the brush
         //https://github.com/d3/d3-brush#brush_move
