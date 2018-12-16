@@ -18,7 +18,7 @@ npm run dev
 This section only lists api that are <b>deviated</b> from the original parallel coordinates.
 
 
-<a name="parcoords_brush_extents" href="#parcoords_brush_extents">#</a> <b>brushExtents</b> supports 1D multi brushes:
+<a name="parcoords_brush_extents" href="#parcoords_brush_extents">#</a> parcoords.<b>brushExtents</b>(extents) supports 1D multi brushes:
 
 1D brush [<>](https://github.com/BigFatDog/parcoords-es/blob/master/demo/setterForBrushes.html "Source")
 ```javascript
@@ -32,6 +32,22 @@ This section only lists api that are <b>deviated</b> from the original parallel 
   .brushExtents({"2": [[3,4], [6,8], [10, 14]]});
 
 ```
+
+when parameter `extents` is not provided, this function returns
+
+```
+const extents = parcoords.brushExtents();
+// format is:
+{
+    extents,
+    selection: {
+        raw, //raw coordinate
+        scaled //y-scale transformed
+    }
+}
+```
+
+
 
 <a name="parcoords_marking" href="#parcoords_marking">#</a> parcoords.<b>mark</b>([values])
 allows user to permanently highlight a data element in chart
