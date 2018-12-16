@@ -1,9 +1,9 @@
-const invertCategorical = (selection, yscale) => {
+const invertCategorical = (selection, scale) => {
   if (selection.length === 0) {
     return [];
   }
-  const domain = yscale.domain();
-  const range = yscale.range();
+  const domain = scale.domain();
+  const range = scale.range();
   const found = [];
   range.forEach((d, i) => {
     if (d >= selection[0] && d <= selection[1]) {
@@ -13,10 +13,10 @@ const invertCategorical = (selection, yscale) => {
   return found;
 };
 
-const invertByScale = (selection, yScale) => {
-  return typeof yScale.invert === 'undefined'
-    ? invertCategorical(selection, yScale)
-    : selection.map(d => yScale.invert(d));
+const invertByScale = (selection, scale) => {
+  return typeof scale.invert === 'undefined'
+    ? invertCategorical(selection, scale)
+    : selection.map(d => scale.invert(d));
 };
 
 export default invertByScale;
