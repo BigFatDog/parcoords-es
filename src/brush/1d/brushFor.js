@@ -1,6 +1,6 @@
 import { brushY, brushSelection } from 'd3-brush';
 import { event } from 'd3-selection';
-
+import invertByScale from '../invertByScale';
 import selected from './selected';
 
 const brushUpdated = (config, pc, events, args) => newSelection => {
@@ -22,42 +22,21 @@ const brushFor = (state, config, pc, events, brushGroup) => (
 
   const _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
-  const invertCategorical = (selection, yscale) => {
-    if (selection.length === 0) {
-      return [];
-    }
-    const domain = yscale.domain();
-    const range = yscale.range();
-    const found = [];
-    range.forEach((d, i) => {
-      if (d >= selection[0] && d <= selection[1]) {
-        found.push(domain[i]);
-      }
-    });
-    return found;
-  };
-
   const convertBrushArguments = args => {
     const args_array = Array.prototype.slice.call(args);
     const axis = args_array[0];
-    const selection_raw = brushSelection(args_array[2][0]) || [];
     // ordinal scales do not have invert
-    let selection_scaled = [];
     const yscale = config.dimensions[axis].yscale;
-    if (typeof yscale.invert === 'undefined') {
-      selection_scaled = invertCategorical(selection_raw, yscale);
-    } else {
-      selection_scaled = selection_raw.map(d =>
-        config.dimensions[axis].yscale.invert(d)
-      );
-    }
+
+    const raw = brushSelection(args_array[2][0]) || [];
+    const scaled = invertByScale(raw, yscale);
 
     return {
       axis: args_array[0],
       node: args_array[2][0],
       selection: {
-        raw: selection_raw,
-        scaled: selection_scaled,
+        raw,
+        scaled,
       },
     };
   };
