@@ -75,6 +75,27 @@
     return config.width - config.margin.right - config.margin.left;
   };
 
+  var invertCategorical = function invertCategorical(selection, scale) {
+    if (selection.length === 0) {
+      return [];
+    }
+    var domain = scale.domain();
+    var range = scale.range();
+    var found = [];
+    range.forEach(function (d, i) {
+      if (d >= selection[0] && d <= selection[1]) {
+        found.push(domain[i]);
+      }
+    });
+    return found;
+  };
+
+  var invertByScale = function invertByScale(selection, scale) {
+    return typeof scale.invert === 'undefined' ? invertCategorical(selection, scale) : selection.map(function (d) {
+      return scale.invert(d);
+    });
+  };
+
   var brushExtents = function brushExtents(state, config, pc) {
     return function (extents) {
       var brushes = state.brushes,
@@ -86,7 +107,17 @@
           var brush = brushes[cur];
           //todo: brush check
           if (brush !== undefined && d3Brush.brushSelection(brushNodes[cur]) !== null) {
-            acc[cur] = brush.extent();
+            var raw = d3Brush.brushSelection(brushNodes[cur]);
+            var yScale = config.dimensions[cur].yscale;
+            var scaled = invertByScale(raw, yScale);
+
+            acc[cur] = {
+              extent: brush.extent(),
+              selection: {
+                raw: raw,
+                scaled: scaled
+              }
+            };
           }
 
           return acc;
@@ -249,42 +280,21 @@
 
       var _brush = d3Brush.brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
-      var invertCategorical = function invertCategorical(selection, yscale) {
-        if (selection.length === 0) {
-          return [];
-        }
-        var domain = yscale.domain();
-        var range = yscale.range();
-        var found = [];
-        range.forEach(function (d, i) {
-          if (d >= selection[0] && d <= selection[1]) {
-            found.push(domain[i]);
-          }
-        });
-        return found;
-      };
-
       var convertBrushArguments = function convertBrushArguments(args) {
         var args_array = Array.prototype.slice.call(args);
         var axis = args_array[0];
-        var selection_raw = d3Brush.brushSelection(args_array[2][0]) || [];
         // ordinal scales do not have invert
-        var selection_scaled = [];
         var yscale = config.dimensions[axis].yscale;
-        if (typeof yscale.invert === 'undefined') {
-          selection_scaled = invertCategorical(selection_raw, yscale);
-        } else {
-          selection_scaled = selection_raw.map(function (d) {
-            return config.dimensions[axis].yscale.invert(d);
-          });
-        }
+
+        var raw = d3Brush.brushSelection(args_array[2][0]) || [];
+        var scaled = invertByScale(raw, yscale);
 
         return {
           axis: args_array[0],
           node: args_array[2][0],
           selection: {
-            raw: selection_raw,
-            scaled: selection_scaled
+            raw: raw,
+            scaled: scaled
           }
         };
       };
@@ -2918,7 +2928,7 @@
     };
   };
 
-  var version = "2.2.2";
+  var version = "2.2.3";
 
   var DefaultConfig = {
     data: [],
