@@ -10,8 +10,7 @@ const computeCentroids = (config, position, row) => {
     // centroids on 'real' axes
     const x = position(p[i]);
     const y = config.dimensions[p[i]].yscale(row[p[i]]);
-    let v = new Vector([x, y]);
-    centroids.push(v);
+    centroids.push(new Vector([x, y]));
 
     // centroids on 'virtual' axes
     if (i < cols - 1) {
@@ -35,8 +34,7 @@ const computeCentroids = (config, position, row) => {
         let centroid = 0.5 * (leftCentroid + rightCentroid);
         cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
       }
-      v = new Vector([cx, cy]);
-      centroids.push(v);
+      centroids.push(new Vector([cx, cy]));
     }
   }
 

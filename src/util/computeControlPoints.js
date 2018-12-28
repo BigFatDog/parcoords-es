@@ -4,13 +4,12 @@ const computeControlPoints = (smoothness, centroids) => {
   const cols = centroids.length;
   const a = smoothness;
   const cps = [];
-  let v = new Vector([
-    centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)),
-    centroids[0].e(2),
-  ]);
 
   cps.push(centroids[0]);
-  cps.push(v);
+  cps.push(new Vector([
+    centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)),
+    centroids[0].e(2),
+  ]));
   for (let col = 1; col < cols - 1; ++col) {
     let mid = centroids[col];
     let left = centroids[col - 1];
@@ -21,13 +20,12 @@ const computeControlPoints = (smoothness, centroids) => {
     cps.push(mid);
     cps.push(mid.subtract(diff.x(a)));
   }
-  v = new Vector([
+
+  cps.push(new Vector([
     centroids[cols - 1].e(1) +
       a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)),
     centroids[cols - 1].e(2),
-  ]);
-
-  cps.push(v);
+  ]));
   cps.push(centroids[cols - 1]);
 
   return cps;
