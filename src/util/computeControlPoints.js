@@ -1,3 +1,5 @@
+import { Vector } from 'sylvester-es6/src/Vector';
+
 const computeControlPoints = (smoothness, centroids) => {
   const cols = centroids.length;
   const a = smoothness;
@@ -5,7 +7,7 @@ const computeControlPoints = (smoothness, centroids) => {
 
   cps.push(centroids[0]);
   cps.push(
-    $V([
+    new Vector([
       centroids[0].e(1) + a * 2 * (centroids[1].e(1) - centroids[0].e(1)),
       centroids[0].e(2),
     ])
@@ -20,8 +22,9 @@ const computeControlPoints = (smoothness, centroids) => {
     cps.push(mid);
     cps.push(mid.subtract(diff.x(a)));
   }
+
   cps.push(
-    $V([
+    new Vector([
       centroids[cols - 1].e(1) +
         a * 2 * (centroids[cols - 2].e(1) - centroids[cols - 1].e(1)),
       centroids[cols - 1].e(2),

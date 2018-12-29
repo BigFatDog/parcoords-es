@@ -1,3 +1,5 @@
+import { Vector } from 'sylvester-es6/src/Vector';
+
 const computeCentroids = (config, position, row) => {
   const centroids = [];
 
@@ -8,7 +10,7 @@ const computeCentroids = (config, position, row) => {
     // centroids on 'real' axes
     const x = position(p[i]);
     const y = config.dimensions[p[i]].yscale(row[p[i]]);
-    centroids.push($V([x, y]));
+    centroids.push(new Vector([x, y]));
 
     // centroids on 'virtual' axes
     if (i < cols - 1) {
@@ -32,7 +34,7 @@ const computeCentroids = (config, position, row) => {
         let centroid = 0.5 * (leftCentroid + rightCentroid);
         cy = centroid + (1 - config.bundlingStrength) * (cy - centroid);
       }
-      centroids.push($V([cx, cy]));
+      centroids.push(new Vector([cx, cy]));
     }
   }
 
