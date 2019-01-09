@@ -4079,6 +4079,7 @@
     };
 
     var invertByScale = function invertByScale(selection, scale) {
+      if (scale === null) return [];
       return typeof scale.invert === 'undefined' ? invertCategorical(selection, scale) : selection.map(function (d) {
         return scale.invert(d);
       });
@@ -4271,10 +4272,16 @@
         var convertBrushArguments = function convertBrushArguments(args) {
           var args_array = Array.prototype.slice.call(args);
           var axis = args_array[0];
-          // ordinal scales do not have invert
-          var yscale = config.dimensions[axis].yscale;
 
           var raw = brushSelection(args_array[2][0]) || [];
+
+          // handle hidden axes which will not have a yscale
+          var yscale = null;
+          if (config.dimensions.hasOwnProperty(axis)) {
+            yscale = config.dimensions[axis].yscale;
+          }
+
+          // ordinal scales do not have invert
           var scaled = invertByScale(raw, yscale);
 
           return {
@@ -7650,6 +7657,8 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
+    var mondays = monday.range;
+    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7739,6 +7748,8 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
+    var utcMondays = utcMonday.range;
+    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
@@ -10794,7 +10805,7 @@
       };
     };
 
-    var version = "2.2.4";
+    var version = "2.2.5";
 
     var DefaultConfig = {
       data: [],
