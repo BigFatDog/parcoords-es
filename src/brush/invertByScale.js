@@ -14,6 +14,7 @@ const invertCategorical = (selection, scale) => {
 };
 
 const invertByScale = (selection, scale) => {
+  if(scale === null) return [];
   return typeof scale.invert === 'undefined'
     ? invertCategorical(selection, scale)
     : selection.map(d => scale.invert(d));

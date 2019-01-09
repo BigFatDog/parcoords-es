@@ -25,10 +25,16 @@ const brushFor = (state, config, pc, events, brushGroup) => (
   const convertBrushArguments = args => {
     const args_array = Array.prototype.slice.call(args);
     const axis = args_array[0];
-    // ordinal scales do not have invert
-    const yscale = config.dimensions[axis].yscale;
 
     const raw = brushSelection(args_array[2][0]) || [];
+
+    // handle hidden axes which will not have a yscale
+    let yscale = null;
+    if(config.dimensions.hasOwnProperty(axis)) {
+      yscale = config.dimensions[axis].yscale;
+    }
+
+    // ordinal scales do not have invert
     const scaled = invertByScale(raw, yscale);
 
     return {
