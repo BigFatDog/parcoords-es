@@ -96,6 +96,7 @@ var invertCategorical = function invertCategorical(selection, scale) {
 };
 
 var invertByScale = function invertByScale(selection, scale) {
+  if (scale === null) return [];
   return typeof scale.invert === 'undefined' ? invertCategorical(selection, scale) : selection.map(function (d) {
     return scale.invert(d);
   });
@@ -288,10 +289,16 @@ var brushFor = function brushFor(state, config, pc, events, brushGroup) {
     var convertBrushArguments = function convertBrushArguments(args) {
       var args_array = Array.prototype.slice.call(args);
       var axis = args_array[0];
-      // ordinal scales do not have invert
-      var yscale = config.dimensions[axis].yscale;
 
       var raw = brushSelection(args_array[2][0]) || [];
+
+      // handle hidden axes which will not have a yscale
+      var yscale = null;
+      if (config.dimensions.hasOwnProperty(axis)) {
+        yscale = config.dimensions[axis].yscale;
+      }
+
+      // ordinal scales do not have invert
       var scaled = invertByScale(raw, yscale);
 
       return {
@@ -4063,7 +4070,7 @@ var scale = function scale(config, pc) {
   };
 };
 
-var version = "2.2.4";
+var version = "2.2.5";
 
 var DefaultConfig = {
   data: [],

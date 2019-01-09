@@ -30,7 +30,7 @@ const brushFor = (state, config, pc, events, brushGroup) => (
 
     // handle hidden axes which will not have a yscale
     let yscale = null;
-    if(config.dimensions.hasOwnProperty(axis)) {
+    if (config.dimensions.hasOwnProperty(axis)) {
       yscale = config.dimensions[axis].yscale;
     }
 
