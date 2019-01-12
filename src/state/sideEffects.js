@@ -15,6 +15,7 @@ const sideEffects = (
   ctx,
   pc,
   xscale,
+  axis,
   flags,
   brushedQueue,
   markedQueue,
@@ -76,8 +77,8 @@ const sideEffects = (
     })
     .on('flipAxes', d => {
       if (d.value && d.value.length) {
-        d.value.forEach(function(axis) {
-          flipAxisAndUpdatePCP(config, pc, axis);
+        d.value.forEach(function(dimension) {
+          flipAxisAndUpdatePCP(config, pc, axis)(dimension);
         });
         pc.updateAxes(0);
       }

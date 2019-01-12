@@ -1,10 +1,19 @@
-import { select } from 'd3-selection';
+import { select, selectAll } from 'd3-selection';
 
 const flipAxisAndUpdatePCP = (config, pc, axis) =>
   function(dimension) {
     pc.flip(dimension);
     pc.brushReset(dimension);
-    select(this.parentElement)
+
+    // select(this.parentElement)
+    pc.selection
+      .select('svg')
+      .selectAll('g.axis')
+      .filter(function(d) {
+        if (d === dimension) {
+          return d;
+        }
+      })
       .transition()
       .duration(config.animationTime)
       .call(axis.scale(config.dimensions[dimension].yscale));
