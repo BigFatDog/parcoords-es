@@ -9,11 +9,7 @@ const flipAxisAndUpdatePCP = (config, pc, axis) =>
     pc.selection
       .select('svg')
       .selectAll('g.axis')
-      .filter(function(d) {
-        if (d === dimension) {
-          return d;
-        }
-      })
+      .filter(d => d === dimension)
       .transition()
       .duration(config.animationTime)
       .call(axis.scale(config.dimensions[dimension].yscale));
