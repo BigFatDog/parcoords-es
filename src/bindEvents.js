@@ -30,6 +30,7 @@ const bindEvents = (
     ctx,
     pc,
     xscale,
+    axis,
     flags,
     brushedQueue,
     markedQueue,
