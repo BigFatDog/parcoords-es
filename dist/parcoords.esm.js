@@ -1888,7 +1888,11 @@ var flipAxisAndUpdatePCP = function flipAxisAndUpdatePCP(config, pc, axis) {
   return function (dimension) {
     pc.flip(dimension);
     pc.brushReset(dimension);
-    select(this.parentElement).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
+
+    // select(this.parentElement)
+    pc.selection.select('svg').selectAll('g.axis').filter(function (d) {
+      return d === dimension;
+    }).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
     pc.render();
   };
 };
@@ -4070,7 +4074,7 @@ var scale = function scale(config, pc) {
   };
 };
 
-var version = "2.2.5";
+var version = "2.2.6";
 
 var DefaultConfig = {
   data: [],
@@ -4216,7 +4220,7 @@ var without = function without(arr, items) {
   return arr;
 };
 
-var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue) {
+var sideEffects = function sideEffects(config, ctx, pc, xscale, axis, flags, brushedQueue, markedQueue, foregroundQueue) {
   return dispatch.apply(_this$5, Object.keys(config)).on('composite', function (d) {
     ctx.foreground.globalCompositeOperation = d.value;
     ctx.brushed.globalCompositeOperation = d.value;
@@ -4264,7 +4268,8 @@ var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQu
     pc.dimensions(without(config.dimensions, d.value));
   }).on('flipAxes', function (d) {
     if (d.value && d.value.length) {
-      d.value.forEach(function (axis) {
+      d.value.forEach(function (dimension) {
+        flipAxisAndUpdatePCP(config, pc, axis)(dimension);
       });
       pc.updateAxes(0);
     }
@@ -4305,7 +4310,7 @@ var _rebind = function _rebind(target, source, method) {
 };
 
 var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue, events, axis) {
-  var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue);
+  var side_effects = sideEffects(__, ctx, pc, xscale, axis, flags, brushedQueue, markedQueue, foregroundQueue);
 
   // create getter/setters
   getset(pc, __, events, side_effects);

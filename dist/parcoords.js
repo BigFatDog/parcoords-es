@@ -1883,7 +1883,11 @@
     return function (dimension) {
       pc.flip(dimension);
       pc.brushReset(dimension);
-      d3Selection.select(this.parentElement).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
+
+      // select(this.parentElement)
+      pc.selection.select('svg').selectAll('g.axis').filter(function (d) {
+        return d === dimension;
+      }).transition().duration(config.animationTime).call(axis.scale(config.dimensions[dimension].yscale));
       pc.render();
     };
   };
@@ -4065,7 +4069,7 @@
     };
   };
 
-  var version = "2.2.5";
+  var version = "2.2.6";
 
   var DefaultConfig = {
     data: [],
@@ -4211,7 +4215,7 @@
     return arr;
   };
 
-  var sideEffects = function sideEffects(config, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue) {
+  var sideEffects = function sideEffects(config, ctx, pc, xscale, axis, flags, brushedQueue, markedQueue, foregroundQueue) {
     return d3Dispatch.dispatch.apply(_this$5, Object.keys(config)).on('composite', function (d) {
       ctx.foreground.globalCompositeOperation = d.value;
       ctx.brushed.globalCompositeOperation = d.value;
@@ -4259,7 +4263,8 @@
       pc.dimensions(without(config.dimensions, d.value));
     }).on('flipAxes', function (d) {
       if (d.value && d.value.length) {
-        d.value.forEach(function (axis) {
+        d.value.forEach(function (dimension) {
+          flipAxisAndUpdatePCP(config, pc, axis)(dimension);
         });
         pc.updateAxes(0);
       }
@@ -4300,7 +4305,7 @@
   };
 
   var bindEvents = function bindEvents(__, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue, events, axis) {
-    var side_effects = sideEffects(__, ctx, pc, xscale, flags, brushedQueue, markedQueue, foregroundQueue);
+    var side_effects = sideEffects(__, ctx, pc, xscale, axis, flags, brushedQueue, markedQueue, foregroundQueue);
 
     // create getter/setters
     getset(pc, __, events, side_effects);
