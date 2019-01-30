@@ -13,16 +13,17 @@ const brushFor = (state, config, pc, events, brushGroup) => (
   axis,
   _selector
 ) => {
-  // handle hidden axes which will not be found in dimensions
-  let brushRangeMax = null;
-  if (config.dimensions.hasOwnProperty(axis)) {
-    brushRangeMax =
-      config.dimensions[axis].type === 'string'
-        ? config.dimensions[axis].yscale.range()[
-            config.dimensions[axis].yscale.range().length - 1
-          ]
-        : config.dimensions[axis].yscale.range()[0];
+  // handle hidden axes which will not be a property of dimensions
+  if (!config.dimensions.hasOwnProperty(axis)) {
+    return () => {}
   }
+
+  const brushRangeMax =
+    config.dimensions[axis].type === 'string'
+      ? config.dimensions[axis].yscale.range()[
+          config.dimensions[axis].yscale.range().length - 1
+        ]
+      : config.dimensions[axis].yscale.range()[0];
 
   const _brush = brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
 
