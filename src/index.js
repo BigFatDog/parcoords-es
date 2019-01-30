@@ -153,7 +153,7 @@ const ParCoords = userConfig => {
   pc.renderMarked.default = renderMarkedDefault(config, pc, ctx, position);
   pc.renderMarked.queue = renderMarkedQueue(config, markedQueue);
 
-  pc.compute_real_centroids = computeRealCentroids(config.dimensions, position);
+  pc.compute_real_centroids = computeRealCentroids(config, position);
   pc.shadows = shadows(flags, pc);
   pc.axisDots = axisDots(config, pc, position);
   pc.clear = clear(config, pc, ctx, brush);
