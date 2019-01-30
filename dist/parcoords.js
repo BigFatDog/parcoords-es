@@ -277,6 +277,11 @@
 
   var brushFor = function brushFor(state, config, pc, events, brushGroup) {
     return function (axis, _selector) {
+      // handle hidden axes which will not be a property of dimensions
+      if (!config.dimensions.hasOwnProperty(axis)) {
+        return function () {};
+      }
+
       var brushRangeMax = config.dimensions[axis].type === 'string' ? config.dimensions[axis].yscale.range()[config.dimensions[axis].yscale.range().length - 1] : config.dimensions[axis].yscale.range()[0];
 
       var _brush = d3Brush.brushY(_selector).extent([[-15, 0], [15, brushRangeMax]]);
@@ -4069,7 +4074,7 @@
     };
   };
 
-  var version = "2.2.6";
+  var version = "2.2.7";
 
   var DefaultConfig = {
     data: [],
