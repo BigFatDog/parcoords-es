@@ -9,7 +9,9 @@ const brushReset = (state, config, pc) => dimension => {
       pc.g()
         .selectAll('.brush')
         .each(function(d) {
-          select(this).call(brushes[d].move, null);
+          if (brushes[d] !== undefined) {
+            select(this).call(brushes[d].move, null);
+          }
         });
       pc.renderBrushed();
     }
