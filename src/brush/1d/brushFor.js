@@ -15,7 +15,7 @@ const brushFor = (state, config, pc, events, brushGroup) => (
 ) => {
   // handle hidden axes which will not be a property of dimensions
   if (!config.dimensions.hasOwnProperty(axis)) {
-    return () => {}
+    return () => {};
   }
 
   const brushRangeMax =

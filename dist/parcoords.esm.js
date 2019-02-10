@@ -182,7 +182,9 @@ var brushReset = function brushReset(state, config, pc) {
       config.brushed = false;
       if (pc.g() !== undefined && pc.g() !== null) {
         pc.g().selectAll('.brush').each(function (d) {
-          select(this).call(brushes[d].move, null);
+          if (brushes[d] !== undefined) {
+            select(this).call(brushes[d].move, null);
+          }
         });
         pc.renderBrushed();
       }
@@ -2191,11 +2193,11 @@ var commonScale = function commonScale(config, pc) {
   };
 };
 
-var computeRealCentroids = function computeRealCentroids(dimensions, position) {
+var computeRealCentroids = function computeRealCentroids(config, position) {
   return function (row) {
-    return Object.keys(dimensions).map(function (d) {
+    return Object.keys(config.dimensions).map(function (d) {
       var x = position(d);
-      var y = dimensions[d].yscale(row[d]);
+      var y = config.dimensions[d].yscale(row[d]);
       return [x, y];
     });
   };
@@ -4079,7 +4081,7 @@ var scale = function scale(config, pc) {
   };
 };
 
-var version = "2.2.7";
+var version = "2.2.8";
 
 var DefaultConfig = {
   data: [],
@@ -4391,7 +4393,7 @@ var ParCoords = function ParCoords(userConfig) {
   pc.renderMarked.default = renderMarkedDefault(config, pc, ctx, position);
   pc.renderMarked.queue = renderMarkedQueue(config, markedQueue);
 
-  pc.compute_real_centroids = computeRealCentroids(config.dimensions, position);
+  pc.compute_real_centroids = computeRealCentroids(config, position);
   pc.shadows = shadows(flags, pc);
   pc.axisDots = axisDots(config, pc, position);
   pc.clear = clear(config, pc, ctx, brush);
