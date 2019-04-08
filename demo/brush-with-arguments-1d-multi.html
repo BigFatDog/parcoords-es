@@ -1,0 +1,43 @@
+<!doctype html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+</head>
+<title>Brushing Example</title>
+<link rel="stylesheet" type="text/css" href="./parcoords.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+<script src="./lib/d3.v5.min.js"></script>
+<script src="./parcoords.standalone.js"></script>
+<div id="example" class="parcoords" style="width:960px;height:200px;"></div>
+<p>Loads an external <a href="data/cars.csv">csv file</a>, creates a custom <a
+        href="https://github.com/mbostock/d3/wiki/Quantitative-Scales#wiki-quantitative">quantitative color scale</a>
+    using <a href="http://bl.ocks.org/3014589">L*a*b interpolation</a>, and enables brushing.
+
+<h3>Brush Debug</h3>
+<p id="brush-results" style="background-color:#ccc;">
+</p>
+<button id="show_ext">Show EXT</button>
+
+
+<script>
+    var parcoords = ParCoords()("#example")
+    //    .color(color)
+        .alpha(0.4)
+    // load csv file and create the chart
+    d3.csv('data/cars.csv').then(function(data) {
+        parcoords
+            .data(data)
+            .hideAxis(["name"])
+            .composite("darker")
+            .render()
+            .shadows()
+            .reorderable()
+            .brushMode("1D-axes-multi");  // enable brushing
+    });
+
+    d3.select('#show_ext').on('click', function() {console.log(parcoords.brushExtents());})
+
+</script>
+
+
+

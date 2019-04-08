@@ -2,6 +2,7 @@ import { select } from 'd3-selection';
 import { brushSelection } from 'd3-brush';
 import newBrush from './newBrush';
 import drawBrushes from './drawBrushes';
+import invertByScale from '../invertByScale';
 
 /**
  *
@@ -23,13 +24,22 @@ const brushExtents = (state, config, pc, events, brushGroup) => extents => {
         acc[cur] = [];
       } else {
         acc[cur] = axisBrushes.reduce((d, p, i) => {
-          const range = brushSelection(
+          const raw = brushSelection(
             document.getElementById('brush-' + pos + '-' + i)
           );
-          if (range !== null) {
-            d = d.push(range);
-          }
 
+          if (raw) {
+            const yScale = config.dimensions[cur].yscale;
+            const scaled = invertByScale(raw, yScale);
+
+            d.push({
+              extent: p.brush.extent(),
+              selection: {
+                raw,
+                scaled,
+              },
+            });
+          }
           return d;
         }, []);
       }
