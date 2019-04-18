@@ -16,7 +16,7 @@
 <h3>Brush Debug</h3>
 <p id="brush-results" style="background-color:#ccc;">
 </p>
-<button id="show_ext">Show EXT</button>
+<button id="show_ext">Show Extension</button>
 
 
 <script>
@@ -35,7 +35,28 @@
             .brushMode("1D-axes-multi");  // enable brushing
     });
 
-    d3.select('#show_ext').on('click', function() {console.log(parcoords.brushExtents());})
+    d3.select('#show_ext').on('click', function() {
+        var html = '';
+        var exts = parcoords.brushExtents();
+        for (var k of Object.keys(exts)) {
+            var brushes = exts[k];
+
+            if (brushes && brushes.length > 0) {
+                brushes.forEach(d => {
+                    html += [
+                        '<span style="font-weight:bold;">',
+                        'dimension: ' + k,
+                        '</span>',
+                        'selection (raw): ' + d.selection.raw,
+                        'selection : ' + JSON.stringify(d.selection.scaled)
+                    ].join("<br/>");
+                })
+            }
+
+            d3.select("#brush-results").html(html);
+        }
+
+    })
 
 </script>
 
