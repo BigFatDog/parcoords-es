@@ -16,7 +16,7 @@
     "test": "mocha",
     "test:cover": "babel-node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha",
     "prepare": "npm test",
-    "pretty": "prettier --single-quote --trailing-comma es5 --write \"{src,__{tests,demo,dist}__}/**/*.js\""
+    "format": "prettier --single-quote --trailing-comma es5 --write \"{src,__{tests,demo,dist}__}/**/*.{js,html}\""
   },
   "files": [
     "src",
