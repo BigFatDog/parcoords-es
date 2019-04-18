@@ -4732,11 +4732,20 @@
               acc[cur] = [];
             } else {
               acc[cur] = axisBrushes.reduce(function (d, p, i) {
-                var range = brushSelection(document.getElementById('brush-' + pos + '-' + i));
-                if (range !== null) {
-                  d = d.push(range);
-                }
+                var raw = brushSelection(document.getElementById('brush-' + pos + '-' + i));
 
+                if (raw) {
+                  var yScale = config.dimensions[cur].yscale;
+                  var scaled = invertByScale(raw, yScale);
+
+                  d.push({
+                    extent: p.brush.extent(),
+                    selection: {
+                      raw: raw,
+                      scaled: scaled
+                    }
+                  });
+                }
                 return d;
               }, []);
             }
@@ -10812,7 +10821,7 @@
       };
     };
 
-    var version = "2.2.8";
+    var version = "2.2.9";
 
     var DefaultConfig = {
       data: [],

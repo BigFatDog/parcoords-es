@@ -47,7 +47,7 @@
             })
             .on("brushend", function(brushed, args){
               if(args !== undefined  && Object.keys(this.brushExtents()).length > 0) {
-                var brush_selection = args.selection
+                var brush_selection = args.selection;
                 d3.select("#brush-results").html([
                   '<span style="font-weight:bold;">brush end</span>',
                   'dimension: ' + args.axis,
