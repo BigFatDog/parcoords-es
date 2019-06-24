@@ -15,37 +15,40 @@ import invertByScale from '../invertByScale';
  */
 const brushExtents = (state, config, pc, events, brushGroup) => extents => {
   const { brushes } = state;
+  const hiddenAxes = pc.hideAxis();
 
   if (typeof extents === 'undefined') {
-    return Object.keys(config.dimensions).reduce((acc, cur, pos) => {
-      const axisBrushes = brushes[cur];
+    return Object.keys(config.dimensions)
+      .filter(d => !hiddenAxes.includes(d))
+      .reduce((acc, cur, pos) => {
+        const axisBrushes = brushes[cur];
 
-      if (axisBrushes === undefined || axisBrushes === null) {
-        acc[cur] = [];
-      } else {
-        acc[cur] = axisBrushes.reduce((d, p, i) => {
-          const raw = brushSelection(
-            document.getElementById('brush-' + pos + '-' + i)
-          );
+        if (axisBrushes === undefined || axisBrushes === null) {
+          acc[cur] = [];
+        } else {
+          acc[cur] = axisBrushes.reduce((d, p, i) => {
+            const raw = brushSelection(
+              document.getElementById('brush-' + pos + '-' + i)
+            );
 
-          if (raw) {
-            const yScale = config.dimensions[cur].yscale;
-            const scaled = invertByScale(raw, yScale);
+            if (raw) {
+              const yScale = config.dimensions[cur].yscale;
+              const scaled = invertByScale(raw, yScale);
 
-            d.push({
-              extent: p.brush.extent(),
-              selection: {
-                raw,
-                scaled,
-              },
-            });
-          }
-          return d;
-        }, []);
-      }
+              d.push({
+                extent: p.brush.extent(),
+                selection: {
+                  raw,
+                  scaled,
+                },
+              });
+            }
+            return d;
+          }, []);
+        }
 
-      return acc;
-    }, {});
+        return acc;
+      }, {});
   } else {
     // //first get all the brush selections
     // loop over each dimension and update appropriately (if it was passed in through extents)

@@ -72,8 +72,10 @@ const sideEffects = (
       }
     })
     .on('hideAxis', d => {
+      pc.brushReset();
       pc.dimensions(pc.applyDimensionDefaults());
       pc.dimensions(without(config.dimensions, d.value));
+      pc.render();
     })
     .on('flipAxes', d => {
       if (d.value && d.value.length) {
