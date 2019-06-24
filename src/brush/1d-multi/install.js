@@ -8,13 +8,17 @@ const install = (state, config, pc, events, brushGroup) => () => {
     pc.createAxes();
   }
 
+  const hiddenAxes = pc.hideAxis();
+
   pc.g()
     .append('svg:g')
     .attr('id', (d, i) => 'brush-group-' + i)
     .attr('class', 'brush-group')
     .attr('dimension', d => d)
     .each(function(d) {
-      brushFor(state, config, pc, events, brushGroup)(d, select(this));
+      if (!hiddenAxes.includes(d)) {
+        brushFor(state, config, pc, events, brushGroup)(d, select(this));
+      }
     });
 
   pc.brushExtents = brushExtents(state, config, pc, events, brushGroup);

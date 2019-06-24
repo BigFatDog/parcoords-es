@@ -9,14 +9,17 @@ const brushReset = (state, config, pc) => dimension => {
       Object.keys(config.dimensions).forEach((d, pos) => {
         const axisBrush = brushes[d];
 
-        axisBrush.forEach((e, i) => {
-          const brush = document.getElementById('brush-' + pos + '-' + i);
-          if (brushSelection(brush) !== null) {
-            pc.g()
-              .select('#brush-' + pos + '-' + i)
-              .call(e.brush.move, null);
-          }
-        });
+        // hidden axes will be undefined
+        if (axisBrush) {
+          axisBrush.forEach((e, i) => {
+            const brush = document.getElementById('brush-' + pos + '-' + i);
+            if (brush && brushSelection(brush) !== null) {
+              pc.g()
+                .select('#brush-' + pos + '-' + i)
+                .call(e.brush.move, null);
+            }
+          });
+        }
       });
 
       pc.renderBrushed();
@@ -26,18 +29,20 @@ const brushReset = (state, config, pc) => dimension => {
       const axisBrush = brushes[dimension];
       const pos = Object.keys(config.dimensions).indexOf(dimension);
 
-      axisBrush.forEach((e, i) => {
-        const brush = document.getElementById('brush-' + pos + '-' + i);
-        if (brushSelection(brush) !== null) {
-          pc.g()
-            .select('#brush-' + pos + '-' + i)
-            .call(e.brush.move, null);
+      if (axisBrush) {
+        axisBrush.forEach((e, i) => {
+          const brush = document.getElementById('brush-' + pos + '-' + i);
+          if (brushSelection(brush) !== null) {
+            pc.g()
+              .select('#brush-' + pos + '-' + i)
+              .call(e.brush.move, null);
 
-          if (typeof e.event === 'function') {
-            e.event(select('#brush-' + pos + '-' + i));
+            if (typeof e.event === 'function') {
+              e.event(select('#brush-' + pos + '-' + i));
+            }
           }
-        }
-      });
+        });
+      }
 
       pc.renderBrushed();
     }

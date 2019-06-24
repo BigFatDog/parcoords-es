@@ -1,6 +1,6 @@
-import { select, selectAll } from 'd3-selection';
+import { select } from 'd3-selection';
 
-const brushReset = config =>
+const brushReset = (config, pc) =>
   function(dimension) {
     const brushesToKeep = [];
     for (let j = 0; j < config.brushes.length; j++) {
