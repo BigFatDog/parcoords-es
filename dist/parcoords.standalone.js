@@ -4406,7 +4406,7 @@
         for (var i = 0; i < axisBrushes.length; i++) {
           var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
 
-          if (brushSelection(brush$$1) !== null) {
+          if (brush$$1 && brushSelection(brush$$1) !== null) {
             return true;
           }
         }
@@ -4418,7 +4418,9 @@
       var extents = actives.map(function (p) {
         var axisBrushes = brushes[p];
 
-        return axisBrushes.map(function (d, i) {
+        return axisBrushes.filter(function (d) {
+          return !pc.hideAxis().includes(d);
+        }).map(function (d, i) {
           return brushSelection(document.getElementById('brush-' + Object.keys(config.dimensions).indexOf(p) + '-' + i));
         }).map(function (d, i) {
           if (d === null || d === undefined) {
@@ -4723,9 +4725,12 @@
       return function (extents) {
         var brushes = state.brushes;
 
+        var hiddenAxes = pc.hideAxis();
 
         if (typeof extents === 'undefined') {
-          return Object.keys(config.dimensions).reduce(function (acc, cur, pos) {
+          return Object.keys(config.dimensions).filter(function (d) {
+            return !hiddenAxes.includes(d);
+          }).reduce(function (acc, cur, pos) {
             var axisBrushes = brushes[cur];
 
             if (axisBrushes === undefined || axisBrushes === null) {
@@ -4811,12 +4816,15 @@
             Object.keys(config.dimensions).forEach(function (d, pos) {
               var axisBrush = brushes[d];
 
-              axisBrush.forEach(function (e, i) {
-                var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
-                if (brushSelection(brush$$1) !== null) {
-                  pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
-                }
-              });
+              // hidden axes will be undefined
+              if (axisBrush) {
+                axisBrush.forEach(function (e, i) {
+                  var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
+                  if (brush$$1 && brushSelection(brush$$1) !== null) {
+                    pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
+                  }
+                });
+              }
             });
 
             pc.renderBrushed();
@@ -4826,16 +4834,18 @@
             var axisBrush = brushes[dimension];
             var pos = Object.keys(config.dimensions).indexOf(dimension);
 
-            axisBrush.forEach(function (e, i) {
-              var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
-              if (brushSelection(brush$$1) !== null) {
-                pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
+            if (axisBrush) {
+              axisBrush.forEach(function (e, i) {
+                var brush$$1 = document.getElementById('brush-' + pos + '-' + i);
+                if (brushSelection(brush$$1) !== null) {
+                  pc.g().select('#brush-' + pos + '-' + i).call(e.brush.move, null);
 
-                if (typeof e.event === 'function') {
-                  e.event(select('#brush-' + pos + '-' + i));
+                  if (typeof e.event === 'function') {
+                    e.event(select('#brush-' + pos + '-' + i));
+                  }
                 }
-              }
-            });
+              });
+            }
 
             pc.renderBrushed();
           }
@@ -4859,12 +4869,16 @@
           pc.createAxes();
         }
 
+        var hiddenAxes = pc.hideAxis();
+
         pc.g().append('svg:g').attr('id', function (d, i) {
           return 'brush-group-' + i;
         }).attr('class', 'brush-group').attr('dimension', function (d) {
           return d;
         }).each(function (d) {
-          brushFor$1(state, config, pc, events, brushGroup)(d, select(this));
+          if (!hiddenAxes.includes(d)) {
+            brushFor$1(state, config, pc, events, brushGroup)(d, select(this));
+          }
         });
 
         pc.brushExtents = brushExtents$1(state, config, pc, events, brushGroup);
@@ -7677,6 +7691,8 @@
     var saturday = weekday(6);
 
     var sundays = sunday.range;
+    var mondays = monday.range;
+    var thursdays = thursday.range;
 
     var month = newInterval(function (date) {
       date.setDate(1);
@@ -7766,6 +7782,8 @@
     var utcSaturday = utcWeekday(6);
 
     var utcSundays = utcSunday.range;
+    var utcMondays = utcMonday.range;
+    var utcThursdays = utcThursday.range;
 
     var utcMonth = newInterval(function (date) {
       date.setUTCDate(1);
@@ -10547,7 +10565,7 @@
       };
     };
 
-    var brushReset$4 = function brushReset(config) {
+    var brushReset$4 = function brushReset(config, pc) {
       return function (dimension) {
         var brushesToKeep = [];
         for (var j = 0; j < config.brushes.length; j++) {
@@ -10821,7 +10839,7 @@
       };
     };
 
-    var version = "2.2.9";
+    var version = "2.2.10";
 
     var DefaultConfig = {
       data: [],
@@ -11011,8 +11029,10 @@
           pc.render();
         }
       }).on('hideAxis', function (d) {
+        pc.brushReset();
         pc.dimensions(pc.applyDimensionDefaults());
         pc.dimensions(without(config.dimensions, d.value));
+        pc.render();
       }).on('flipAxes', function (d) {
         if (d.value && d.value.length) {
           d.value.forEach(function (dimension) {
@@ -11142,7 +11162,7 @@
       pc.updateAxes = updateAxes(config, pc, position, axis, flags);
       pc.applyAxisConfig = applyAxisConfig;
       pc.brushable = brushable(config, pc, flags);
-      pc.brushReset = brushReset$4(config);
+      pc.brushReset = brushReset$4(config, pc);
       pc.selected = selected$4(config, pc);
       pc.reorderable = reorderable(config, pc, xscale, position, dragging, flags);
 
