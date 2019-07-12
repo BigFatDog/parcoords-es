@@ -89,7 +89,7 @@ npm install parcoord-es --save
 2. import module
 
 ```
-import 'parcoord-es/parcoords.css';
+import 'parcoord-es/dist/parcoords.css';
 import ParCoords from 'parcoord-es';
 
 const chart = ParCoords()....
