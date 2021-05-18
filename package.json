@@ -58,7 +58,7 @@
     "rollup-plugin-local-resolve": "^1.0.7",
     "rollup-plugin-node-resolve": "^3.3.0",
     "rollup-plugin-postcss": "^1.6.2",
-    "rollup-plugin-serve": "^0.4.2",
+    "rollup-plugin-serve": "^1.0.2",
     "rollup-watch": "^4.3.1"
   },
   "repository": {
