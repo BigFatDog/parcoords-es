@@ -103,72 +103,78 @@ var invertByScale = function invertByScale(selection, scale) {
 };
 
 var brushExtents = function brushExtents(state, config, pc) {
-  return function (extents) {
-    var brushes = state.brushes,
-        brushNodes = state.brushNodes;
+    return function (extents) {
+        var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "scaled";
+        var brushes = state.brushes,
+            brushNodes = state.brushNodes;
 
 
-    if (typeof extents === 'undefined') {
-      return Object.keys(config.dimensions).reduce(function (acc, cur) {
-        var brush = brushes[cur];
-        //todo: brush check
-        if (brush !== undefined && brushSelection(brushNodes[cur]) !== null) {
-          var raw = brushSelection(brushNodes[cur]);
-          var yScale = config.dimensions[cur].yscale;
-          var scaled = invertByScale(raw, yScale);
+        if (typeof extents === 'undefined') {
+            return Object.keys(config.dimensions).reduce(function (acc, cur) {
+                var brush = brushes[cur];
+                //todo: brush check
+                if (brush !== undefined && brushSelection(brushNodes[cur]) !== null) {
+                    var raw = brushSelection(brushNodes[cur]);
+                    var yScale = config.dimensions[cur].yscale;
+                    var scaled = invertByScale(raw, yScale);
 
-          acc[cur] = {
-            extent: brush.extent(),
-            selection: {
-              raw: raw,
-              scaled: scaled
-            }
-          };
+                    acc[cur] = {
+                        extent: brush.extent(),
+                        selection: {
+                            raw: raw,
+                            scaled: scaled
+                        }
+                    };
+                }
+
+                return acc;
+            }, {});
+        } else {
+            //first get all the brush selections
+            var brushSelections = {};
+            pc.g().selectAll('.brush').each(function (d) {
+                brushSelections[d] = select(this);
+            });
+
+            // loop over each dimension and update appropriately (if it was passed in through extents)
+            Object.keys(config.dimensions).forEach(function (d) {
+                if (extents[d] === undefined) {
+                    return;
+                }
+
+                var brush = brushes[d];
+                if (brush !== undefined) {
+
+                    if (type === "raw") {
+                        brushSelections[d].call(brush).call(brush.move, extents[d]);
+                    } else {
+                        var dim = config.dimensions[d];
+                        var yExtent = extents[d].map(dim.yscale);
+
+                        //update the extent
+                        //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
+                        //we actually don't need this since we are using brush.move below
+                        //extents set the limits of the brush which means a user will not be able
+                        //to move or drag the brush beyond the limits set by brush.extent
+                        //brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
+
+                        //redraw the brush
+                        //https://github.com/d3/d3-brush#brush_move
+                        // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
+                        brushSelections[d].call(brush).call(brush.move, yExtent.reverse());
+
+                        //fire some events
+                        // brush.event(brushSelections[d]);
+                    }
+                }
+            });
+
+            //redraw the chart
+            pc.renderBrushed();
+
+            return pc;
         }
-
-        return acc;
-      }, {});
-    } else {
-      //first get all the brush selections
-      var brushSelections = {};
-      pc.g().selectAll('.brush').each(function (d) {
-        brushSelections[d] = select(this);
-      });
-
-      // loop over each dimension and update appropriately (if it was passed in through extents)
-      Object.keys(config.dimensions).forEach(function (d) {
-        if (extents[d] === undefined) {
-          return;
-        }
-
-        var brush = brushes[d];
-        if (brush !== undefined) {
-          var dim = config.dimensions[d];
-          var yExtent = extents[d].map(dim.yscale);
-
-          //update the extent
-          //sets the brushable extent to the specified array of points [[x0, y0], [x1, y1]]
-          //we actually don't need this since we are using brush.move below
-          //extents set the limits of the brush which means a user will not be able
-          //to move or drag the brush beyond the limits set by brush.extent
-          //brush.extent([[-15, yExtent[1]], [15, yExtent[0]]]);
-
-          //redraw the brush
-          //https://github.com/d3/d3-brush#brush_move
-          // For an x-brush, it must be defined as [x0, x1]; for a y-brush, it must be defined as [y0, y1].
-          brushSelections[d].call(brush).call(brush.move, yExtent.reverse());
-
-          //fire some events
-          // brush.event(brushSelections[d]);
-        }
-      });
-
-      //redraw the chart
-      pc.renderBrushed();
-
-      return pc;
-    }
-  };
+    };
 };
 
 var _this = undefined;
