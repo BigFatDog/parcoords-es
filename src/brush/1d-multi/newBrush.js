@@ -63,12 +63,15 @@ const newBrush = (state, config, pc, events, brushGroup) => (
     .on('end', function() {
       // Figure out if our latest brush has a selection
       const lastBrushID = brushes[axis][brushes[axis].length - 1].id;
-      const lastBrush = document.getElementById(
-        'brush-' +
-          Object.keys(config.dimensions).indexOf(axis) +
-          '-' +
-          lastBrushID
-      );
+
+      const lastBrush = pc.selection
+        .node()
+        .querySelector(
+          "#brush-" +
+            Object.keys(config.dimensions).indexOf(axis) +
+            "-" +
+            lastBrushID
+        );
       const selection = brushSelection(lastBrush);
 
       if (

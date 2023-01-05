@@ -28,7 +28,7 @@ const brushExtents = (state, config, pc, events, brushGroup) => extents => {
         } else {
           acc[cur] = axisBrushes.reduce((d, p, i) => {
             const raw = brushSelection(
-              document.getElementById('brush-' + pos + '-' + i)
+              pc.selection.node().querySelector("#brush-" + pos + "-" + i)
             );
 
             if (raw) {

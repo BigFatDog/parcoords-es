@@ -8,7 +8,9 @@ const selected = (state, config, pc, events, brushGroup) => {
     const axisBrushes = brushes[p];
 
     for (let i = 0; i < axisBrushes.length; i++) {
-      const brush = document.getElementById('brush-' + pos + '-' + i);
+      const brush = pc.selection
+        .node()
+        .querySelector("#brush-" + pos + "-" + i);
 
       if (brush && brushSelection(brush) !== null) {
         return true;
@@ -26,9 +28,11 @@ const selected = (state, config, pc, events, brushGroup) => {
       .filter(d => !pc.hideAxis().includes(d))
       .map((d, i) =>
         brushSelection(
-          document.getElementById(
-            'brush-' + Object.keys(config.dimensions).indexOf(p) + '-' + i
-          )
+          pc.selection
+            .node()
+            .querySelector(
+              "#brush-" + Object.keys(config.dimensions).indexOf(p) + "-" + i
+            )
         )
       )
       .map((d, i) => {

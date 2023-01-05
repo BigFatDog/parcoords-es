@@ -12,7 +12,9 @@ const brushReset = (state, config, pc) => dimension => {
         // hidden axes will be undefined
         if (axisBrush) {
           axisBrush.forEach((e, i) => {
-            const brush = document.getElementById('brush-' + pos + '-' + i);
+            const brush = pc.selection
+              .node()
+              .querySelector("#brush-" + pos + "-" + i);
             if (brush && brushSelection(brush) !== null) {
               pc.g()
                 .select('#brush-' + pos + '-' + i)
@@ -31,7 +33,7 @@ const brushReset = (state, config, pc) => dimension => {
 
       if (axisBrush) {
         axisBrush.forEach((e, i) => {
-          const brush = document.getElementById('brush-' + pos + '-' + i);
+          const brush = pc.selection.node().querySelector("#brush-" + pos + "-" + i);
           if (brushSelection(brush) !== null) {
             pc.g()
               .select('#brush-' + pos + '-' + i)
