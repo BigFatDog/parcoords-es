@@ -4008,14 +4008,26 @@ var toTypeCoerceNumbers = function toTypeCoerceNumbers(v) {
   return parseFloat(v) == v && v !== null ? 'number' : toType(v);
 };
 
-// attempt to determine types of each dimension based on first row of data
+// attempt to determine types of each dimension
+// if all non-null values are numbers, then it's a number, otherwise it's a string
 var detectDimensionTypes = function detectDimensionTypes(data) {
-  return Object.keys(data[0]).reduce(function (acc, cur) {
-    var key = isNaN(Number(cur)) ? cur : parseInt(cur);
-    acc[key] = toTypeCoerceNumbers(data[0][cur]);
-
-    return acc;
-  }, {});
+  var keys$$1 = Object.keys(data[0]);
+  var nonNullValues = keys$$1.map(function (key) {
+    return data.map(function (d) {
+      return d[key];
+    }).filter(function (v) {
+      return v !== null;
+    });
+  });
+  var types = nonNullValues.map(function (v) {
+    if (v.every(function (x) {
+      return !isNaN(x);
+    })) return 'number';
+    return 'string';
+  });
+  return Object.fromEntries(keys$$1.map(function (_, i) {
+    return [keys$$1[i], types[i]];
+  }));
 };
 
 var getOrderedDimensionKeys = function getOrderedDimensionKeys(config) {
